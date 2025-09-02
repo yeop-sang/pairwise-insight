@@ -7,14 +7,12 @@ import ppaLogo from "@/assets/ppa-logo.png";
 const Index = () => {
   const navigate = useNavigate();
 
-  const handleLogin = async (email: string, password: string) => {
-    // 임시 로그인 - 아무 이메일/비밀번호로도 로그인 가능
+  const handleLogin = async (email: string, password: string, role?: 'teacher' | 'student') => {
+    // 임시 로그인 - 역할에 따라 리다이렉트
     if (email && password) {
-      // 이메일에 "teacher" 또는 "교사"가 포함되면 교사 대시보드로
-      if (email.includes('teacher') || email.includes('교사')) {
+      if (role === 'teacher') {
         navigate("/dashboard");
       } else {
-        // 그 외에는 학생 대시보드로
         navigate("/student-dashboard");
       }
     }

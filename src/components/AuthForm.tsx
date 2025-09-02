@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Lock, User, GraduationCap, BookOpen } from "lucide-react";
 
 interface AuthFormProps {
-  onLogin: (email: string, password: string) => void;
+  onLogin: (email: string, password: string, role?: 'teacher' | 'student') => void;
   onSignup: (email: string, password: string, name: string, role: 'teacher' | 'student') => void;
 }
 
@@ -18,7 +18,12 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(loginData.email, loginData.password);
+    onLogin(loginData.email, loginData.password, 'student'); // 학생 로그인
+  };
+
+  const handleTeacherLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    onLogin(loginData.email, loginData.password, 'teacher'); // 교사 로그인
   };
 
   const handleSignup = (e: React.FormEvent) => {
@@ -93,7 +98,7 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
             </TabsList>
             
             <TabsContent value="login" className="space-y-4">
-              <form onSubmit={handleLogin} className="space-y-4">
+              <form onSubmit={handleTeacherLogin} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="teacher-login-email">이메일</Label>
                   <div className="relative">
