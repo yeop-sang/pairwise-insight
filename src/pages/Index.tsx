@@ -29,40 +29,22 @@ const Index = () => {
     }
   }, [user, profile, student, navigate]);
 
-  const handleLogin = async (email: string, password: string, role?: 'teacher' | 'student') => {
-    console.log('Index handleLogin called with role:', role);
+  const handleLogin = async (email: string, password: string) => {
+    console.log('Index handleLogin called - teacher login');
     
     try {
-      if (role === 'student') {
-        // 학생 로그인: students 테이블 사용
-        const { error } = await studentLogin(email, password);
-        
-        if (!error) {
-          console.log('Student login successful');
-          navigate('/student-dashboard');
-        } else {
-          console.error('Student login failed:', error);
-          toast({
-            title: '로그인 실패',
-            description: error,
-            variant: 'destructive',
-          });
-        }
+      const { error } = await signIn(email, password);
+      
+      if (!error) {
+        console.log('Teacher login successful');
+        // 로그인 성공 후 onAuthStateChange에서 자동으로 라우팅 처리
       } else {
-        // 교사 로그인: Supabase Auth 사용
-        const { error } = await signIn(email, password);
-        
-        if (!error) {
-          console.log('Teacher login successful');
-          // 로그인 성공 후 onAuthStateChange에서 자동으로 라우팅 처리
-        } else {
-          console.error('Teacher login failed:', error);
-          toast({
-            title: '로그인 실패',
-            description: '이메일 또는 비밀번호가 올바르지 않습니다.',
-            variant: 'destructive',
-          });
-        }
+        console.error('Teacher login failed:', error);
+        toast({
+          title: '로그인 실패',
+          description: '이메일 또는 비밀번호가 올바르지 않습니다.',
+          variant: 'destructive',
+        });
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -74,11 +56,11 @@ const Index = () => {
     }
   };
 
-  const handleSignup = async (email: string, password: string, name: string, role: 'teacher' | 'student') => {
-    console.log('Index handleSignup called with role:', role);
+  const handleSignup = async (email: string, password: string, name: string) => {
+    console.log('Index handleSignup called - teacher signup');
     
     try {
-      const { error } = await signUp(email, password, name, role);
+      const { error } = await signUp(email, password, name, 'teacher');
       
       if (!error) {
         console.log('Signup successful');

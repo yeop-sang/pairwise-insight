@@ -8,12 +8,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Mail, Lock, User, GraduationCap, BookOpen } from "lucide-react";
 
 interface AuthFormProps {
-  onLogin: (email: string, password: string, role?: 'teacher' | 'student') => void;
-  onSignup: (email: string, password: string, name: string, role: 'teacher' | 'student') => void;
+  onLogin: (email: string, password: string) => void;
+  onSignup: (email: string, password: string, name: string) => void;
 }
 
 export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
-  const [studentLoginData, setStudentLoginData] = useState({ email: "", password: "" });
   const [teacherLoginData, setTeacherLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ email: "", password: "", name: "" });
 
@@ -25,78 +24,21 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
     return email;
   };
 
-  const handleStudentLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log('Student login:', studentLoginData);
-    const normalizedEmail = normalizeEmail(studentLoginData.email);
-    onLogin(normalizedEmail, studentLoginData.password, 'student');
-  };
-
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Teacher login:', teacherLoginData);
-    console.log('Calling onLogin with teacher role');
     const normalizedEmail = normalizeEmail(teacherLoginData.email);
-    onLogin(normalizedEmail, teacherLoginData.password, 'teacher');
+    onLogin(normalizedEmail, teacherLoginData.password);
   };
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
     const normalizedEmail = normalizeEmail(signupData.email);
-    onSignup(normalizedEmail, signupData.password, signupData.name, 'teacher'); // 교사 회원가입만 가능
+    onSignup(normalizedEmail, signupData.password, signupData.name);
   };
 
   return (
     <div className="w-full max-w-md space-y-6">
-      {/* Student Login */}
-      <Card className="shadow-medium">
-        <CardHeader className="text-center pb-4">
-          <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
-            <GraduationCap className="h-5 w-5 text-primary" />
-            학생 로그인
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleStudentLogin} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="student-email">이메일 또는 ID</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="student-email"
-                  type="text"
-                  placeholder="이메일 또는 ID를 입력하세요"
-                  className="pl-10"
-                  value={studentLoginData.email}
-                  onChange={(e) => setStudentLoginData({...studentLoginData, email: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="student-password">비밀번호</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  id="student-password"
-                  type="password"
-                  placeholder="비밀번호를 입력하세요"
-                  className="pl-10"
-                  value={studentLoginData.password}
-                  onChange={(e) => setStudentLoginData({...studentLoginData, password: e.target.value})}
-                  required
-                />
-              </div>
-            </div>
-            
-            <Button type="submit" className="w-full" variant="default">
-              학생으로 로그인
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-
       {/* Teacher Login */}
       <Card className="shadow-medium">
         <CardHeader className="text-center pb-4">
