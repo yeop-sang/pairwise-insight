@@ -1,8 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Clock, Users, ArrowRight } from "lucide-react";
 
@@ -18,75 +16,48 @@ interface AssignedProject {
 }
 
 export const StudentDashboard = () => {
-  const { user, profile, signOut } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<AssignedProject[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // 임시로 로딩 false
 
-  useEffect(() => {
-    if (user && profile?.role === 'student') {
-      fetchAssignedProjects();
-    }
-  }, [user, profile]);
-
-  const fetchAssignedProjects = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('project_assignments')
-        .select(`
-          project_id,
-          projects!inner (
-            id,
-            title,
-            description,
-            question,
-            rubric,
-            created_at,
-            is_active
-          )
-        `)
-        .eq('student_id', user?.id)
-        .eq('projects.is_active', true);
-
-      if (error) throw error;
-
-      // Get comparison counts for each project
-      const projectsWithCounts = await Promise.all(
-        (data || []).map(async (assignment: any) => {
-          const project = assignment.projects;
-          
-          // Count total responses for this project
-          const { count: totalResponses } = await supabase
-            .from('student_responses')
-            .select('id', { count: 'exact' })
-            .eq('project_id', project.id);
-
-          // Count comparisons made by this student
-          const { count: comparisonCount } = await supabase
-            .from('comparisons')
-            .select('id', { count: 'exact' })
-            .eq('project_id', project.id)
-            .eq('student_id', user?.id);
-
-          return {
-            ...project,
-            comparison_count: comparisonCount || 0,
-            total_responses: totalResponses || 0
-          };
-        })
-      );
-
-      setProjects(projectsWithCounts);
-    } catch (error) {
-      console.error('Failed to fetch assigned projects:', error);
-    } finally {
-      setLoading(false);
-    }
+  // 임시 학생 데이터
+  const mockStudent = {
+    name: "테스트 학생",
+    id: "student-123"
   };
+
+  // 임시 프로젝트 데이터
+  const mockProjects: AssignedProject[] = [
+    {
+      id: "project-1",
+      title: "영어 에세이 비교평가",
+      description: "학생들의 영어 에세이를 비교하여 평가하는 프로젝트입니다.",
+      question: "다음 두 에세이 중 어느 것이 더 논리적이고 설득력이 있나요?",
+      rubric: "논리성, 구조, 언어 사용, 창의성을 기준으로 평가하세요.",
+      created_at: "2024-01-15",
+      comparison_count: 5,
+      total_responses: 24
+    },
+    {
+      id: "project-2", 
+      title: "수학 문제 해결 과정 평가",
+      description: "학생들의 수학 문제 해결 과정을 평가합니다.",
+      question: "어느 학생의 문제 해결 과정이 더 체계적이고 명확한가요?",
+      rubric: "문제 이해, 해결 과정, 답의 정확성을 기준으로 평가하세요.",
+      created_at: "2024-01-10",
+      comparison_count: 2,
+      total_responses: 18
+    }
+  ];
 
   const handleStartComparison = (projectId: string) => {
     navigate(`/compare/${projectId}`);
   };
+
+  const handleSignOut = () => {
+    navigate("/");
+  };
+
 
   if (loading) {
     return (
@@ -104,15 +75,15 @@ export const StudentDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground">내 프로젝트</h1>
           <p className="text-muted-foreground mt-2">
-            안녕하세요, {profile?.name}님! 할당된 비교평가 프로젝트를 확인하세요.
+            안녕하세요, {mockStudent.name}님! 할당된 비교평가 프로젝트를 확인하세요.
           </p>
         </div>
-        <Button variant="outline" onClick={signOut}>
+        <Button variant="outline" onClick={handleSignOut}>
           로그아웃
         </Button>
       </div>
 
-      {projects.length === 0 ? (
+      {mockProjects.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -124,7 +95,7 @@ export const StudentDashboard = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
+          {mockProjects.map((project) => (
             <Card key={project.id} className="hover:shadow-medium transition-shadow">
               <CardHeader>
                 <CardTitle className="text-lg">{project.title}</CardTitle>
