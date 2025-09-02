@@ -67,37 +67,43 @@ export class ComparisonAlgorithm {
 
   async initializeWithExistingComparisons(projectId: string, supabase: any) {
     try {
-      // 기존 비교 데이터 로드
+      // 현재 문항의 응답 ID들 추출
+      const currentResponseIds = this.responses.map(r => r.id);
+      
+      // 현재 문항의 응답들에 대한 비교 데이터만 로드
       const { data: comparisons, error } = await supabase
         .from('comparisons')
         .select('*')
-        .eq('project_id', projectId);
+        .eq('project_id', projectId)
+        .in('response_a_id', currentResponseIds)
+        .in('response_b_id', currentResponseIds);
 
       if (error) throw error;
 
-      // 완료된 페어 추적
+      // 완료된 페어 추적 (현재 문항의 응답만 해당하는 비교만 처리)
       comparisons?.forEach((comp: any) => {
-        const pairKey = this.getPairKey(comp.response_a_id, comp.response_b_id);
-        this.completedPairs.add(pairKey);
-        
-        // 리뷰어 상태 업데이트
-        const reviewer = this.reviewers.get(comp.student_id);
-        if (reviewer) {
-          reviewer.quota = Math.max(0, reviewer.quota - 1);
-          reviewer.totalComparisons++;
-          
-          // 최근 응답 목록 업데이트
-          reviewer.recentResponses.push(comp.response_a_id, comp.response_b_id);
-          if (reviewer.recentResponses.length > 10) {
-            reviewer.recentResponses = reviewer.recentResponses.slice(-10);
-          }
-        }
-        
-        // 응답 상태 업데이트
+        // 두 응답이 모두 현재 문항에 속하는지 확인
         const responseA = this.responseStates.get(comp.response_a_id);
         const responseB = this.responseStates.get(comp.response_b_id);
         
         if (responseA && responseB) {
+          const pairKey = this.getPairKey(comp.response_a_id, comp.response_b_id);
+          this.completedPairs.add(pairKey);
+          
+          // 리뷰어 상태 업데이트 (현재 문항에 대해서만)
+          const reviewer = this.reviewers.get(comp.student_id);
+          if (reviewer) {
+            reviewer.quota = Math.max(0, reviewer.quota - 1);
+            reviewer.totalComparisons++;
+            
+            // 최근 응답 목록 업데이트
+            reviewer.recentResponses.push(comp.response_a_id, comp.response_b_id);
+            if (reviewer.recentResponses.length > 10) {
+              reviewer.recentResponses = reviewer.recentResponses.slice(-10);
+            }
+          }
+          
+          // 응답 상태 업데이트
           responseA.need = Math.max(0, responseA.need - 1);
           responseB.need = Math.max(0, responseB.need - 1);
           responseA.totalComparisons++;
