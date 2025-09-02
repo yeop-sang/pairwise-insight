@@ -99,18 +99,24 @@ export type Database = {
       project_assignments: {
         Row: {
           assigned_at: string
+          completed_at: string | null
+          has_completed: boolean
           id: string
           project_id: string
           student_id: string
         }
         Insert: {
           assigned_at?: string
+          completed_at?: string | null
+          has_completed?: boolean
           id?: string
           project_id: string
           student_id: string
         }
         Update: {
           assigned_at?: string
+          completed_at?: string | null
+          has_completed?: boolean
           id?: string
           project_id?: string
           student_id?: string
@@ -204,39 +210,36 @@ export type Database = {
           class_number: number
           created_at: string
           grade: number
-          has_completed: boolean
           id: string
           name: string
           password: string
-          project_id: string
           student_id: string
           student_number: number
+          teacher_id: string
           updated_at: string
         }
         Insert: {
           class_number: number
           created_at?: string
           grade: number
-          has_completed?: boolean
           id?: string
           name: string
           password: string
-          project_id: string
           student_id: string
           student_number: number
+          teacher_id: string
           updated_at?: string
         }
         Update: {
           class_number?: number
           created_at?: string
           grade?: number
-          has_completed?: boolean
           id?: string
           name?: string
           password?: string
-          project_id?: string
           student_id?: string
           student_number?: number
+          teacher_id?: string
           updated_at?: string
         }
         Relationships: []

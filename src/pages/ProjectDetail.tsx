@@ -5,13 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Users, Plus, Upload, Trash2 } from 'lucide-react';
-import * as XLSX from 'xlsx';
+import { ArrowLeft, Users, Plus, BookOpen } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -22,15 +17,11 @@ interface Project {
   created_at: string;
 }
 
-interface Student {
-  id: string;
-  student_id: string;
+interface ClassInfo {
   grade: number;
   class_number: number;
-  student_number: number;
-  name: string;
-  has_completed: boolean;
-  created_at: string;
+  student_count: number;
+  assigned_count: number;
 }
 
 export const ProjectDetail: React.FC = () => {
@@ -40,10 +31,8 @@ export const ProjectDetail: React.FC = () => {
   const { toast } = useToast();
 
   const [project, setProject] = useState<Project | null>(null);
-  const [students, setStudents] = useState<Student[]>([]);
+  const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [uploading, setUploading] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!user || !id) {
@@ -51,7 +40,7 @@ export const ProjectDetail: React.FC = () => {
       return;
     }
     fetchProject();
-    fetchStudents();
+    fetchClassInfo();
   }, [user, id]);
 
   const fetchProject = async () => {
@@ -77,132 +66,156 @@ export const ProjectDetail: React.FC = () => {
     }
   };
 
-  const fetchStudents = async () => {
+  const fetchClassInfo = async () => {
     if (!id) return;
 
     try {
-      const { data, error } = await supabase
+      // 전체 학생 수 (학년/반별)
+      const { data: studentsData, error: studentsError } = await supabase
         .from('students')
-        .select('*')
-        .eq('project_id', id)
-        .order('grade', { ascending: true })
-        .order('class_number', { ascending: true })
-        .order('student_number', { ascending: true });
+        .select('grade, class_number')
+        .order('grade')
+        .order('class_number');
 
-      if (error) throw error;
-      setStudents(data || []);
+      if (studentsError) throw studentsError;
+
+      // 이미 할당된 학생 수 (학년/반별)
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('project_assignments')
+        .select(`
+          students (
+            grade,
+            class_number
+          )
+        `)
+        .eq('project_id', id);
+
+      if (assignmentsError) throw assignmentsError;
+
+      // 학년/반별 통계 계산
+      const classStats = (studentsData || []).reduce((acc, student) => {
+        const key = `${student.grade}-${student.class_number}`;
+        if (!acc[key]) {
+          acc[key] = {
+            grade: student.grade,
+            class_number: student.class_number,
+            student_count: 0,
+            assigned_count: 0
+          };
+        }
+        acc[key].student_count++;
+        return acc;
+      }, {} as Record<string, ClassInfo>);
+
+      // 할당된 학생 수 계산
+      (assignmentsData || []).forEach(assignment => {
+        if (assignment.students) {
+          const key = `${assignment.students.grade}-${assignment.students.class_number}`;
+          if (classStats[key]) {
+            classStats[key].assigned_count++;
+          }
+        }
+      });
+
+      setClasses(Object.values(classStats).sort((a, b) => {
+        if (a.grade !== b.grade) return a.grade - b.grade;
+        return a.class_number - b.class_number;
+      }));
     } catch (error) {
-      console.error('Error fetching students:', error);
+      console.error('Error fetching class info:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const generateRandomPrefix = () => {
-    const chars = 'abcdefghijklmnopqrstuvwxyz';
-    return Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('');
-  };
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !project) return;
-
-    setUploading(true);
+  const assignClassToProject = async (grade: number, classNumber: number) => {
+    if (!id || !user) return;
 
     try {
-      const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'array' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-
-      if (jsonData.length < 2) {
-        throw new Error('Excel 파일에 데이터가 부족합니다.');
-      }
-
-      const headers = jsonData[0];
-      const expectedHeaders = ['학년', '반', '번호', '이름'];
-      
-      if (!expectedHeaders.every((header, index) => headers[index] === header)) {
-        throw new Error('Excel 파일의 첫 번째 행은 "학년", "반", "번호", "이름" 순서여야 합니다.');
-      }
-
-      const studentsData = [];
-      const prefix = generateRandomPrefix();
-
-      for (let i = 1; i < jsonData.length; i++) {
-        const row = jsonData[i];
-        if (!row[0] || !row[1] || !row[2] || !row[3]) continue;
-
-        const grade = parseInt(row[0]);
-        const classNumber = parseInt(row[1]);
-        const studentNumber = parseInt(row[2]);
-        const name = row[3];
-
-        const studentId = `${prefix}_${grade}${classNumber}${studentNumber.toString().padStart(2, '0')}`;
-        const password = `${grade}${classNumber}${studentNumber.toString().padStart(2, '0')}`;
-
-        studentsData.push({
-          project_id: project.id,
-          student_id: studentId,
-          password: password,
-          grade: grade,
-          class_number: classNumber,
-          student_number: studentNumber,
-          name: name,
-        });
-      }
-
-      const { error } = await supabase
+      // 해당 학년/반의 미할당 학생들 가져오기
+      const { data: studentsData, error: studentsError } = await supabase
         .from('students')
-        .insert(studentsData);
+        .select('id')
+        .eq('grade', grade)
+        .eq('class_number', classNumber)
+        .not('id', 'in', `(
+          SELECT student_id 
+          FROM project_assignments 
+          WHERE project_id = '${id}'
+        )`);
 
-      if (error) throw error;
+      if (studentsError) throw studentsError;
+
+      if (!studentsData || studentsData.length === 0) {
+        toast({
+          title: '알림',
+          description: '할당할 수 있는 학생이 없습니다.',
+        });
+        return;
+      }
+
+      // 프로젝트에 학생들 할당
+      const assignments = studentsData.map(student => ({
+        project_id: id,
+        student_id: student.id,
+      }));
+
+      const { error: assignError } = await supabase
+        .from('project_assignments')
+        .insert(assignments);
+
+      if (assignError) throw assignError;
 
       toast({
         title: '성공',
-        description: `${studentsData.length}명의 학생이 추가되었습니다.`,
+        description: `${grade}학년 ${classNumber}반 학생 ${studentsData.length}명이 할당되었습니다.`,
       });
 
-      setIsDialogOpen(false);
-      fetchStudents();
+      fetchClassInfo();
     } catch (error: any) {
-      console.error('Error uploading students:', error);
+      console.error('Error assigning class to project:', error);
       toast({
         title: '오류',
-        description: error.message || '학생 목록을 업로드하는데 실패했습니다.',
+        description: error.message || '학생 할당에 실패했습니다.',
         variant: 'destructive',
       });
-    } finally {
-      setUploading(false);
-      if (event.target) {
-        event.target.value = '';
-      }
     }
   };
 
-  const deleteStudent = async (studentId: string) => {
-    if (!confirm('이 학생을 삭제하시겠습니까?')) return;
+  const removeClassFromProject = async (grade: number, classNumber: number) => {
+    if (!id || !confirm(`${grade}학년 ${classNumber}반의 모든 할당을 취소하시겠습니까?`)) return;
 
     try {
-      const { error } = await supabase
+      // 해당 학년/반 학생들의 할당 취소
+      const { data: studentsData, error: studentsError } = await supabase
         .from('students')
-        .delete()
-        .eq('id', studentId);
+        .select('id')
+        .eq('grade', grade)
+        .eq('class_number', classNumber);
 
-      if (error) throw error;
+      if (studentsError) throw studentsError;
+
+      const studentIds = (studentsData || []).map(s => s.id);
+
+      const { error: removeError } = await supabase
+        .from('project_assignments')
+        .delete()
+        .eq('project_id', id)
+        .in('student_id', studentIds);
+
+      if (removeError) throw removeError;
 
       toast({
         title: '성공',
-        description: '학생이 삭제되었습니다.',
+        description: `${grade}학년 ${classNumber}반의 할당이 취소되었습니다.`,
       });
 
-      fetchStudents();
-    } catch (error) {
-      console.error('Error deleting student:', error);
+      fetchClassInfo();
+    } catch (error: any) {
+      console.error('Error removing class assignment:', error);
       toast({
         title: '오류',
-        description: '학생을 삭제하는데 실패했습니다.',
+        description: error.message || '할당 취소에 실패했습니다.',
         variant: 'destructive',
       });
     }
@@ -224,8 +237,8 @@ export const ProjectDetail: React.FC = () => {
     );
   }
 
-  const completedCount = students.filter(s => s.has_completed).length;
-  const totalCount = students.length;
+  const totalStudents = classes.reduce((sum, cls) => sum + cls.student_count, 0);
+  const totalAssigned = classes.reduce((sum, cls) => sum + cls.assigned_count, 0);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -244,180 +257,132 @@ export const ProjectDetail: React.FC = () => {
             <h1 className="text-3xl font-bold">{project.title}</h1>
             <p className="text-muted-foreground mt-2">{project.description}</p>
           </div>
-          <Badge variant={project.is_active ? "default" : "secondary"}>
-            {project.is_active ? '활성' : '비활성'}
-          </Badge>
+          <div className="flex gap-2">
+            <Badge variant={project.is_active ? "default" : "secondary"}>
+              {project.is_active ? '활성' : '비활성'}
+            </Badge>
+            <Button
+              onClick={() => navigate(`/project/${id}/assignments`)}
+              variant="outline"
+            >
+              <BookOpen className="w-4 h-4 mr-2" />
+              할당 현황 보기
+            </Button>
+          </div>
         </div>
       </div>
 
+      {/* 통계 카드 */}
       <div className="grid gap-6 md:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">총 학생 수</CardTitle>
+            <CardTitle className="text-sm font-medium">전체 학생 수</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCount}</div>
+            <div className="text-2xl font-bold">{totalStudents}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">완료한 학생</CardTitle>
+            <CardTitle className="text-sm font-medium">할당된 학생</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completedCount}</div>
+            <div className="text-2xl font-bold">{totalAssigned}</div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">완료율</CardTitle>
+            <CardTitle className="text-sm font-medium">할당률</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0}%
+              {totalStudents > 0 ? Math.round((totalAssigned / totalStudents) * 100) : 0}%
             </div>
           </CardContent>
         </Card>
       </div>
 
-      <Tabs defaultValue="students">
-        <TabsList>
-          <TabsTrigger value="students">학생 관리</TabsTrigger>
-          <TabsTrigger value="responses">응답 현황</TabsTrigger>
-          <TabsTrigger value="settings">설정</TabsTrigger>
-        </TabsList>
+      {/* 프로젝트 질문 */}
+      <Card className="mb-8">
+        <CardHeader>
+          <CardTitle>프로젝트 질문</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-lg">{project.question}</p>
+        </CardContent>
+      </Card>
 
-        <TabsContent value="students" className="space-y-4">
-          <div className="flex justify-between items-center">
-            <h2 className="text-xl font-semibold">학생 목록</h2>
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-              <DialogTrigger asChild>
-                <Button>
-                  <Plus className="w-4 h-4 mr-2" />
-                  학생 추가
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>학생 목록 업로드</DialogTitle>
-                  <DialogDescription>
-                    Excel 파일로 학생 목록을 일괄 업로드할 수 있습니다.
-                    <br />
-                    파일 형식: 1행에 "학년", "반", "번호", "이름" 순서로 입력
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <div className="flex items-center space-x-2">
-                    <Input
-                      type="file"
-                      accept=".xlsx,.xls"
-                      onChange={handleFileUpload}
-                      disabled={uploading}
-                    />
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      disabled={uploading}
-                    >
-                      <Upload className="h-4 w-4" />
-                    </Button>
+      {/* 학급 할당 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>학급별 할당 관리</CardTitle>
+          <CardDescription>
+            학년과 반을 선택하여 프로젝트에 할당하거나 할당을 취소할 수 있습니다.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {classes.length === 0 ? (
+            <div className="text-center py-8">
+              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-lg font-semibold mb-2">등록된 학생이 없습니다</h3>
+              <p className="text-muted-foreground mb-4">
+                먼저 학생 관리에서 학생을 등록해주세요.
+              </p>
+              <Button onClick={() => navigate('/student-management')}>
+                <Plus className="w-4 h-4 mr-2" />
+                학생 관리로 이동
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {classes.map((cls) => (
+                <Card key={`${cls.grade}-${cls.class_number}`} className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="font-semibold">
+                      {cls.grade}학년 {cls.class_number}반
+                    </h3>
+                    <Badge variant="outline">
+                      {cls.assigned_count}/{cls.student_count}
+                    </Badge>
                   </div>
-                  {uploading && (
-                    <p className="text-sm text-muted-foreground">업로드 중...</p>
-                  )}
-                </div>
-              </DialogContent>
-            </Dialog>
-          </div>
-
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>학생 ID</TableHead>
-                    <TableHead>이름</TableHead>
-                    <TableHead>학년</TableHead>
-                    <TableHead>반</TableHead>
-                    <TableHead>번호</TableHead>
-                    <TableHead>비밀번호</TableHead>
-                    <TableHead>상태</TableHead>
-                    <TableHead>액션</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {students.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={8} className="text-center py-8">
-                        등록된 학생이 없습니다. 학생을 추가해주세요.
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    students.map((student) => (
-                      <TableRow key={student.id}>
-                        <TableCell className="font-mono text-sm">
-                          {student.student_id}
-                        </TableCell>
-                        <TableCell>{student.name}</TableCell>
-                        <TableCell>{student.grade}학년</TableCell>
-                        <TableCell>{student.class_number}반</TableCell>
-                        <TableCell>{student.student_number}번</TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {student.grade}{student.class_number}{student.student_number.toString().padStart(2, '0')}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={student.has_completed ? "default" : "secondary"}>
-                            {student.has_completed ? '완료' : '미완료'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteStudent(student.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="responses" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>응답 현황</CardTitle>
-              <CardDescription>
-                학생들의 응답 현황을 확인할 수 있습니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">응답 현황 기능은 개발 중입니다.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="settings" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>프로젝트 설정</CardTitle>
-              <CardDescription>
-                프로젝트의 활성화 상태 및 기타 설정을 변경할 수 있습니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">설정 기능은 개발 중입니다.</p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                  
+                  <div className="space-y-2">
+                    <div className="text-sm text-muted-foreground">
+                      전체: {cls.student_count}명, 할당: {cls.assigned_count}명
+                    </div>
+                    
+                    <div className="flex gap-2">
+                      {cls.assigned_count < cls.student_count && (
+                        <Button
+                          size="sm"
+                          onClick={() => assignClassToProject(cls.grade, cls.class_number)}
+                          className="flex-1"
+                        >
+                          할당
+                        </Button>
+                      )}
+                      
+                      {cls.assigned_count > 0 && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => removeClassFromProject(cls.grade, cls.class_number)}
+                          className="flex-1"
+                        >
+                          할당 취소
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };

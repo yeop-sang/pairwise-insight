@@ -10,6 +10,8 @@ import { CreateProject } from "./pages/CreateProject";
 import { StudentDashboard } from "./pages/StudentDashboard";
 import { ComparisonSession } from "./pages/ComparisonSession";
 import { ProjectDetail } from "./pages/ProjectDetail";
+import { StudentManagement } from "./pages/StudentManagement";
+import { ProjectAssignment } from "./pages/ProjectAssignment";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,10 +27,12 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/student-dashboard" element={<StudentDashboard />} />
+            <Route path="/student-management" element={<StudentManagement />} />
             <Route path="/create-project" element={<CreateProject />} />
             <Route path="/compare/:projectId" element={<ComparisonSession />} />
             <Route path="/compare-demo" element={<ComparisonSession />} />
             <Route path="/project/:id" element={<ProjectDetail />} />
+            <Route path="/project/:id/assignments" element={<ProjectAssignment />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
