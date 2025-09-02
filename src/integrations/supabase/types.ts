@@ -270,6 +270,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_bradley_terry_by_question: {
+        Args: { project_uuid: string; question_num: number }
+        Returns: {
+          loss_count: number
+          rank: number
+          response_id: string
+          score: number
+          student_code: string
+          total_comparisons: number
+          win_count: number
+        }[]
+      }
       calculate_bradley_terry_scores: {
         Args: { project_uuid: string }
         Returns: {

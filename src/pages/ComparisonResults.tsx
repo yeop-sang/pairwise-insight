@@ -9,6 +9,7 @@ import { Progress } from '@/components/ui/progress';
 import { ArrowLeft, Download, Trophy, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 interface ComparisonResult {
   response_id: string;
@@ -77,7 +78,7 @@ export const ComparisonResults = () => {
       const allResults: ComparisonResult[] = [];
       for (const qNum of questionNumbers) {
         const { data: resultsData, error: resultsError } = await supabase
-          .rpc('calculate_bradley_terry_by_question', { 
+          .rpc('calculate_bradley_terry_by_question' as any, { 
             project_uuid: projectId, 
             question_num: qNum 
           });
@@ -103,21 +104,44 @@ export const ComparisonResults = () => {
   const exportToExcel = () => {
     if (!results.length || !project) return;
 
-    const exportData = results.map((result, index) => ({
-      '순위': result.rank,
-      '학생코드': result.student_code,
-      '점수': (result.score * 100).toFixed(1) + '%',
-      '승리횟수': result.win_count,
-      '패배횟수': result.loss_count,
-      '총비교횟수': result.total_comparisons,
-      '승률': result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) + '%' : '0%'
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
+    // 문항별로 데이터 정리
+    const questionNumbers = [...new Set(results.map(r => r.question_number))].sort();
     const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, '비교결과');
     
-    XLSX.writeFile(wb, `${project.title}_비교결과.xlsx`);
+    // 각 문항별로 시트 생성
+    questionNumbers.forEach(qNum => {
+      const questionResults = results.filter(r => r.question_number === qNum);
+      const exportData = questionResults.map((result) => ({
+        '순위': result.rank,
+        '학생코드': result.student_code,
+        '점수': (result.score * 100).toFixed(1) + '%',
+        '승리횟수': result.win_count,
+        '패배횟수': result.loss_count,
+        '총비교횟수': result.total_comparisons,
+        '승률': result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) + '%' : '0%'
+      }));
+
+      const ws = XLSX.utils.json_to_sheet(exportData);
+      XLSX.utils.book_append_sheet(wb, ws, `${qNum}번 문항`);
+    });
+    
+    // 전체 요약 시트
+    const summaryData = questionNumbers.map(qNum => {
+      const questionResults = results.filter(r => r.question_number === qNum);
+      const firstPlace = questionResults.find(r => r.rank === 1);
+      return {
+        '문항번호': qNum,
+        '1등학생': firstPlace?.student_code || '-',
+        '1등점수': firstPlace ? (firstPlace.score * 100).toFixed(1) + '%' : '-',
+        '총응답수': questionResults.length,
+        '총비교수': questionResults.reduce((sum, r) => sum + r.total_comparisons, 0)
+      };
+    });
+    
+    const summaryWs = XLSX.utils.json_to_sheet(summaryData);
+    XLSX.utils.book_append_sheet(wb, summaryWs, '전체 요약');
+    
+    XLSX.writeFile(wb, `${project.title}_문항별_비교결과.xlsx`);
     toast.success('결과를 Excel 파일로 내보냈습니다.');
   };
 
@@ -132,6 +156,20 @@ export const ComparisonResults = () => {
     if (rank <= 3) return <Trophy className="h-5 w-5" />;
     return <Target className="h-5 w-5" />;
   };
+
+  // 문항별 질문 내용
+  const getQuestionTitle = (questionNumber: number) => {
+    const questionMap: Record<number, string> = {
+      1: "감각 기관과 자극 전달 과정",
+      2: "동공 반사의 자극 전달 과정", 
+      3: "무조건 반사와 무릎 반사",
+      4: "온도 감각 실험",
+      5: "다양한 맛과 후각의 관계"
+    };
+    return questionMap[questionNumber] || `${questionNumber}번 문항`;
+  };
+
+  const filteredResults = results.filter(r => r.question_number === selectedQuestion);
 
   if (loading) {
     return (
@@ -171,81 +209,106 @@ export const ComparisonResults = () => {
               <ArrowLeft className="mr-2 h-4 w-4" />
               대시보드로 돌아가기
             </Button>
-            <h1 className="text-3xl font-bold">{project.title} - 비교 결과</h1>
-            <p className="text-muted-foreground mt-2">Bradley-Terry 모델 기반 순위 분석</p>
+            <h1 className="text-3xl font-bold">{project.title} - 문항별 비교 결과</h1>
+            <p className="text-muted-foreground mt-2">Bradley-Terry 모델 기반 문항별 순위 분석</p>
           </div>
           <Button onClick={exportToExcel} className="gap-2">
             <Download className="h-4 w-4" />
-            Excel 내보내기
+            Excel 내보내기 (전체)
           </Button>
         </div>
 
-        {results.length === 0 ? (
-          <Card>
-            <CardContent className="text-center py-12">
-              <p className="text-lg text-muted-foreground">아직 비교 데이터가 없습니다.</p>
-              <p className="text-sm text-muted-foreground mt-2">학생들이 비교를 시작하면 결과가 여기에 표시됩니다.</p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4">
-            {results.map((result, index) => (
-              <Card key={result.response_id} className="overflow-hidden">
-                <CardContent className="p-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`flex items-center justify-center w-12 h-12 rounded-full text-white font-bold ${getRankColor(result.rank)}`}>
-                        {getRankIcon(result.rank)}
-                        <span className="ml-1">{result.rank}</span>
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold">{result.student_code}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          승률: {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-6">
-                      <div className="text-center">
-                        <p className="text-2xl font-bold text-primary">{(result.score * 100).toFixed(1)}%</p>
-                        <p className="text-xs text-muted-foreground">Bradley-Terry 점수</p>
-                      </div>
-                      
-                      <div className="text-center">
-                        <p className="text-lg font-semibold text-green-600">{result.win_count}</p>
-                        <p className="text-xs text-muted-foreground">승리</p>
-                      </div>
-                      
-                      <div className="text-center">
-                        <p className="text-lg font-semibold text-red-600">{result.loss_count}</p>
-                        <p className="text-xs text-muted-foreground">패배</p>
-                      </div>
-                      
-                      <div className="text-center">
-                        <p className="text-lg font-semibold">{result.total_comparisons}</p>
-                        <p className="text-xs text-muted-foreground">총 비교</p>
-                      </div>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-muted-foreground">승률</span>
-                      <span className="text-sm font-medium">
-                        {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
-                      </span>
-                    </div>
-                    <Progress 
-                      value={result.total_comparisons > 0 ? (result.win_count / result.total_comparisons) * 100 : 0} 
-                      className="h-2"
-                    />
-                  </div>
+        <Tabs value={selectedQuestion.toString()} onValueChange={(value) => setSelectedQuestion(parseInt(value))}>
+          <TabsList className="grid w-full grid-cols-5 mb-6">
+            {[1,2,3,4,5].slice(0, maxQuestions).map(qNum => (
+              <TabsTrigger key={qNum} value={qNum.toString()}>
+                {qNum}번 문항
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          
+          {[1,2,3,4,5].slice(0, maxQuestions).map(qNum => (
+            <TabsContent key={qNum} value={qNum.toString()}>
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>{qNum}번 문항: {getQuestionTitle(qNum)}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    이 문항에 대한 학생들의 응답을 쌍대비교로 분석한 결과입니다.
+                  </p>
                 </CardContent>
               </Card>
-            ))}
-          </div>
-        )}
+
+              {filteredResults.length === 0 ? (
+                <Card>
+                  <CardContent className="text-center py-12">
+                    <p className="text-lg text-muted-foreground">아직 이 문항에 대한 비교 데이터가 없습니다.</p>
+                    <p className="text-sm text-muted-foreground mt-2">학생들이 비교를 시작하면 결과가 여기에 표시됩니다.</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="grid gap-4">
+                  {filteredResults.map((result) => (
+                    <Card key={result.response_id} className="overflow-hidden">
+                      <CardContent className="p-6">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-4">
+                            <div className={`flex items-center justify-center w-12 h-12 rounded-full text-white font-bold ${getRankColor(result.rank)}`}>
+                              {getRankIcon(result.rank)}
+                              <span className="ml-1">{result.rank}</span>
+                            </div>
+                            <div>
+                              <h3 className="text-lg font-semibold">{result.student_code}</h3>
+                              <p className="text-sm text-muted-foreground">
+                                승률: {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-6">
+                            <div className="text-center">
+                              <p className="text-2xl font-bold text-primary">{(result.score * 100).toFixed(1)}%</p>
+                              <p className="text-xs text-muted-foreground">Bradley-Terry 점수</p>
+                            </div>
+                            
+                            <div className="text-center">
+                              <p className="text-lg font-semibold text-green-600">{result.win_count}</p>
+                              <p className="text-xs text-muted-foreground">승리</p>
+                            </div>
+                            
+                            <div className="text-center">
+                              <p className="text-lg font-semibold text-red-600">{result.loss_count}</p>
+                              <p className="text-xs text-muted-foreground">패배</p>
+                            </div>
+                            
+                            <div className="text-center">
+                              <p className="text-lg font-semibold">{result.total_comparisons}</p>
+                              <p className="text-xs text-muted-foreground">총 비교</p>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        <div className="mt-4">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className="text-sm text-muted-foreground">승률</span>
+                            <span className="text-sm font-medium">
+                              {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
+                            </span>
+                          </div>
+                          <Progress 
+                            value={result.total_comparisons > 0 ? (result.win_count / result.total_comparisons) * 100 : 0} 
+                            className="h-2"
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </TabsContent>
+          ))}
+        </Tabs>
       </div>
     </div>
   );
