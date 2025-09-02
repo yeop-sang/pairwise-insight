@@ -51,18 +51,7 @@ export const Dashboard = () => {
     }
   };
 
-  if (profile?.role !== 'teacher') {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card>
-          <CardContent className="p-8 text-center">
-            <h2 className="text-xl font-semibold mb-4">접근 권한 없음</h2>
-            <p className="text-muted-foreground">교사 대시보드에 접근할 권한이 없습니다.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // 임시로 모든 사용자가 교사 대시보드에 접근 가능하도록 수정
 
   if (loading) {
     return (

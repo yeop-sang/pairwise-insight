@@ -114,9 +114,6 @@ export const CompareSession = () => {
       // For demo, just randomize the responses
       const shuffled = [...mockResponses].sort(() => Math.random() - 0.5);
       setCurrentPair({ left: shuffled[0], right: shuffled[1] });
-    } else {
-      // Session complete
-      navigate("/results");
     }
   };
 
@@ -138,6 +135,43 @@ export const CompareSession = () => {
     return `${minutes} min`;
   };
 
+  // 비교 완료 화면
+  if (completed >= total) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
+          <div className="text-center space-y-6">
+            <div className="text-6xl">🎉</div>
+            <h1 className="text-3xl font-bold text-foreground">평가 완료!</h1>
+            <p className="text-lg text-muted-foreground">
+              수고하셨습니다. 모든 비교 평가를 마무리했습니다.
+            </p>
+            <div className="flex gap-4 justify-center">
+              <Button 
+                onClick={() => {
+                  setCompleted(1);
+                  setStartTime(Date.now());
+                  const shuffled = [...mockResponses].sort(() => Math.random() - 0.5);
+                  setCurrentPair({ left: shuffled[0], right: shuffled[1] });
+                }}
+                className="flex items-center gap-2"
+              >
+                다시 평가하기
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => navigate("/student-dashboard")}
+                className="flex items-center gap-2"
+              >
+                다른 평가하러 가기
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <QuestionStickyHeader
@@ -154,7 +188,7 @@ export const CompareSession = () => {
         <div className="flex justify-between items-center mb-6">
           <Button
             variant="outline"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/student-dashboard")}
             className="flex items-center gap-2"
           >
             <X className="h-4 w-4" />
