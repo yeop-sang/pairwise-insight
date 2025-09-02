@@ -3,12 +3,16 @@ import { AuthForm } from "@/components/AuthForm";
 import { BarChart3, UserCheck } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useToast } from "@/hooks/use-toast";
 import ppaLogo from "@/assets/ppa-logo.png";
 import { useEffect } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
   const { user, profile, signIn, signUp } = useAuth();
+  const { student, login: studentLogin } = useStudentAuth();
+  const { toast } = useToast();
 
   // Redirect if user is already logged in
   useEffect(() => {
@@ -19,22 +23,54 @@ const Index = () => {
         navigate('/student-dashboard');
       }
     }
-  }, [user, profile, navigate]);
+    // Also redirect if student is logged in
+    if (student) {
+      navigate('/student-dashboard');
+    }
+  }, [user, profile, student, navigate]);
 
   const handleLogin = async (email: string, password: string, role?: 'teacher' | 'student') => {
     console.log('Index handleLogin called with role:', role);
     
     try {
-      const { error } = await signIn(email, password);
-      
-      if (!error) {
-        console.log('Login successful');
-        // 로그인 성공 후 onAuthStateChange에서 자동으로 라우팅 처리
+      if (role === 'student') {
+        // 학생 로그인: students 테이블 사용
+        const { error } = await studentLogin(email, password);
+        
+        if (!error) {
+          console.log('Student login successful');
+          navigate('/student-dashboard');
+        } else {
+          console.error('Student login failed:', error);
+          toast({
+            title: '로그인 실패',
+            description: error,
+            variant: 'destructive',
+          });
+        }
       } else {
-        console.error('Login failed:', error);
+        // 교사 로그인: Supabase Auth 사용
+        const { error } = await signIn(email, password);
+        
+        if (!error) {
+          console.log('Teacher login successful');
+          // 로그인 성공 후 onAuthStateChange에서 자동으로 라우팅 처리
+        } else {
+          console.error('Teacher login failed:', error);
+          toast({
+            title: '로그인 실패',
+            description: '이메일 또는 비밀번호가 올바르지 않습니다.',
+            variant: 'destructive',
+          });
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
+      toast({
+        title: '로그인 오류',
+        description: '로그인 중 오류가 발생했습니다.',
+        variant: 'destructive',
+      });
     }
   };
 
