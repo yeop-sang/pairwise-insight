@@ -166,6 +166,7 @@ export type Database = {
           created_at: string
           id: string
           project_id: string
+          question_number: number
           response_text: string
           student_code: string
           updated_at: string
@@ -174,6 +175,7 @@ export type Database = {
           created_at?: string
           id?: string
           project_id: string
+          question_number?: number
           response_text: string
           student_code: string
           updated_at?: string
@@ -182,6 +184,7 @@ export type Database = {
           created_at?: string
           id?: string
           project_id?: string
+          question_number?: number
           response_text?: string
           student_code?: string
           updated_at?: string

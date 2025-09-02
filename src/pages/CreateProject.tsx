@@ -144,7 +144,8 @@ export const CreateProject = () => {
           responses.map(response => ({
             project_id: project.id,
             student_code: response.code,
-            response_text: response.answer
+            response_text: response.answer,
+            question_number: response.questionIndex + 1 // 1-based indexing
           }))
         );
 
