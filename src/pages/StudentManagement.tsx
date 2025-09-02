@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, Upload, Trash2, Search, ArrowLeft } from 'lucide-react';
+import { Users, Plus, Upload, Trash2, Search, ArrowLeft, UserX, GraduationCap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Student {
@@ -39,6 +39,8 @@ export const StudentManagement: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{type: 'grade' | 'class', grade: number, class?: number} | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedClass, setSelectedClass] = useState<number | null>(null);
@@ -228,6 +230,101 @@ export const StudentManagement: React.FC = () => {
     }
   };
 
+  const deleteByGrade = async (grade: number) => {
+    try {
+      const { data: studentsToDelete, error: fetchError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('grade', grade);
+
+      if (fetchError) throw fetchError;
+
+      if (!studentsToDelete || studentsToDelete.length === 0) {
+        toast({
+          title: '알림',
+          description: `${grade}학년에 삭제할 학생이 없습니다.`,
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('grade', grade);
+
+      if (error) throw error;
+
+      toast({
+        title: '성공',
+        description: `${grade}학년 학생 ${studentsToDelete.length}명이 삭제되었습니다.`,
+      });
+
+      fetchStudents();
+    } catch (error) {
+      console.error('Error deleting students by grade:', error);
+      toast({
+        title: '오류',
+        description: '학년별 학생 삭제에 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const deleteByClass = async (grade: number, classNumber: number) => {
+    try {
+      const { data: studentsToDelete, error: fetchError } = await supabase
+        .from('students')
+        .select('id')
+        .eq('grade', grade)
+        .eq('class_number', classNumber);
+
+      if (fetchError) throw fetchError;
+
+      if (!studentsToDelete || studentsToDelete.length === 0) {
+        toast({
+          title: '알림',
+          description: `${grade}학년 ${classNumber}반에 삭제할 학생이 없습니다.`,
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('students')
+        .delete()
+        .eq('grade', grade)
+        .eq('class_number', classNumber);
+
+      if (error) throw error;
+
+      toast({
+        title: '성공',
+        description: `${grade}학년 ${classNumber}반 학생 ${studentsToDelete.length}명이 삭제되었습니다.`,
+      });
+
+      fetchStudents();
+    } catch (error) {
+      console.error('Error deleting students by class:', error);
+      toast({
+        title: '오류',
+        description: '반별 학생 삭제에 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleBulkDelete = () => {
+    if (!deleteTarget) return;
+
+    if (deleteTarget.type === 'grade') {
+      deleteByGrade(deleteTarget.grade);
+    } else {
+      deleteByClass(deleteTarget.grade, deleteTarget.class!);
+    }
+    
+    setIsDeleteDialogOpen(false);
+    setDeleteTarget(null);
+  };
+
   const resetFilters = () => {
     setSearchTerm('');
     setSelectedGrade(null);
@@ -307,22 +404,52 @@ export const StudentManagement: React.FC = () => {
       {classStats.length > 0 && (
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>반별 학생 현황</CardTitle>
+            <div className="flex items-center justify-between">
+              <CardTitle>반별 학생 현황</CardTitle>
+              <div className="flex gap-2">
+                {uniqueGrades.map((grade) => (
+                  <Button
+                    key={grade}
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setDeleteTarget({ type: 'grade', grade });
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <GraduationCap className="w-4 h-4 mr-2" />
+                    {grade}학년 삭제
+                  </Button>
+                ))}
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {classStats.map((stat) => (
-                <Badge 
-                  key={`${stat.grade}-${stat.class_number}`}
-                  variant="outline"
-                  className="cursor-pointer hover:bg-accent"
-                  onClick={() => {
-                    setSelectedGrade(stat.grade);
-                    setSelectedClass(stat.class_number);
-                  }}
-                >
-                  {stat.grade}학년 {stat.class_number}반 ({stat.count}명)
-                </Badge>
+                <div key={`${stat.grade}-${stat.class_number}`} className="flex items-center gap-1">
+                  <Badge 
+                    variant="outline"
+                    className="cursor-pointer hover:bg-accent"
+                    onClick={() => {
+                      setSelectedGrade(stat.grade);
+                      setSelectedClass(stat.class_number);
+                    }}
+                  >
+                    {stat.grade}학년 {stat.class_number}반 ({stat.count}명)
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setDeleteTarget({ type: 'class', grade: stat.grade, class: stat.class_number });
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <UserX className="w-3 h-3" />
+                  </Button>
+                </div>
               ))}
             </div>
           </CardContent>
@@ -427,6 +554,31 @@ export const StudentManagement: React.FC = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* 일괄 삭제 확인 다이얼로그 */}
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>학생 일괄 삭제</DialogTitle>
+            <DialogDescription>
+              {deleteTarget?.type === 'grade' 
+                ? `${deleteTarget.grade}학년 모든 학생을 삭제하시겠습니까?`
+                : `${deleteTarget?.grade}학년 ${deleteTarget?.class}반 모든 학생을 삭제하시겠습니까?`
+              }
+              <br />
+              <span className="text-destructive font-medium">이 작업은 되돌릴 수 없습니다.</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
+              취소
+            </Button>
+            <Button variant="destructive" onClick={handleBulkDelete}>
+              삭제
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* 학생 목록 테이블 */}
       <Card>
