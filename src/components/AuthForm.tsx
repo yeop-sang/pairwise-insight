@@ -26,6 +26,7 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Teacher login:', teacherLoginData);
+    console.log('Calling onLogin with teacher role');
     onLogin(teacherLoginData.email, teacherLoginData.password, 'teacher');
   };
 
