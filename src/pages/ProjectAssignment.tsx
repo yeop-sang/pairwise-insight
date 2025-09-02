@@ -78,7 +78,7 @@ export const ProjectAssignment: React.FC = () => {
         .from('project_assignments')
         .select(`
           *,
-          students (
+          students!fk_project_assignments_student_id (
             student_id,
             name,
             grade,

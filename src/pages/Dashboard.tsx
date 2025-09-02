@@ -129,6 +129,10 @@ export const Dashboard = () => {
             </p>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => navigate('/student-management')}>
+              <Users className="h-4 w-4 mr-2" />
+              학생 관리
+            </Button>
             <Button 
               onClick={() => navigate("/create-project")} 
               className="flex items-center gap-2"

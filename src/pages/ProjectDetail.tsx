@@ -83,7 +83,7 @@ export const ProjectDetail: React.FC = () => {
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('project_assignments')
         .select(`
-          students (
+          students!fk_project_assignments_student_id (
             grade,
             class_number
           )
