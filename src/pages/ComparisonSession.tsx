@@ -40,17 +40,20 @@ export const ComparisonSession = () => {
   const [startTime, setStartTime] = useState<number>(Date.now());
 
   // 현재 사용자 정보 (교사 또는 학생)
-  const currentUserId = user?.id || student?.id;
   const isStudent = !!student;
+  const isTeacher = !!user && !!profile;
+  const currentUserId = student?.id || user?.id;
 
   useEffect(() => {
-    if (currentUserId && projectId) {
-      fetchProjectAndResponses();
-    } else if (!student) {
-      // 학생이 아니고 교사 로그인도 안되어 있으면 학생 로그인으로 리다이렉트
+    if (!isStudent && !isTeacher) {
       navigate('/student-login');
+      return;
     }
-  }, [currentUserId, projectId, student, navigate]);
+    
+    if (projectId) {
+      fetchProjectAndResponses();
+    }
+  }, [isStudent, isTeacher, projectId, navigate]);
 
   const fetchProjectAndResponses = async () => {
     try {
@@ -74,12 +77,17 @@ export const ComparisonSession = () => {
       if (responsesError) throw responsesError;
       setResponses(responsesData || []);
 
-      // Get comparison count for this student
-      const { count } = await supabase
+      // Get comparison count - only for students, teachers can view all
+      let comparisonQuery = supabase
         .from('comparisons')
         .select('*', { count: 'exact', head: true })
-        .eq('project_id', projectId)
-        .eq('student_id', currentUserId);
+        .eq('project_id', projectId);
+      
+      if (isStudent) {
+        comparisonQuery = comparisonQuery.eq('student_id', currentUserId);
+      }
+      
+      const { count } = await comparisonQuery;
 
       setComparisonCount(count || 0);
 
@@ -109,12 +117,17 @@ export const ComparisonSession = () => {
       return;
     }
 
-    // Get already compared pairs
-    const { data: existingComparisons } = await supabase
+    // Get already compared pairs - only for students
+    let comparisonQuery = supabase
       .from('comparisons')
       .select('response_a_id, response_b_id')
-      .eq('project_id', projectId)
-      .eq('student_id', currentUserId);
+      .eq('project_id', projectId);
+    
+    if (isStudent) {
+      comparisonQuery = comparisonQuery.eq('student_id', currentUserId);
+    }
+    
+    const { data: existingComparisons } = await comparisonQuery;
 
     const comparedPairs = new Set(
       (existingComparisons || []).map(c => 
@@ -147,6 +160,16 @@ export const ComparisonSession = () => {
 
   const handleChoice = async (chosenResponse: StudentResponse) => {
     if (!responseA || !responseB || !currentUserId) return;
+    
+    // Only students can make comparisons, teachers can only view
+    if (!isStudent) {
+      toast({
+        variant: "destructive",
+        title: "권한 없음",
+        description: "교사는 비교를 볼 수만 있습니다."
+      });
+      return;
+    }
 
     setSubmitting(true);
     const comparisonTime = Date.now() - startTime;

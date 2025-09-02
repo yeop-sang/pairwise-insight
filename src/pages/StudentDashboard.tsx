@@ -29,18 +29,32 @@ export const StudentDashboard = () => {
     if (!student) return;
     
     try {
-      const { data, error } = await supabase
+      // First get projects that are assigned to this student
+      const { data: assignedProjects, error: assignmentError } = await supabase
+        .from('project_assignments')
+        .select('project_id')
+        .eq('student_id', student.id);
+      
+      if (assignmentError) throw assignmentError;
+      
+      if (!assignedProjects || assignedProjects.length === 0) {
+        setProjects([]);
+        setLoading(false);
+        return;
+      }
+      
+      const projectIds = assignedProjects.map(p => p.project_id);
+      
+      // Then get the actual project details
+      const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select(`
-          *,
-          project_assignments!inner(*)
-        `)
-        .eq('project_assignments.student_id', student.id)
+        .select('*')
+        .in('id', projectIds)
         .eq('is_active', true);
       
-      if (error) throw error;
+      if (projectsError) throw projectsError;
       
-      setProjects(data || []);
+      setProjects(projectsData || []);
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
