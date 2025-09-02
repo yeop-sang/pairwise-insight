@@ -132,8 +132,6 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !user) return;
 
     try {
-      console.log('할당 시작:', { grade, classNumber, projectId: id });
-
       // 먼저 해당 학년/반의 학생들이 존재하는지 확인
       const { data: allStudents, error: allStudentsError } = await supabase
         .from('students')
@@ -142,11 +140,8 @@ export const ProjectDetail: React.FC = () => {
         .eq('class_number', classNumber);
 
       if (allStudentsError) {
-        console.error('학생 조회 오류:', allStudentsError);
         throw allStudentsError;
       }
-
-      console.log('해당 학년/반 학생들:', allStudents);
 
       if (!allStudents || allStudents.length === 0) {
         toast({
@@ -163,21 +158,15 @@ export const ProjectDetail: React.FC = () => {
         .eq('project_id', id);
 
       if (assignedError) {
-        console.error('할당된 학생 조회 오류:', assignedError);
         throw assignedError;
       }
 
-      console.log('이미 할당된 학생들:', assignedStudents);
-
       const assignedStudentIds = (assignedStudents || []).map(a => a.student_id);
-      console.log('할당된 학생 ID 목록:', assignedStudentIds);
 
       // 미할당 학생들 필터링
       const unassignedStudents = allStudents.filter(student => 
         !assignedStudentIds.includes(student.id)
       );
-
-      console.log('미할당 학생들:', unassignedStudents);
 
       if (unassignedStudents.length === 0) {
         toast({
@@ -193,14 +182,11 @@ export const ProjectDetail: React.FC = () => {
         student_id: student.id,
       }));
 
-      console.log('할당할 데이터:', assignments);
-
       const { error: assignError } = await supabase
         .from('project_assignments')
         .insert(assignments);
 
       if (assignError) {
-        console.error('할당 삽입 오류:', assignError);
         throw assignError;
       }
 
