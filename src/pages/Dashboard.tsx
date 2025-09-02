@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Users, BarChart3, Clock, FileText } from "lucide-react";
+import { Plus, Users, BarChart3, Clock, FileText, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Project {
@@ -59,6 +59,29 @@ export const Dashboard = () => {
       console.error('Failed to fetch projects:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteProject = async (projectId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    
+    if (!confirm('정말로 이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.')) {
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .delete()
+        .eq('id', projectId);
+
+      if (error) throw error;
+      
+      // Remove from local state
+      setProjects(projects.filter(p => p.id !== projectId));
+    } catch (error) {
+      console.error('Failed to delete project:', error);
+      alert('프로젝트 삭제에 실패했습니다.');
     }
   };
 
@@ -225,6 +248,14 @@ export const Dashboard = () => {
                       <div className="text-center min-w-20">
                         <p className="text-xs">{new Date(project.created_at).toLocaleDateString()}</p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => deleteProject(project.id, e)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}
