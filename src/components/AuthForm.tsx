@@ -4,16 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Users, FileText, Mail, Lock, User } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Mail, Lock, User, GraduationCap, BookOpen } from "lucide-react";
 
 interface AuthFormProps {
   onLogin: (email: string, password: string) => void;
-  onSignup: (email: string, password: string, name: string) => void;
+  onSignup: (email: string, password: string, name: string, role: 'teacher' | 'student') => void;
 }
 
 export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
-  const [signupData, setSignupData] = useState({ email: "", password: "", name: "" });
+  const [signupData, setSignupData] = useState({ email: "", password: "", name: "", role: "student" as 'teacher' | 'student' });
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,7 +23,7 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    onSignup(signupData.email, signupData.password, signupData.name);
+    onSignup(signupData.email, signupData.password, signupData.name, signupData.role);
   };
 
   return (
@@ -125,6 +126,32 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                     required
                   />
                 </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="signup-role">역할</Label>
+                <Select 
+                  value={signupData.role} 
+                  onValueChange={(value: 'teacher' | 'student') => setSignupData({...signupData, role: value})}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="역할을 선택하세요" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="student">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="h-4 w-4" />
+                        학생
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="teacher">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        교사
+                      </div>
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               
               <Button type="submit" className="w-full" variant="academic">
