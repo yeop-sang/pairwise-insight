@@ -36,18 +36,53 @@ export const CreateProject = () => {
     }
   };
 
-  const parseCSV = async (file: File): Promise<Array<{code: string, answer: string}>> => {
+  const parseCSV = async (file: File): Promise<Array<{code: string, answer: string, questionIndex: number}>> => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
         const text = e.target?.result as string;
         const lines = text.split('\n').filter(line => line.trim());
         
-        // Skip header row, parse data
-        const data = lines.slice(1).map(line => {
-          const [code, answer] = line.split(',').map(cell => cell.trim().replace(/"/g, ''));
-          return { code, answer };
-        }).filter(row => row.code && row.answer);
+        if (lines.length < 2) {
+          reject(new Error("CSV 파일에는 최소 2줄(헤더 + 데이터)이 필요합니다."));
+          return;
+        }
+        
+        // 첫 번째 줄 - 문항들 (1열은 학생번호, 2열부터가 문항들)
+        const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
+        const questions = headerCells.slice(1); // 첫 번째 열(학생번호) 제외
+        
+        if (questions.length === 0) {
+          reject(new Error("문항이 없습니다. 2열부터 문항을 입력해주세요."));
+          return;
+        }
+        
+        // 두 번째 줄부터 - 학생 응답들
+        const data: Array<{code: string, answer: string, questionIndex: number}> = [];
+        
+        for (let i = 1; i < lines.length; i++) {
+          const cells = lines[i].split(',').map(cell => cell.trim().replace(/"/g, ''));
+          const studentCode = cells[0]; // 첫 번째 열은 학생 번호
+          
+          if (!studentCode) continue;
+          
+          // 각 문항에 대한 응답 처리
+          for (let j = 1; j < cells.length && j - 1 < questions.length; j++) {
+            const answer = cells[j];
+            if (answer && answer.trim()) {
+              data.push({
+                code: studentCode,
+                answer: answer,
+                questionIndex: j - 1 // 0부터 시작하는 문항 인덱스
+              });
+            }
+          }
+        }
+        
+        if (data.length === 0) {
+          reject(new Error("유효한 학생 응답이 없습니다."));
+          return;
+        }
         
         resolve(data);
       };
@@ -232,7 +267,7 @@ export const CreateProject = () => {
                   CSV 파일을 선택하거나 드래그하여 업로드하세요
                 </p>
                 <p className="text-xs text-muted-foreground mb-4">
-                  형식: 1열(code), 2열(answer) - 1행은 헤더
+                  형식: 1열(학생번호), 2열부터(문항들) - 1행은 문항명, 2행부터는 학생 응답
                 </p>
                 <Input
                   id="csv-file"
@@ -252,11 +287,15 @@ export const CreateProject = () => {
             <div className="bg-muted p-4 rounded-lg">
               <h4 className="font-medium mb-2">CSV 파일 형식 예시:</h4>
               <pre className="text-sm text-muted-foreground">
-{`code,answer
-1,"학생 1의 응답 내용..."
-2,"학생 2의 응답 내용..."
-3,"학생 3의 응답 내용..."`}
+{`학생번호,1번문항,2번문항,3번문항
+1,"1번 학생의 1번 응답","1번 학생의 2번 응답","1번 학생의 3번 응답"
+2,"2번 학생의 1번 응답","2번 학생의 2번 응답","2번 학생의 3번 응답"
+3,"3번 학생의 1번 응답","3번 학생의 2번 응답","3번 학생의 3번 응답"`}
               </pre>
+              <p className="text-xs text-muted-foreground mt-2">
+                * 1행: 1열은 "학생번호", 2열부터는 각 문항명<br/>
+                * 2행부터: 1열은 학생 식별번호, 2열부터는 해당 문항에 대한 학생 응답
+              </p>
             </div>
           </CardContent>
         </Card>
