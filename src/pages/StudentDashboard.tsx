@@ -49,8 +49,7 @@ export const StudentDashboard = () => {
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
-        .in('id', projectIds)
-        .eq('is_active', true);
+        .in('id', projectIds);
       
       if (projectsError) throw projectsError;
       
