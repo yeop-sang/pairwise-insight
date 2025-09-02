@@ -1,47 +1,36 @@
-import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { AuthForm } from "@/components/AuthForm";
-import { useAuth } from "@/hooks/useAuth";
 import { BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ppaLogo from "@/assets/ppa-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { signIn, signUp, user, profile, loading } = useAuth();
 
-  useEffect(() => {
-    if (user && profile) {
-      // Redirect based on role
-      if (profile.role === 'teacher') {
+  const handleLogin = async (email: string, password: string) => {
+    // 임시 로그인 - 아무 이메일/비밀번호로도 로그인 가능
+    if (email && password) {
+      // 이메일에 "teacher" 또는 "교사"가 포함되면 교사 대시보드로
+      if (email.includes('teacher') || email.includes('교사')) {
+        navigate("/dashboard");
+      } else {
+        // 그 외에는 학생 대시보드로
+        navigate("/student-dashboard");
+      }
+    }
+  };
+
+  const handleSignup = async (email: string, password: string, name: string, role: 'teacher' | 'student') => {
+    // 임시 회원가입 - 역할에 따라 리다이렉트
+    if (email && password && name) {
+      if (role === 'teacher') {
         navigate("/dashboard");
       } else {
         navigate("/student-dashboard");
       }
     }
-  }, [user, profile, navigate]);
-
-  const handleLogin = async (email: string, password: string) => {
-    const { error } = await signIn(email, password);
-    if (!error) {
-      // Navigation will be handled by useEffect
-    }
   };
 
-  const handleSignup = async (email: string, password: string, name: string, role: 'teacher' | 'student') => {
-    const { error } = await signUp(email, password, name, role);
-    if (!error) {
-      // Navigation will be handled by useEffect after email confirmation
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
-        <p className="text-muted-foreground">로딩 중...</p>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-subtle flex">
