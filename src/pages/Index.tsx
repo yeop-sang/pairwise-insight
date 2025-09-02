@@ -4,22 +4,37 @@ import { BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import ppaLogo from "@/assets/ppa-logo.png";
+import { useEffect } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
-  const { signIn, signUp } = useAuth();
+  const { user, profile, signIn, signUp } = useAuth();
+
+  // Redirect if user is already logged in
+  useEffect(() => {
+    if (user && profile) {
+      if (profile.role === 'teacher') {
+        navigate('/dashboard');
+      } else if (profile.role === 'student') {
+        navigate('/student-dashboard');
+      }
+    }
+  }, [user, profile, navigate]);
 
   const handleLogin = async (email: string, password: string, role?: 'teacher' | 'student') => {
     console.log('Index handleLogin called with role:', role);
     
-    // 임시로 모든 로그인 허용
-    if (email && password) {
-      console.log('Login successful, forcing page refresh');
-      if (role === 'teacher') {
-        window.location.href = '/dashboard';
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (!error) {
+        console.log('Login successful');
+        // 로그인 성공 후 onAuthStateChange에서 자동으로 라우팅 처리
       } else {
-        window.location.href = '/student-dashboard';
+        console.error('Login failed:', error);
       }
+    } catch (error) {
+      console.error('Login error:', error);
     }
   };
 

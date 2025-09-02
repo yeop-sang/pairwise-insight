@@ -21,19 +21,29 @@ interface Project {
 
 
 export const Dashboard = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // 임시로 모든 사용자에게 대시보드 접근 허용
-    if (user) {
-      fetchProjects();
-    } else if (profile?.role === 'student') {
-      navigate("/student-dashboard");
+    if (!authLoading) {
+      if (!user) {
+        navigate('/');
+        return;
+      }
+      
+      if (profile?.role === 'student') {
+        navigate("/student-dashboard");
+        return;
+      }
+      
+      // Only fetch projects if user exists and is teacher (or no profile yet)
+      if (user && (!profile || profile.role === 'teacher')) {
+        fetchProjects();
+      }
     }
-  }, [user, profile, navigate]);
+  }, [user, profile, authLoading, navigate]);
 
   const fetchProjects = async () => {
     try {
@@ -52,13 +62,22 @@ export const Dashboard = () => {
     }
   };
 
-  // 임시로 모든 사용자가 교사 대시보드에 접근 가능하도록 수정
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show message if not authenticated
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">로그인이 필요합니다.</p>
         </div>
       </div>
     );
