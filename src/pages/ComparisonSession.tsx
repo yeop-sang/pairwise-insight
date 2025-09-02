@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Zap, Clock } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,6 +27,7 @@ export const ComparisonSession = () => {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { user, profile } = useAuth();
+  const { student } = useStudentAuth();
   const { toast } = useToast();
   
   const [project, setProject] = useState<Project | null>(null);
@@ -37,11 +39,18 @@ export const ComparisonSession = () => {
   const [comparisonCount, setComparisonCount] = useState(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
 
+  // 현재 사용자 정보 (교사 또는 학생)
+  const currentUserId = user?.id || student?.id;
+  const isStudent = !!student;
+
   useEffect(() => {
-    if (user && projectId) {
+    if (currentUserId && projectId) {
       fetchProjectAndResponses();
+    } else if (!student) {
+      // 학생이 아니고 교사 로그인도 안되어 있으면 학생 로그인으로 리다이렉트
+      navigate('/student-login');
     }
-  }, [user, projectId]);
+  }, [currentUserId, projectId, student, navigate]);
 
   const fetchProjectAndResponses = async () => {
     try {
@@ -70,7 +79,7 @@ export const ComparisonSession = () => {
         .from('comparisons')
         .select('*', { count: 'exact', head: true })
         .eq('project_id', projectId)
-        .eq('student_id', user?.id);
+        .eq('student_id', currentUserId);
 
       setComparisonCount(count || 0);
 
@@ -83,7 +92,7 @@ export const ComparisonSession = () => {
         title: "프로젝트 로드 실패",
         description: error.message
       });
-      navigate('/student-dashboard');
+      navigate(isStudent ? '/student-dashboard' : '/dashboard');
     } finally {
       setLoading(false);
     }
@@ -96,7 +105,7 @@ export const ComparisonSession = () => {
         title: "비교할 응답이 부족합니다",
         description: "최소 2개의 응답이 필요합니다."
       });
-      navigate('/student-dashboard');
+      navigate(isStudent ? '/student-dashboard' : '/dashboard');
       return;
     }
 
@@ -105,7 +114,7 @@ export const ComparisonSession = () => {
       .from('comparisons')
       .select('response_a_id, response_b_id')
       .eq('project_id', projectId)
-      .eq('student_id', user?.id);
+      .eq('student_id', currentUserId);
 
     const comparedPairs = new Set(
       (existingComparisons || []).map(c => 
@@ -132,12 +141,12 @@ export const ComparisonSession = () => {
         title: "모든 비교 완료!",
         description: "이 프로젝트의 모든 응답 쌍을 비교하셨습니다."
       });
-      navigate('/student-dashboard');
+      navigate(isStudent ? '/student-dashboard' : '/dashboard');
     }
   };
 
   const handleChoice = async (chosenResponse: StudentResponse) => {
-    if (!responseA || !responseB || !user) return;
+    if (!responseA || !responseB || !currentUserId) return;
 
     setSubmitting(true);
     const comparisonTime = Date.now() - startTime;
@@ -147,7 +156,7 @@ export const ComparisonSession = () => {
         .from('comparisons')
         .insert({
           project_id: projectId,
-          student_id: user.id,
+          student_id: currentUserId,
           response_a_id: responseA.id,
           response_b_id: responseB.id,
           decision: chosenResponse.id === responseA.id ? 'A' : 'B',
@@ -202,11 +211,11 @@ export const ComparisonSession = () => {
       <div className="mb-8">
         <Button
           variant="outline"
-          onClick={() => navigate("/student-dashboard")}
+          onClick={() => navigate(isStudent ? "/student-dashboard" : "/dashboard")}
           className="mb-4"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
-          대시보드로 돌아가기
+          {isStudent ? "학생 대시보드로 돌아가기" : "대시보드로 돌아가기"}
         </Button>
         
         <div className="flex items-center justify-between">

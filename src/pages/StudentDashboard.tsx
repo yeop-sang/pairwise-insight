@@ -1,222 +1,177 @@
-import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
-import { Clock, Users, ArrowRight, ArrowLeft } from "lucide-react";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { ArrowLeft, BookOpen, Clock, CheckCircle, LogOut, User } from 'lucide-react';
+import { useStudentAuth } from '@/hooks/useStudentAuth';
+import { useToast } from '@/hooks/use-toast';
 
-interface AssignedProject {
+interface Project {
   id: string;
   title: string;
   description: string;
   question: string;
   rubric: string;
   created_at: string;
-  comparison_count: number;
-  total_responses: number;
+  is_active: boolean;
 }
 
 export const StudentDashboard = () => {
-  const navigate = useNavigate();
-  const { user, profile, loading: authLoading, signOut } = useAuth();
-  const { toast } = useToast();
-  const [projects, setProjects] = useState<AssignedProject[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const { student, logout } = useStudentAuth();
+  const { toast } = useToast();
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        navigate('/');
-        return;
-      }
-      
-      if (profile?.role === 'teacher') {
-        navigate("/dashboard");
-        return;
-      }
-      
-      if (user && (!profile || profile.role === 'student')) {
-        fetchAssignedProjects();
-      }
-    }
-  }, [user, profile, authLoading, navigate]);
-
-  const fetchAssignedProjects = async () => {
+  const fetchProjects = async () => {
+    if (!student) return;
+    
     try {
-      // Get projects assigned to this student
-      const { data: assignments, error: assignmentsError } = await supabase
-        .from('project_assignments')
+      const { data, error } = await supabase
+        .from('projects')
         .select(`
-          project_id,
-          projects!inner (
-            id,
-            title,
-            description,
-            question,
-            rubric,
-            created_at,
-            is_active
-          )
+          *,
+          project_assignments!inner(*)
         `)
-        .eq('student_id', user?.id);
-
-      if (assignmentsError) throw assignmentsError;
-
-      // Get comparison counts for each project
-      const projectsData = await Promise.all(
-        (assignments || []).map(async (assignment: any) => {
-          const project = assignment.projects;
-          
-          // Count total responses for this project
-          const { count: totalResponses } = await supabase
-            .from('student_responses')
-            .select('*', { count: 'exact', head: true })
-            .eq('project_id', project.id);
-
-          // Count comparisons made by this student for this project
-          const { count: comparisonCount } = await supabase
-            .from('comparisons')
-            .select('*', { count: 'exact', head: true })
-            .eq('project_id', project.id)
-            .eq('student_id', user?.id);
-
-          return {
-            id: project.id,
-            title: project.title,
-            description: project.description,
-            question: project.question,
-            rubric: project.rubric,
-            created_at: project.created_at,
-            comparison_count: comparisonCount || 0,
-            total_responses: totalResponses || 0
-          };
-        })
-      );
-
-      setProjects(projectsData);
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "프로젝트 조회 실패",
-        description: error.message
-      });
+        .eq('project_assignments.student_id', student.id)
+        .eq('is_active', true);
+      
+      if (error) throw error;
+      
+      setProjects(data || []);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleStartComparison = (projectId: string) => {
-    navigate(`/compare/${projectId}`);
+  useEffect(() => {
+    if (!student) {
+      navigate('/student-login');
+      return;
+    }
+    fetchProjects();
+  }, [student, navigate]);
+
+  const handleLogout = () => {
+    logout();
+    toast({
+      title: '로그아웃',
+      description: '성공적으로 로그아웃되었습니다.',
+    });
+    navigate('/student-login');
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    navigate("/");
-  };
-
-  if (authLoading || loading) {
+  if (!student || loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">로딩 중...</p>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">로그인이 필요합니다.</p>
+      <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">
+            {!student ? '로그인 정보를 확인하는 중...' : '프로젝트를 불러오는 중...'}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/')}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          홈으로 돌아가기
-        </Button>
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">내 프로젝트</h1>
-            <p className="text-muted-foreground mt-2">
-              안녕하세요, {profile?.name || '학생'}님! 할당된 비교평가 프로젝트를 확인하세요.
-            </p>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-between mb-8">
+          <div className="flex items-center gap-4">
+            <Link 
+              to="/student-login" 
+              className="flex items-center text-muted-foreground hover:text-foreground"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              로그인으로 돌아가기
+            </Link>
           </div>
-          <Button variant="outline" onClick={handleSignOut}>
-            로그아웃
-          </Button>
+          
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <User className="w-4 h-4" />
+              <span>{student.name} ({student.grade}학년 {student.class_number}반 {student.student_number}번)</span>
+            </div>
+            <Button variant="outline" size="sm" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 mr-2" />
+              로그아웃
+            </Button>
+          </div>
         </div>
+
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2">안녕하세요, {student.name}님!</h1>
+          <p className="text-muted-foreground">
+            할당된 프로젝트를 확인하고 평가에 참여하세요.
+          </p>
+        </div>
+
+        {projects.length === 0 ? (
+          <Card>
+            <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+              <Clock className="w-16 h-16 text-muted-foreground mb-6" />
+              <CardTitle className="text-xl mb-2">할당된 프로젝트가 없습니다</CardTitle>
+              <CardDescription className="text-center">
+                선생님이 프로젝트를 할당할 때까지 기다려주세요.
+              </CardDescription>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <Card key={project.id} className="hover:shadow-md transition-shadow">
+                <CardHeader>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <CardTitle className="text-lg mb-2">{project.title}</CardTitle>
+                      {project.description && (
+                        <CardDescription>{project.description}</CardDescription>
+                      )}
+                    </div>
+                    <Badge variant={project.is_active ? "default" : "secondary"}>
+                      {project.is_active ? "진행중" : "종료됨"}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="p-3 bg-muted rounded-lg">
+                      <h4 className="font-medium text-sm mb-1">평가 질문:</h4>
+                      <p className="text-sm text-muted-foreground">{project.question}</p>
+                    </div>
+
+                    {project.rubric && (
+                      <div className="p-3 bg-accent rounded-lg">
+                        <h4 className="font-medium text-sm mb-1">평가 기준:</h4>
+                        <p className="text-sm text-muted-foreground">{project.rubric}</p>
+                      </div>
+                    )}
+
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Clock className="w-4 h-4" />
+                      <span>생성일: {new Date(project.created_at).toLocaleDateString('ko-KR')}</span>
+                    </div>
+
+                    <Button 
+                      className="w-full" 
+                      onClick={() => navigate(`/compare/${project.id}`)}
+                      disabled={!project.is_active}
+                    >
+                      <BookOpen className="w-4 h-4 mr-2" />
+                      {project.is_active ? "비교 평가 시작" : "평가 종료됨"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-
-      {projects.length === 0 ? (
-        <Card>
-          <CardContent className="p-8 text-center">
-            <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <h3 className="text-lg font-semibold mb-2">할당된 프로젝트가 없습니다</h3>
-            <p className="text-muted-foreground">
-              교사가 프로젝트를 할당할 때까지 기다려주세요.
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <Card key={project.id} className="hover:shadow-medium transition-shadow">
-              <CardHeader>
-                <CardTitle className="text-lg">{project.title}</CardTitle>
-                {project.description && (
-                  <p className="text-sm text-muted-foreground">{project.description}</p>
-                )}
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="bg-muted p-3 rounded-lg">
-                    <h4 className="font-medium text-sm mb-1">평가 질문:</h4>
-                    <p className="text-sm text-muted-foreground">{project.question}</p>
-                  </div>
-
-                  {project.rubric && (
-                    <div className="bg-accent p-3 rounded-lg">
-                      <h4 className="font-medium text-sm mb-1">평가 기준:</h4>
-                      <p className="text-sm text-muted-foreground">{project.rubric}</p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>{project.total_responses}개 응답</span>
-                    </div>
-                    <div className="text-primary font-medium">
-                      {project.comparison_count}번 비교 완료
-                    </div>
-                  </div>
-
-                  <Button 
-                    className="w-full" 
-                    onClick={() => handleStartComparison(project.id)}
-                  >
-                    비교 시작
-                    <ArrowRight className="h-4 w-4 ml-2" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
     </div>
   );
 };

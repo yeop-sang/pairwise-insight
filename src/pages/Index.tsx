@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { AuthForm } from "@/components/AuthForm";
-import { BarChart3 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { BarChart3, UserCheck } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import ppaLogo from "@/assets/ppa-logo.png";
 import { useEffect } from "react";
@@ -71,10 +71,25 @@ const Index = () => {
             </h2>
           </div>
           
-          <p className="text-xl text-muted-foreground leading-relaxed">
+          <p className="text-xl text-muted-foreground leading-relaxed mb-8">
             비교 평가를 통해 학생 평가를 혁신하세요. 
             Bradley-Terry 모델링을 사용하여 간단한 쌍대비교에서 신뢰할 수 있는 순위를 생성합니다.
           </p>
+          
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild size="lg">
+              <Link to="/dashboard">
+                <BarChart3 className="mr-2 h-4 w-4" />
+                교사용 대시보드
+              </Link>
+            </Button>
+            <Button variant="outline" size="lg" asChild>
+              <Link to="/student-login">
+                <UserCheck className="mr-2 h-4 w-4" />
+                학생 로그인
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
