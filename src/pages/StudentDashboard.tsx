@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Clock, Users, ArrowRight } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface AssignedProject {
   id: string;
@@ -17,53 +20,117 @@ interface AssignedProject {
 
 export const StudentDashboard = () => {
   const navigate = useNavigate();
+  const { user, profile, loading: authLoading, signOut } = useAuth();
+  const { toast } = useToast();
   const [projects, setProjects] = useState<AssignedProject[]>([]);
-  const [loading, setLoading] = useState(false); // 임시로 로딩 false
+  const [loading, setLoading] = useState(true);
 
-  // 임시 학생 데이터
-  const mockStudent = {
-    name: "테스트 학생",
-    id: "student-123"
-  };
-
-  // 임시 프로젝트 데이터
-  const mockProjects: AssignedProject[] = [
-    {
-      id: "project-1",
-      title: "영어 에세이 비교평가",
-      description: "학생들의 영어 에세이를 비교하여 평가하는 프로젝트입니다.",
-      question: "다음 두 에세이 중 어느 것이 더 논리적이고 설득력이 있나요?",
-      rubric: "논리성, 구조, 언어 사용, 창의성을 기준으로 평가하세요.",
-      created_at: "2024-01-15",
-      comparison_count: 5,
-      total_responses: 24
-    },
-    {
-      id: "project-2", 
-      title: "수학 문제 해결 과정 평가",
-      description: "학생들의 수학 문제 해결 과정을 평가합니다.",
-      question: "어느 학생의 문제 해결 과정이 더 체계적이고 명확한가요?",
-      rubric: "문제 이해, 해결 과정, 답의 정확성을 기준으로 평가하세요.",
-      created_at: "2024-01-10",
-      comparison_count: 2,
-      total_responses: 18
+  useEffect(() => {
+    if (!authLoading) {
+      if (!user) {
+        navigate('/');
+        return;
+      }
+      
+      if (profile?.role === 'teacher') {
+        navigate("/dashboard");
+        return;
+      }
+      
+      if (user && (!profile || profile.role === 'student')) {
+        fetchAssignedProjects();
+      }
     }
-  ];
+  }, [user, profile, authLoading, navigate]);
+
+  const fetchAssignedProjects = async () => {
+    try {
+      // Get projects assigned to this student
+      const { data: assignments, error: assignmentsError } = await supabase
+        .from('project_assignments')
+        .select(`
+          project_id,
+          projects!inner (
+            id,
+            title,
+            description,
+            question,
+            rubric,
+            created_at,
+            is_active
+          )
+        `)
+        .eq('student_id', user?.id);
+
+      if (assignmentsError) throw assignmentsError;
+
+      // Get comparison counts for each project
+      const projectsData = await Promise.all(
+        (assignments || []).map(async (assignment: any) => {
+          const project = assignment.projects;
+          
+          // Count total responses for this project
+          const { count: totalResponses } = await supabase
+            .from('student_responses')
+            .select('*', { count: 'exact', head: true })
+            .eq('project_id', project.id);
+
+          // Count comparisons made by this student for this project
+          const { count: comparisonCount } = await supabase
+            .from('comparisons')
+            .select('*', { count: 'exact', head: true })
+            .eq('project_id', project.id)
+            .eq('student_id', user?.id);
+
+          return {
+            id: project.id,
+            title: project.title,
+            description: project.description,
+            question: project.question,
+            rubric: project.rubric,
+            created_at: project.created_at,
+            comparison_count: comparisonCount || 0,
+            total_responses: totalResponses || 0
+          };
+        })
+      );
+
+      setProjects(projectsData);
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "프로젝트 조회 실패",
+        description: error.message
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleStartComparison = (projectId: string) => {
     navigate(`/compare/${projectId}`);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await signOut();
     navigate("/");
   };
 
-
-  if (loading) {
+  if (authLoading || loading) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">로딩 중...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">로그인이 필요합니다.</p>
         </div>
       </div>
     );
@@ -75,7 +142,7 @@ export const StudentDashboard = () => {
         <div>
           <h1 className="text-3xl font-bold text-foreground">내 프로젝트</h1>
           <p className="text-muted-foreground mt-2">
-            안녕하세요, {mockStudent.name}님! 할당된 비교평가 프로젝트를 확인하세요.
+            안녕하세요, {profile?.name || '학생'}님! 할당된 비교평가 프로젝트를 확인하세요.
           </p>
         </div>
         <Button variant="outline" onClick={handleSignOut}>
@@ -83,7 +150,7 @@ export const StudentDashboard = () => {
         </Button>
       </div>
 
-      {mockProjects.length === 0 ? (
+      {projects.length === 0 ? (
         <Card>
           <CardContent className="p-8 text-center">
             <Clock className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
@@ -95,7 +162,7 @@ export const StudentDashboard = () => {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {mockProjects.map((project) => (
+          {projects.map((project) => (
             <Card key={project.id} className="hover:shadow-medium transition-shadow">
               <CardHeader>
                 <CardTitle className="text-lg">{project.title}</CardTitle>

@@ -8,7 +8,7 @@ import Index from "./pages/Index";
 import { Dashboard } from "./pages/Dashboard";
 import { CreateProject } from "./pages/CreateProject";
 import { StudentDashboard } from "./pages/StudentDashboard";
-import { CompareSession } from "./pages/CompareSession";
+import { ComparisonSession } from "./pages/ComparisonSession";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,8 +25,8 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/student-dashboard" element={<StudentDashboard />} />
             <Route path="/create-project" element={<CreateProject />} />
-            <Route path="/compare/:projectId" element={<CompareSession />} />
-            <Route path="/compare-demo" element={<CompareSession />} />
+            <Route path="/compare/:projectId" element={<ComparisonSession />} />
+            <Route path="/compare-demo" element={<ComparisonSession />} />
             <Route path="/project/:id" element={<Dashboard />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -151,6 +151,27 @@ export const CreateProject = () => {
 
       if (responsesError) throw responsesError;
 
+      // Assign all students to this project
+      const { data: students, error: studentsError } = await supabase
+        .from('profiles')
+        .select('user_id')
+        .eq('role', 'student');
+
+      if (studentsError) throw studentsError;
+
+      if (students && students.length > 0) {
+        const { error: assignmentError } = await supabase
+          .from('project_assignments')
+          .insert(
+            students.map(student => ({
+              project_id: project.id,
+              student_id: student.user_id
+            }))
+          );
+
+        if (assignmentError) throw assignmentError;
+      }
+
       toast({
         title: "프로젝트 생성 완료",
         description: `${responses.length}개의 학생 응답이 업로드되었습니다.`
