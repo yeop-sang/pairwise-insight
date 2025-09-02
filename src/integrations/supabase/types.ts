@@ -199,6 +199,48 @@ export type Database = {
           },
         ]
       }
+      students: {
+        Row: {
+          class_number: number
+          created_at: string
+          grade: number
+          has_completed: boolean
+          id: string
+          name: string
+          password: string
+          project_id: string
+          student_id: string
+          student_number: number
+          updated_at: string
+        }
+        Insert: {
+          class_number: number
+          created_at?: string
+          grade: number
+          has_completed?: boolean
+          id?: string
+          name: string
+          password: string
+          project_id: string
+          student_id: string
+          student_number: number
+          updated_at?: string
+        }
+        Update: {
+          class_number?: number
+          created_at?: string
+          grade?: number
+          has_completed?: boolean
+          id?: string
+          name?: string
+          password?: string
+          project_id?: string
+          student_id?: string
+          student_number?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
