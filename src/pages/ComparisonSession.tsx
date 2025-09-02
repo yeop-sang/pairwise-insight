@@ -3,11 +3,13 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Zap, Clock, ChevronLeft, ChevronRight, Minus } from "lucide-react";
+import { ArrowLeft, Zap, Clock, ChevronLeft, ChevronRight, Minus, Target, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAdvancedComparisonLogic } from "@/hooks/useAdvancedComparisonLogic";
+import { Progress } from "@/components/ui/progress";
 
 interface StudentResponse {
   id: string;
@@ -32,22 +34,37 @@ export const ComparisonSession = () => {
   
   const [project, setProject] = useState<Project | null>(null);
   const [responses, setResponses] = useState<StudentResponse[]>([]);
-  const [responseA, setResponseA] = useState<StudentResponse | null>(null);
-  const [responseB, setResponseB] = useState<StudentResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [comparisonCount, setComparisonCount] = useState(0);
   const [startTime, setStartTime] = useState<number>(Date.now());
 
-  // 현재 사용자 정보 (교사 또는 학생)
+  // 현재 사용자 정보 (교사 또는 학생)  
   const isStudent = !!student;
   const isTeacher = !!user && !!profile;
   const currentUserId = student?.id || user?.id;
 
+  // 고급 비교 알고리즘 훅 사용
+  const {
+    currentPair,
+    isInitialized,
+    completionStats,
+    reviewerStats,
+    submitComparison,
+    canContinue,
+    getEstimatedTimeRemaining,
+    getCurrentPhaseInfo,
+    hasMoreComparisons,
+    isComplete
+  } = useAdvancedComparisonLogic({
+    projectId: projectId || '',
+    responses,
+    reviewerId: student?.id || ''
+  });
+
   // 키보드 이벤트 핸들러
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (submitting || !responseA || !responseB || !isStudent) return;
+      if (submitting || !currentPair || !isStudent) return;
       
       switch (event.key) {
         case 'ArrowLeft':
@@ -69,7 +86,7 @@ export const ComparisonSession = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyPress);
     };
-  }, [submitting, responseA, responseB, isStudent]);
+  }, [submitting, currentPair, isStudent]);
 
   useEffect(() => {
     if (!isStudent && !isTeacher) {
@@ -81,6 +98,17 @@ export const ComparisonSession = () => {
       fetchProjectAndResponses();
     }
   }, [isStudent, isTeacher, projectId, navigate]);
+
+  // 비교 완료 시 리다이렉트
+  useEffect(() => {
+    if (isInitialized && isComplete && !hasMoreComparisons) {
+      toast({
+        title: "모든 비교 완료!",
+        description: `총 ${reviewerStats.completed}회의 비교를 완료하셨습니다.`
+      });
+      navigate(isStudent ? '/student-dashboard' : '/dashboard');
+    }
+  }, [isInitialized, isComplete, hasMoreComparisons, reviewerStats.completed, navigate, isStudent, toast]);
 
   const fetchProjectAndResponses = async () => {
     try {
@@ -103,23 +131,6 @@ export const ComparisonSession = () => {
 
       if (responsesError) throw responsesError;
       setResponses(responsesData || []);
-
-      // Get comparison count - only for students, teachers can view all
-      let comparisonQuery = supabase
-        .from('comparisons')
-        .select('*', { count: 'exact', head: true })
-        .eq('project_id', projectId);
-      
-    if (isStudent) {
-      comparisonQuery = comparisonQuery.eq('student_id', student?.id);
-    }
-      
-      const { count } = await comparisonQuery;
-
-      setComparisonCount(count || 0);
-
-      // Load first comparison pair
-      loadNextComparison(responsesData || []);
       
     } catch (error: any) {
       toast({
@@ -133,60 +144,10 @@ export const ComparisonSession = () => {
     }
   };
 
-  const loadNextComparison = async (allResponses: StudentResponse[]) => {
-    if (allResponses.length < 2) {
-      toast({
-        variant: "destructive",
-        title: "비교할 응답이 부족합니다",
-        description: "최소 2개의 응답이 필요합니다."
-      });
-      navigate(isStudent ? '/student-dashboard' : '/dashboard');
-      return;
-    }
-
-    // Get already compared pairs - only for students
-    let comparisonQuery = supabase
-      .from('comparisons')
-      .select('response_a_id, response_b_id')
-      .eq('project_id', projectId);
-    
-    if (isStudent) {
-      comparisonQuery = comparisonQuery.eq('student_id', student?.id);
-    }
-    
-    const { data: existingComparisons } = await comparisonQuery;
-
-    const comparedPairs = new Set(
-      (existingComparisons || []).map(c => 
-        [c.response_a_id, c.response_b_id].sort().join('-')
-      )
-    );
-
-    // Find an uncompared pair
-    let foundPair = false;
-    for (let i = 0; i < allResponses.length && !foundPair; i++) {
-      for (let j = i + 1; j < allResponses.length && !foundPair; j++) {
-        const pairKey = [allResponses[i].id, allResponses[j].id].sort().join('-');
-        if (!comparedPairs.has(pairKey)) {
-          setResponseA(allResponses[i]);
-          setResponseB(allResponses[j]);
-          setStartTime(Date.now());
-          foundPair = true;
-        }
-      }
-    }
-
-    if (!foundPair) {
-      toast({
-        title: "모든 비교 완료!",
-        description: "이 프로젝트의 모든 응답 쌍을 비교하셨습니다."
-      });
-      navigate(isStudent ? '/student-dashboard' : '/dashboard');
-    }
-  };
+  // loadNextComparison 함수는 새로운 알고리즘에서 자동으로 처리됨
 
   const handleChoice = async (decision: 'left' | 'right' | 'neutral') => {
-    if (!responseA || !responseB || !currentUserId) return;
+    if (!currentPair || !currentUserId) return;
     
     // Only students can make comparisons, teachers can only view
     if (!isStudent) {
@@ -202,29 +163,20 @@ export const ComparisonSession = () => {
     const comparisonTime = Date.now() - startTime;
 
     try {
-      const { error } = await supabase
-        .from('comparisons')
-        .insert({
-          project_id: projectId,
-          student_id: student?.id, // Use student.id from students table
-          response_a_id: responseA.id,
-          response_b_id: responseB.id,
-          decision: decision,
-          comparison_time_ms: comparisonTime
-        });
-
-      if (error) throw error;
-
-      setComparisonCount(prev => prev + 1);
+      const success = await submitComparison(decision, comparisonTime);
       
-      const decisionText = decision === 'left' ? '응답 A' : decision === 'right' ? '응답 B' : '중립';
-      toast({
-        title: "비교 완료",
-        description: `${decisionText}를 선택했습니다. 다음 비교를 진행합니다.`
-      });
-
-      // Load next comparison
-      loadNextComparison(responses);
+      if (success) {
+        const decisionText = decision === 'left' ? '응답 A' : decision === 'right' ? '응답 B' : '중립';
+        toast({
+          title: "비교 완료",
+          description: `${decisionText}를 선택했습니다.`
+        });
+        
+        // 새로운 시작 시간 설정
+        setStartTime(Date.now());
+      } else {
+        throw new Error('비교 저장에 실패했습니다.');
+      }
 
     } catch (error: any) {
       toast({
@@ -259,15 +211,20 @@ export const ComparisonSession = () => {
     );
   }
 
-  if (!project || !responseA || !responseB) {
+  if (!project || !currentPair) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">비교할 응답을 찾을 수 없습니다.</p>
+          <p className="text-muted-foreground">
+            {!isInitialized ? "알고리즘을 초기화하고 있습니다..." : "비교할 응답을 찾을 수 없습니다."}
+          </p>
         </div>
       </div>
     );
   }
+
+  const phaseInfo = getCurrentPhaseInfo();
+  const estimatedTime = getEstimatedTimeRemaining();
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
@@ -288,8 +245,15 @@ export const ComparisonSession = () => {
           </div>
           <div className="flex items-center gap-4">
             <Badge variant="secondary" className="flex items-center gap-1">
-              <Zap className="h-3 w-3" />
-              {comparisonCount}번 완료
+              <Target className="h-3 w-3" />
+              {reviewerStats.completed}/15 완료
+            </Badge>
+            <Badge 
+              variant={phaseInfo?.phase === 'balance' ? 'default' : 'destructive'} 
+              className="flex items-center gap-1"
+            >
+              <TrendingUp className="h-3 w-3" />
+              {phaseInfo?.phase === 'balance' ? '균형 단계' : '적응 단계'}
             </Badge>
           </div>
         </div>
@@ -301,8 +265,8 @@ export const ComparisonSession = () => {
         </CardHeader>
         <CardContent>
           <p className="text-foreground mb-4">
-            {responseA && responseB && responseA.question_number === responseB.question_number 
-              ? getQuestionByNumber(responseA.question_number)
+            {currentPair.responseA && currentPair.responseB && currentPair.responseA.question_number === currentPair.responseB.question_number 
+              ? getQuestionByNumber(currentPair.responseA.question_number)
               : project.question}
           </p>
           {project.rubric && (
@@ -311,6 +275,29 @@ export const ComparisonSession = () => {
               <p className="text-sm text-muted-foreground">{project.rubric}</p>
             </div>
           )}
+          
+          {/* 진행 상황 표시 */}
+          <div className="mt-4 space-y-3">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">개인 진행률</span>
+              <span className="font-medium">{reviewerStats.progress}%</span>
+            </div>
+            <Progress value={reviewerStats.progress} className="h-2" />
+            
+            {estimatedTime && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>예상 남은 시간</span>
+                <span>{estimatedTime}</span>
+              </div>
+            )}
+            
+            {phaseInfo && (
+              <div className="bg-muted/50 p-3 rounded-lg">
+                <p className="text-sm font-medium mb-1">현재 단계: {phaseInfo.phase === 'balance' ? '균형 단계' : '적응 단계'}</p>
+                <p className="text-xs text-muted-foreground">{phaseInfo.description}</p>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -319,13 +306,13 @@ export const ComparisonSession = () => {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>응답 A</span>
-              <Badge variant="outline">학생 {responseA.student_code}</Badge>
+              <Badge variant="outline">학생 {currentPair.responseA.student_code}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="bg-background p-4 rounded-lg border min-h-[200px]">
               <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-                {responseA.response_text}
+                {currentPair.responseA.response_text}
               </p>
             </div>
           </CardContent>
@@ -335,13 +322,13 @@ export const ComparisonSession = () => {
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
               <span>응답 B</span>
-              <Badge variant="outline">학생 {responseB.student_code}</Badge>
+              <Badge variant="outline">학생 {currentPair.responseB.student_code}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="bg-background p-4 rounded-lg border min-h-[200px]">
               <p className="text-foreground whitespace-pre-wrap leading-relaxed">
-                {responseB.response_text}
+                {currentPair.responseB.response_text}
               </p>
             </div>
           </CardContent>
