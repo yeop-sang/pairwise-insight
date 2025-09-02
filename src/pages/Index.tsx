@@ -9,10 +9,13 @@ const Index = () => {
 
   const handleLogin = async (email: string, password: string, role?: 'teacher' | 'student') => {
     // 임시 로그인 - 역할에 따라 리다이렉트
+    console.log('Index handleLogin called with role:', role);
     if (email && password) {
       if (role === 'teacher') {
-        navigate("/dashboard");
+        console.log('Navigating to teacher dashboard with replace: true');
+        navigate("/dashboard", { replace: true });
       } else {
+        console.log('Navigating to student dashboard');
         navigate("/student-dashboard");
       }
     }
