@@ -51,19 +51,40 @@ export const CompareSession = () => {
         return; // Don't handle shortcuts when typing in input fields
       }
 
-      switch (event.key.toLowerCase()) {
+      switch (event.key) {
+        case "ArrowLeft":
+          event.preventDefault();
+          handleDecision("left");
+          break;
+        case "ArrowRight":
+          event.preventDefault();
+          handleDecision("right");
+          break;
+        case "ArrowUp":
+          event.preventDefault();
+          handlePrevious();
+          break;
+        case "ArrowDown":
+          event.preventDefault();
+          handleNext();
+          break;
+        // Keep existing letter shortcuts for accessibility
         case "a":
+        case "A":
           handleDecision("left");
           break;
         case "l":
+        case "L":
           handleDecision("right");
           break;
         case "n":
+        case "N":
           if (mockQuestion.allowTie) {
             handleDecision("neutral");
           }
           break;
         case "s":
+        case "S":
           if (mockQuestion.allowSkip) {
             handleDecision("skip");
           }
@@ -81,17 +102,32 @@ export const CompareSession = () => {
     
     // In real app, would submit to API here
     
-    // Simulate loading next pair
-    setCompleted(prev => prev + 1);
-    setStartTime(Date.now());
-    
-    // For demo, just randomize the responses
+    // Move to next pair
+    handleNext();
+  };
+
+  const handleNext = () => {
     if (completed < total) {
+      setCompleted(prev => prev + 1);
+      setStartTime(Date.now());
+      
+      // For demo, just randomize the responses
       const shuffled = [...mockResponses].sort(() => Math.random() - 0.5);
       setCurrentPair({ left: shuffled[0], right: shuffled[1] });
     } else {
       // Session complete
       navigate("/results");
+    }
+  };
+
+  const handlePrevious = () => {
+    if (completed > 1) {
+      setCompleted(prev => prev - 1);
+      setStartTime(Date.now());
+      
+      // For demo, just randomize the responses (in real app would load previous pair)
+      const shuffled = [...mockResponses].sort(() => Math.random() - 0.5);
+      setCurrentPair({ left: shuffled[0], right: shuffled[1] });
     }
   };
 

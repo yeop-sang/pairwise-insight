@@ -18,10 +18,22 @@ export const DecisionBar = ({
   return (
     <div className="flex flex-col items-center gap-4 py-6">
       {/* Hotkey hints */}
-      <div className="flex items-center gap-4 text-xs text-muted-foreground">
+      <div className="flex items-center gap-6 text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
-          <Badge variant="outline" className="px-1 py-0 text-xs">A</Badge>
+          <Badge variant="outline" className="px-2 py-1 text-xs">←</Badge>
           <span>Left Better</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Badge variant="outline" className="px-2 py-1 text-xs">↑</Badge>
+          <span>Previous</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Badge variant="outline" className="px-2 py-1 text-xs">↓</Badge>
+          <span>Next</span>
+        </div>
+        <div className="flex items-center gap-1">
+          <Badge variant="outline" className="px-2 py-1 text-xs">→</Badge>
+          <span>Right Better</span>
         </div>
         {allowTie && (
           <div className="flex items-center gap-1">
@@ -29,10 +41,6 @@ export const DecisionBar = ({
             <span>Neutral</span>
           </div>
         )}
-        <div className="flex items-center gap-1">
-          <Badge variant="outline" className="px-1 py-0 text-xs">L</Badge>
-          <span>Right Better</span>
-        </div>
         {allowSkip && (
           <div className="flex items-center gap-1">
             <Badge variant="outline" className="px-1 py-0 text-xs">S</Badge>
