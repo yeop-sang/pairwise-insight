@@ -27,7 +27,8 @@ export const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user && profile?.role === 'teacher') {
+    // 임시로 모든 사용자에게 대시보드 접근 허용
+    if (user) {
       fetchProjects();
     } else if (profile?.role === 'student') {
       navigate("/student-dashboard");

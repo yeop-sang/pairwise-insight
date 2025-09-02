@@ -2,33 +2,49 @@ import { Button } from "@/components/ui/button";
 import { AuthForm } from "@/components/AuthForm";
 import { BarChart3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
 import ppaLogo from "@/assets/ppa-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
+  const { signIn, signUp } = useAuth();
 
   const handleLogin = async (email: string, password: string, role?: 'teacher' | 'student') => {
-    // 임시 로그인 - 역할에 따라 리다이렉트
     console.log('Index handleLogin called with role:', role);
-    if (email && password) {
-      if (role === 'teacher') {
-        console.log('Navigating to teacher dashboard with replace: true');
-        navigate("/dashboard", { replace: true });
+    
+    try {
+      const { error } = await signIn(email, password);
+      
+      if (!error) {
+        console.log('Login successful, forcing page refresh');
+        // 강제로 페이지 새로고침하여 인증 상태 반영
+        if (role === 'teacher') {
+          window.location.href = '/dashboard';
+        } else {
+          window.location.href = '/student-dashboard';
+        }
       } else {
-        console.log('Navigating to student dashboard');
-        navigate("/student-dashboard");
+        console.error('Login failed:', error);
       }
+    } catch (error) {
+      console.error('Login error:', error);
     }
   };
 
   const handleSignup = async (email: string, password: string, name: string, role: 'teacher' | 'student') => {
-    // 임시 회원가입 - 역할에 따라 리다이렉트
-    if (email && password && name) {
-      if (role === 'teacher') {
-        navigate("/dashboard");
+    console.log('Index handleSignup called with role:', role);
+    
+    try {
+      const { error } = await signUp(email, password, name, role);
+      
+      if (!error) {
+        console.log('Signup successful');
+        // 회원가입 후 이메일 확인 안내 (toast는 useAuth에서 처리)
       } else {
-        navigate("/student-dashboard");
+        console.error('Signup failed:', error);
       }
+    } catch (error) {
+      console.error('Signup error:', error);
     }
   };
 
