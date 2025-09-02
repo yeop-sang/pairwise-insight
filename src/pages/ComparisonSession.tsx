@@ -110,9 +110,9 @@ export const ComparisonSession = () => {
         .select('*', { count: 'exact', head: true })
         .eq('project_id', projectId);
       
-      if (isStudent) {
-        comparisonQuery = comparisonQuery.eq('student_id', currentUserId);
-      }
+    if (isStudent) {
+      comparisonQuery = comparisonQuery.eq('student_id', student?.id);
+    }
       
       const { count } = await comparisonQuery;
 
@@ -151,7 +151,7 @@ export const ComparisonSession = () => {
       .eq('project_id', projectId);
     
     if (isStudent) {
-      comparisonQuery = comparisonQuery.eq('student_id', currentUserId);
+      comparisonQuery = comparisonQuery.eq('student_id', student?.id);
     }
     
     const { data: existingComparisons } = await comparisonQuery;
@@ -206,7 +206,7 @@ export const ComparisonSession = () => {
         .from('comparisons')
         .insert({
           project_id: projectId,
-          student_id: currentUserId,
+          student_id: student?.id, // Use student.id from students table
           response_a_id: responseA.id,
           response_b_id: responseB.id,
           decision: decision,

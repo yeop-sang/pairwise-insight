@@ -1,0 +1,224 @@
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
+import { ArrowLeft, Download, Trophy, Target } from 'lucide-react';
+import { toast } from 'sonner';
+import * as XLSX from 'xlsx';
+
+interface ComparisonResult {
+  response_id: string;
+  student_code: string;
+  score: number;
+  win_count: number;
+  loss_count: number;
+  total_comparisons: number;
+  rank: number;
+}
+
+interface Project {
+  id: string;
+  title: string;
+  question: string;
+  rubric?: string;
+}
+
+export const ComparisonResults = () => {
+  const { projectId } = useParams();
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [results, setResults] = useState<ComparisonResult[]>([]);
+  const [project, setProject] = useState<Project | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user) {
+      navigate('/');
+      return;
+    }
+
+    fetchResultsData();
+  }, [projectId, user]);
+
+  const fetchResultsData = async () => {
+    if (!projectId) return;
+
+    try {
+      // Fetch project details
+      const { data: projectData, error: projectError } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('id', projectId)
+        .single();
+
+      if (projectError) throw projectError;
+      setProject(projectData);
+
+      // Call the Bradley-Terry calculation function
+      const { data: resultsData, error: resultsError } = await supabase
+        .rpc('calculate_bradley_terry_scores', { project_uuid: projectId });
+
+      if (resultsError) throw resultsError;
+      setResults(resultsData || []);
+    } catch (error) {
+      console.error('Error fetching results:', error);
+      toast.error('결과를 불러오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const exportToExcel = () => {
+    if (!results.length || !project) return;
+
+    const exportData = results.map((result, index) => ({
+      '순위': result.rank,
+      '학생코드': result.student_code,
+      '점수': (result.score * 100).toFixed(1) + '%',
+      '승리횟수': result.win_count,
+      '패배횟수': result.loss_count,
+      '총비교횟수': result.total_comparisons,
+      '승률': result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) + '%' : '0%'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '비교결과');
+    
+    XLSX.writeFile(wb, `${project.title}_비교결과.xlsx`);
+    toast.success('결과를 Excel 파일로 내보냈습니다.');
+  };
+
+  const getRankColor = (rank: number) => {
+    if (rank === 1) return 'bg-gradient-to-r from-yellow-400 to-yellow-600';
+    if (rank === 2) return 'bg-gradient-to-r from-gray-300 to-gray-500';
+    if (rank === 3) return 'bg-gradient-to-r from-amber-600 to-amber-800';
+    return 'bg-muted';
+  };
+
+  const getRankIcon = (rank: number) => {
+    if (rank <= 3) return <Trophy className="h-5 w-5" />;
+    return <Target className="h-5 w-5" />;
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-lg text-muted-foreground">결과를 분석하고 있습니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!project) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">프로젝트를 찾을 수 없습니다</h2>
+          <Button onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            대시보드로 돌아가기
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted/20">
+      <div className="container mx-auto px-4 py-8">
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <Button
+              variant="ghost"
+              onClick={() => navigate('/dashboard')}
+              className="mb-4"
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              대시보드로 돌아가기
+            </Button>
+            <h1 className="text-3xl font-bold">{project.title} - 비교 결과</h1>
+            <p className="text-muted-foreground mt-2">Bradley-Terry 모델 기반 순위 분석</p>
+          </div>
+          <Button onClick={exportToExcel} className="gap-2">
+            <Download className="h-4 w-4" />
+            Excel 내보내기
+          </Button>
+        </div>
+
+        {results.length === 0 ? (
+          <Card>
+            <CardContent className="text-center py-12">
+              <p className="text-lg text-muted-foreground">아직 비교 데이터가 없습니다.</p>
+              <p className="text-sm text-muted-foreground mt-2">학생들이 비교를 시작하면 결과가 여기에 표시됩니다.</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid gap-4">
+            {results.map((result, index) => (
+              <Card key={result.response_id} className="overflow-hidden">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <div className={`flex items-center justify-center w-12 h-12 rounded-full text-white font-bold ${getRankColor(result.rank)}`}>
+                        {getRankIcon(result.rank)}
+                        <span className="ml-1">{result.rank}</span>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold">{result.student_code}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          승률: {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-6">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-primary">{(result.score * 100).toFixed(1)}%</p>
+                        <p className="text-xs text-muted-foreground">Bradley-Terry 점수</p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-green-600">{result.win_count}</p>
+                        <p className="text-xs text-muted-foreground">승리</p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-lg font-semibold text-red-600">{result.loss_count}</p>
+                        <p className="text-xs text-muted-foreground">패배</p>
+                      </div>
+                      
+                      <div className="text-center">
+                        <p className="text-lg font-semibold">{result.total_comparisons}</p>
+                        <p className="text-xs text-muted-foreground">총 비교</p>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm text-muted-foreground">승률</span>
+                      <span className="text-sm font-medium">
+                        {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
+                      </span>
+                    </div>
+                    <Progress 
+                      value={result.total_comparisons > 0 ? (result.win_count / result.total_comparisons) * 100 : 0} 
+                      className="h-2"
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Users, Plus, BookOpen, Power } from 'lucide-react';
+import { ArrowLeft, Users, Plus, BookOpen, Power, Trophy } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -320,6 +320,14 @@ export const ProjectDetail: React.FC = () => {
             >
               <Power className="w-4 h-4 mr-2" />
               {project.is_active ? '비활성화' : '활성화'}
+            </Button>
+            <Button
+              onClick={() => navigate(`/results/${id}`)}
+              variant="outline"
+              size="sm"
+            >
+              <Trophy className="w-4 h-4 mr-2" />
+              비교 결과 보기
             </Button>
             <Button
               onClick={() => navigate(`/project/${id}/assignments`)}
