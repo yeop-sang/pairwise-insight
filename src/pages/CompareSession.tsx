@@ -9,9 +9,9 @@ import { useNavigate } from "react-router-dom";
 
 // Mock data
 const mockQuestion = {
-  title: "Essay Analysis: Climate Change Solutions",
-  promptMarkdown: "Compare these essays based on clarity of argument, use of evidence, and overall persuasiveness. Consider which response better addresses the prompt and demonstrates critical thinking.",
-  rubricMarkdown: "Excellent (4): Clear thesis, strong evidence, compelling argument\nGood (3): Mostly clear with some supporting evidence\nFair (2): Basic argument with minimal evidence\nPoor (1): Unclear or unsupported argument",
+  title: "에세이 분석: 기후 변화 해결책",
+  promptMarkdown: "논증의 명확성, 증거 사용, 전반적인 설득력을 바탕으로 이 에세이들을 비교하세요. 어떤 응답이 주제를 더 잘 다루고 비판적 사고를 보여주는지 고려하세요.",
+  rubricMarkdown: "우수(4): 명확한 논제, 강력한 증거, 설득력 있는 논증\n양호(3): 대체로 명확하며 일부 뒷받침 증거 있음\n보통(2): 기본적인 논증에 최소한의 증거\n부족(1): 불분명하거나 뒷받침되지 않는 논증",
   allowTie: true,
   allowSkip: false,
 };
@@ -19,20 +19,20 @@ const mockQuestion = {
 const mockResponses = [
   {
     id: "resp1",
-    ownerMasked: "Student #A47",
-    contentText: "Climate change represents one of the most pressing challenges of our time. The evidence is clear: rising global temperatures, melting ice caps, and extreme weather events are becoming more frequent. To address this crisis, we need a multi-faceted approach that combines renewable energy adoption, carbon pricing mechanisms, and international cooperation.\n\nRenewable energy sources like solar and wind power have become increasingly cost-competitive with fossil fuels. Countries like Denmark and Costa Rica have demonstrated that it's possible to generate significant portions of their electricity from renewables without compromising economic growth.\n\nCarbon pricing, through cap-and-trade systems or carbon taxes, creates economic incentives for businesses to reduce emissions. The success of the European Union's Emissions Trading System shows that market-based solutions can effectively drive down greenhouse gas emissions.\n\nInternational cooperation is crucial because climate change is a global problem that requires coordinated action. The Paris Agreement provides a framework, but more ambitious commitments and better enforcement mechanisms are needed.",
+    ownerMasked: "학생 #A47",
+    contentText: "기후 변화는 우리 시대의 가장 시급한 도전 중 하나입니다. 증거는 명확합니다: 지구 온도 상승, 빙하 용해, 극한 기상 현상이 더욱 빈번해지고 있습니다. 이 위기를 해결하기 위해서는 재생 에너지 도입, 탄소 가격 책정 메커니즘, 국제 협력을 결합한 다각적 접근이 필요합니다.\n\n태양광과 풍력 같은 재생 에너지원은 화석 연료와 비교해 점점 더 경쟁력 있는 비용을 갖게 되었습니다. 덴마크와 코스타리카 같은 나라들은 경제 성장을 저해하지 않으면서도 전력의 상당 부분을 재생 에너지로 생산할 수 있음을 보여주었습니다.\n\n배출권 거래제나 탄소세를 통한 탄소 가격 책정은 기업들이 배출량을 줄이도록 하는 경제적 인센티브를 만듭니다. 유럽연합 배출권 거래제의 성공은 시장 기반 솔루션이 온실가스 배출량을 효과적으로 감소시킬 수 있음을 보여줍니다.\n\n기후 변화는 조율된 행동이 필요한 전 지구적 문제이기 때문에 국제 협력이 중요합니다. 파리 협정이 틀을 제공하지만, 더 야심찬 약속과 더 나은 집행 메커니즘이 필요합니다.",
     attachments: [
       {
         id: "att1",
         type: "file" as const,
-        name: "climate_data_charts.pdf",
+        name: "기후_데이터_차트.pdf",
       },
     ],
   },
   {
     id: "resp2", 
-    ownerMasked: "Student #B23",
-    contentText: "Climate change is definitely a problem but I think technology will solve it eventually. Electric cars are getting better and solar panels are cheaper now. Companies are working on new technologies like carbon capture and fusion power.\n\nI read that some scientists think we might be able to use geoengineering to cool the planet if things get really bad. Like putting mirrors in space or spraying stuff in the atmosphere.\n\nAlso people are more aware now because of social media and activists like Greta Thunberg. Young people especially care about the environment and they will vote for politicians who take climate change seriously.\n\nI think the free market will eventually figure out solutions because there's money to be made in clean energy. When something becomes profitable, businesses will do it automatically without needing government regulations.",
+    ownerMasked: "학생 #B23",
+    contentText: "기후 변화는 분명히 문제이지만 기술이 결국 해결할 것이라고 생각합니다. 전기차는 점점 좋아지고 있고 태양광 패널도 더 저렴해지고 있습니다. 회사들은 탄소 포집이나 핵융합 발전 같은 새로운 기술을 개발하고 있습니다.\n\n일부 과학자들은 상황이 정말 나빠지면 지구공학을 사용해서 지구를 냉각시킬 수 있을 것이라고 생각한다고 읽었습니다. 우주에 거울을 설치하거나 대기에 뭔가를 뿌리는 것처럼요.\n\n또한 소셜 미디어와 그레타 툰베리 같은 활동가들 때문에 사람들이 지금 더 인식하고 있습니다. 특히 젊은 사람들은 환경을 중요하게 생각하고 기후 변화를 진지하게 받아들이는 정치인들에게 투표할 것입니다.\n\n청정 에너지에서 돈을 벌 수 있기 때문에 자유 시장이 결국 해결책을 찾을 것이라고 생각합니다. 뭔가가 수익성이 있게 되면, 기업들은 정부 규제 없이도 자동으로 그것을 할 것입니다.",
     attachments: [],
   },
 ];
@@ -158,7 +158,7 @@ export const CompareSession = () => {
             className="flex items-center gap-2"
           >
             <X className="h-4 w-4" />
-            Exit Session
+            세션 종료
           </Button>
           
           <Button
@@ -166,7 +166,7 @@ export const CompareSession = () => {
             className="flex items-center gap-2"
           >
             <Save className="h-4 w-4" />
-            Save Progress
+            진행상황 저장
           </Button>
         </div>
 

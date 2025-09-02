@@ -21,30 +21,30 @@ export const DecisionBar = ({
       <div className="flex items-center gap-6 text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
           <Badge variant="outline" className="px-2 py-1 text-xs">←</Badge>
-          <span>Left Better</span>
+          <span>왼쪽이 더 좋음</span>
         </div>
         <div className="flex items-center gap-1">
           <Badge variant="outline" className="px-2 py-1 text-xs">↑</Badge>
-          <span>Previous</span>
+          <span>이전</span>
         </div>
         <div className="flex items-center gap-1">
           <Badge variant="outline" className="px-2 py-1 text-xs">↓</Badge>
-          <span>Next</span>
+          <span>다음</span>
         </div>
         <div className="flex items-center gap-1">
           <Badge variant="outline" className="px-2 py-1 text-xs">→</Badge>
-          <span>Right Better</span>
+          <span>오른쪽이 더 좋음</span>
         </div>
         {allowTie && (
           <div className="flex items-center gap-1">
             <Badge variant="outline" className="px-1 py-0 text-xs">N</Badge>
-            <span>Neutral</span>
+            <span>동점</span>
           </div>
         )}
         {allowSkip && (
           <div className="flex items-center gap-1">
             <Badge variant="outline" className="px-1 py-0 text-xs">S</Badge>
-            <span>Skip</span>
+            <span>건너뛰기</span>
           </div>
         )}
       </div>
@@ -59,7 +59,7 @@ export const DecisionBar = ({
           className="flex items-center gap-2 min-w-32"
         >
           <ChevronLeft className="h-5 w-5" />
-          A is Better
+          A가 더 좋음
         </Button>
 
         {allowTie && (
@@ -71,7 +71,7 @@ export const DecisionBar = ({
             className="flex items-center gap-2 min-w-24"
           >
             <Minus className="h-4 w-4" />
-            Neutral
+            동점
           </Button>
         )}
 
@@ -82,7 +82,7 @@ export const DecisionBar = ({
           disabled={disabled}
           className="flex items-center gap-2 min-w-32"
         >
-          B is Better
+          B가 더 좋음
           <ChevronRight className="h-5 w-5" />
         </Button>
 
@@ -95,7 +95,7 @@ export const DecisionBar = ({
             className="flex items-center gap-2 ml-4"
           >
             <SkipForward className="h-4 w-4" />
-            Skip
+            건너뛰기
           </Button>
         )}
       </div>

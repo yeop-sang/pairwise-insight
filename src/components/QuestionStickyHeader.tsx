@@ -30,12 +30,12 @@ export const QuestionStickyHeader = ({
           <div className="flex items-center gap-2 ml-4">
             {allowTie && (
               <Badge variant="secondary" className="text-xs">
-                Ties Allowed
+                동점 허용
               </Badge>
             )}
             {allowSkip && (
               <Badge variant="outline" className="text-xs">
-                Skip Allowed
+                건너뛰기 허용
               </Badge>
             )}
             
@@ -48,7 +48,7 @@ export const QuestionStickyHeader = ({
                 </PopoverTrigger>
                 <PopoverContent className="w-80">
                   <div className="space-y-2">
-                    <h4 className="font-medium">Evaluation Rubric</h4>
+                    <h4 className="font-medium">평가 루브릭</h4>
                     <div className="text-sm text-muted-foreground whitespace-pre-wrap">
                       {rubricMarkdown}
                     </div>

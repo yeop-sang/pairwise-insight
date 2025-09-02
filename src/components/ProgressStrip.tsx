@@ -20,13 +20,13 @@ export const ProgressStrip = ({
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <CheckCircle className="h-4 w-4" />
-            <span>{completed} of {total} comparisons completed</span>
+            <span>{completed}/{total} 비교 완료</span>
           </div>
           
           {estimatedTimeRemaining && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Clock className="h-4 w-4" />
-              <span>~{estimatedTimeRemaining} remaining</span>
+              <span>~{estimatedTimeRemaining} 남음</span>
             </div>
           )}
         </div>

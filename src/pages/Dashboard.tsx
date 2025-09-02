@@ -19,8 +19,8 @@ interface Project {
 const mockProjects: Project[] = [
   {
     id: "1",
-    title: "Essay Analysis: Climate Change Solutions",
-    course: "Environmental Science 101",
+    title: "에세이 분석: 기후 변화 해결책",
+    course: "환경과학 101",
     createdAt: "2024-01-15",
     status: "comparing",
     totalResponses: 24,
@@ -29,8 +29,8 @@ const mockProjects: Project[] = [
   },
   {
     id: "2", 
-    title: "Presentation: Historical Figures",
-    course: "History 201",
+    title: "발표: 역사적 인물",
+    course: "역사학 201",
     createdAt: "2024-01-10",
     status: "collecting",
     totalResponses: 18,
@@ -71,10 +71,10 @@ export const Dashboard = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-4xl font-bold text-foreground mb-2">
-              Pairwise Peer Assessment
+              쌍대비교 동료평가
             </h1>
             <p className="text-lg text-muted-foreground">
-              Manage your comparative evaluation projects
+              비교 평가 프로젝트를 관리하세요
             </p>
           </div>
           
@@ -85,7 +85,7 @@ export const Dashboard = () => {
             className="flex items-center gap-2"
           >
             <Plus className="h-5 w-5" />
-            New Project
+            새 프로젝트
           </Button>
         </div>
 
@@ -99,7 +99,7 @@ export const Dashboard = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{totalStats.totalProjects}</p>
-                  <p className="text-sm text-muted-foreground">Total Projects</p>
+                  <p className="text-sm text-muted-foreground">전체 프로젝트</p>
                 </div>
               </div>
             </CardContent>
@@ -113,7 +113,7 @@ export const Dashboard = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{totalStats.activeComparisons}</p>
-                  <p className="text-sm text-muted-foreground">Active Sessions</p>
+                  <p className="text-sm text-muted-foreground">활성 세션</p>
                 </div>
               </div>
             </CardContent>
@@ -127,7 +127,7 @@ export const Dashboard = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{totalStats.totalResponses}</p>
-                  <p className="text-sm text-muted-foreground">Total Responses</p>
+                  <p className="text-sm text-muted-foreground">전체 응답</p>
                 </div>
               </div>
             </CardContent>
@@ -141,7 +141,7 @@ export const Dashboard = () => {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{totalStats.totalComparisons}</p>
-                  <p className="text-sm text-muted-foreground">Comparisons Made</p>
+                  <p className="text-sm text-muted-foreground">완료된 비교</p>
                 </div>
               </div>
             </CardContent>
@@ -151,9 +151,9 @@ export const Dashboard = () => {
         {/* Projects Table */}
         <Card className="shadow-medium">
           <CardHeader>
-            <CardTitle>Recent Projects</CardTitle>
+            <CardTitle>최근 프로젝트</CardTitle>
             <CardDescription>
-              Manage your pairwise comparison projects and view progress
+              쌍대비교 프로젝트를 관리하고 진행 상황을 확인하세요
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -169,19 +169,19 @@ export const Dashboard = () => {
                       {project.title}
                     </h3>
                     <p className="text-sm text-muted-foreground">
-                      {project.course} • Created {project.createdAt}
+                      {project.course} • 생성일 {project.createdAt}
                     </p>
                   </div>
 
                   <div className="flex items-center gap-4">
                     <div className="text-center">
                       <p className="text-lg font-semibold">{project.totalResponses}</p>
-                      <p className="text-xs text-muted-foreground">Responses</p>
+                      <p className="text-xs text-muted-foreground">응답</p>
                     </div>
                     
                     <div className="text-center">
                       <p className="text-lg font-semibold">{project.totalComparisons}</p>
-                      <p className="text-xs text-muted-foreground">Comparisons</p>
+                      <p className="text-xs text-muted-foreground">비교</p>
                     </div>
 
                     <Badge variant={getStatusColor(project.status) as any}>

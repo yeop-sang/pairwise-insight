@@ -49,7 +49,7 @@ export const ResponseCard = ({
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="text-xs">
-              {position === "left" ? "Response A" : "Response B"}
+              {position === "left" ? "응답 A" : "응답 B"}
             </Badge>
             <span className="text-sm text-muted-foreground">{ownerMasked}</span>
           </div>
@@ -82,7 +82,7 @@ export const ResponseCard = ({
           {attachments.length > 0 && (
             <div className="space-y-2">
               <h5 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                Attachments
+                첨부파일
               </h5>
               <div className="space-y-1">
                 {attachments.map((attachment) => (
@@ -104,7 +104,7 @@ export const ResponseCard = ({
                 <div className="mt-3 p-3 bg-muted/50 rounded border">
                   {/* This would show preview based on attachment type */}
                   <div className="text-xs text-muted-foreground">
-                    Preview: {attachments.find(a => a.id === selectedAttachment)?.name}
+                    미리보기: {attachments.find(a => a.id === selectedAttachment)?.name}
                   </div>
                 </div>
               )}
