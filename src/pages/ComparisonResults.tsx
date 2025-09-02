@@ -18,6 +18,7 @@ interface ComparisonResult {
   loss_count: number;
   total_comparisons: number;
   rank: number;
+  question_number: number;
 }
 
 interface Project {
@@ -34,6 +35,8 @@ export const ComparisonResults = () => {
   const [results, setResults] = useState<ComparisonResult[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedQuestion, setSelectedQuestion] = useState<number>(1);
+  const [maxQuestions, setMaxQuestions] = useState<number>(5);
 
   useEffect(() => {
     if (!user) {
@@ -58,12 +61,37 @@ export const ComparisonResults = () => {
       if (projectError) throw projectError;
       setProject(projectData);
 
-      // Call the Bradley-Terry calculation function
-      const { data: resultsData, error: resultsError } = await supabase
-        .rpc('calculate_bradley_terry_scores', { project_uuid: projectId });
+      // Get question numbers first
+      const { data: responseData, error: responseError } = await supabase
+        .from('student_responses')
+        .select('question_number')
+        .eq('project_id', projectId);
+      
+      if (responseError) throw responseError;
+      
+      const questionNumbers = [...new Set(responseData?.map(r => r.question_number) || [])].sort();
+      const maxQ = Math.max(...questionNumbers);
+      setMaxQuestions(maxQ);
+      
+      // Call the Bradley-Terry calculation function for all questions
+      const allResults: ComparisonResult[] = [];
+      for (const qNum of questionNumbers) {
+        const { data: resultsData, error: resultsError } = await supabase
+          .rpc('calculate_bradley_terry_by_question', { 
+            project_uuid: projectId, 
+            question_num: qNum 
+          });
 
-      if (resultsError) throw resultsError;
-      setResults(resultsData || []);
+        if (resultsError) throw resultsError;
+        
+        const questionResults = (resultsData || []).map((r: any) => ({
+          ...r,
+          question_number: qNum
+        }));
+        allResults.push(...questionResults);
+      }
+      
+      setResults(allResults);
     } catch (error) {
       console.error('Error fetching results:', error);
       toast.error('결과를 불러오는데 실패했습니다.');

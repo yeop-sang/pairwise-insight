@@ -34,6 +34,9 @@ export const ComparisonSession = () => {
   
   const [project, setProject] = useState<Project | null>(null);
   const [responses, setResponses] = useState<StudentResponse[]>([]);
+  const [allResponses, setAllResponses] = useState<StudentResponse[]>([]);
+  const [currentQuestion, setCurrentQuestion] = useState<number>(1);
+  const [maxQuestions, setMaxQuestions] = useState<number>(5);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [startTime, setStartTime] = useState<number>(Date.now());
@@ -99,16 +102,34 @@ export const ComparisonSession = () => {
     }
   }, [isStudent, isTeacher, projectId, navigate]);
 
-  // 비교 완료 시 리다이렉트
+  // 문항별 응답 업데이트
+  useEffect(() => {
+    if (allResponses.length > 0) {
+      const currentQuestionResponses = allResponses.filter(r => r.question_number === currentQuestion);
+      setResponses(currentQuestionResponses);
+    }
+  }, [currentQuestion, allResponses]);
+
+  // 비교 완료 시 다음 문항으로 이동 또는 종료
   useEffect(() => {
     if (isInitialized && isComplete && !hasMoreComparisons) {
-      toast({
-        title: "모든 비교 완료!",
-        description: `총 ${reviewerStats.completed}회의 비교를 완료하셨습니다.`
-      });
-      navigate(isStudent ? '/student-dashboard' : '/dashboard');
+      if (currentQuestion < maxQuestions) {
+        // 다음 문항으로 이동
+        toast({
+          title: `${currentQuestion}번 문항 완료!`,
+          description: `${currentQuestion + 1}번 문항으로 이동합니다.`
+        });
+        setCurrentQuestion(prev => prev + 1);
+      } else {
+        // 모든 문항 완료
+        toast({
+          title: "모든 비교 완료!",
+          description: `${maxQuestions}개 문항의 비교를 모두 완료하셨습니다.`
+        });
+        navigate(isStudent ? '/student-dashboard' : '/dashboard');
+      }
     }
-  }, [isInitialized, isComplete, hasMoreComparisons, reviewerStats.completed, navigate, isStudent, toast]);
+  }, [isInitialized, isComplete, hasMoreComparisons, currentQuestion, maxQuestions, navigate, isStudent, toast]);
 
   const fetchProjectAndResponses = async () => {
     try {
@@ -127,10 +148,19 @@ export const ComparisonSession = () => {
       const { data: responsesData, error: responsesError } = await supabase
         .from('student_responses')
         .select('*')
-        .eq('project_id', projectId);
+        .eq('project_id', projectId)
+        .order('question_number');
 
       if (responsesError) throw responsesError;
-      setResponses(responsesData || []);
+      setAllResponses(responsesData || []);
+      
+      // 최대 문항 수 계산
+      const maxQuestionNumber = Math.max(...(responsesData || []).map(r => r.question_number));
+      setMaxQuestions(maxQuestionNumber);
+      
+      // 첫 번째 문항의 응답들로 시작
+      const firstQuestionResponses = (responsesData || []).filter(r => r.question_number === 1);
+      setResponses(firstQuestionResponses);
       
     } catch (error: any) {
       toast({
@@ -241,7 +271,9 @@ export const ComparisonSession = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-foreground">{project.title}</h1>
-            <p className="text-muted-foreground mt-2">다음 두 응답을 비교하여 더 좋은 응답을 선택하세요</p>
+            <p className="text-muted-foreground mt-2">
+              {currentQuestion}번 문항 ({currentQuestion}/{maxQuestions}) - 다음 두 응답을 비교하여 더 좋은 응답을 선택하세요
+            </p>
           </div>
           <div className="flex items-center gap-4">
             <Badge variant="secondary" className="flex items-center gap-1">
@@ -261,13 +293,14 @@ export const ComparisonSession = () => {
 
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle className="text-lg">평가 질문</CardTitle>
+          <CardTitle className="text-lg flex items-center justify-between">
+            <span>{currentQuestion}번 문항 평가</span>
+            <Badge variant="secondary">{currentQuestion}/{maxQuestions}</Badge>
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <p className="text-foreground mb-4">
-            {currentPair.responseA && currentPair.responseB && currentPair.responseA.question_number === currentPair.responseB.question_number 
-              ? getQuestionByNumber(currentPair.responseA.question_number)
-              : project.question}
+            {getQuestionByNumber(currentQuestion)}
           </p>
           {project.rubric && (
             <div className="bg-muted p-4 rounded-lg">
