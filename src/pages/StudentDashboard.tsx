@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { Clock, Users, ArrowRight } from "lucide-react";
+import { Clock, Users, ArrowRight, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -138,16 +138,26 @@ export const StudentDashboard = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-start mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-foreground">내 프로젝트</h1>
-          <p className="text-muted-foreground mt-2">
-            안녕하세요, {profile?.name || '학생'}님! 할당된 비교평가 프로젝트를 확인하세요.
-          </p>
-        </div>
-        <Button variant="outline" onClick={handleSignOut}>
-          로그아웃
+      <div className="mb-8">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/')}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          홈으로 돌아가기
         </Button>
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">내 프로젝트</h1>
+            <p className="text-muted-foreground mt-2">
+              안녕하세요, {profile?.name || '학생'}님! 할당된 비교평가 프로젝트를 확인하세요.
+            </p>
+          </div>
+          <Button variant="outline" onClick={handleSignOut}>
+            로그아웃
+          </Button>
+        </div>
       </div>
 
       {projects.length === 0 ? (

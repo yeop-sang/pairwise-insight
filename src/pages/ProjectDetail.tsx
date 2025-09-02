@@ -132,17 +132,28 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !user) return;
 
     try {
+      // 먼저 이미 할당된 학생들의 ID 가져오기
+      const { data: assignedStudents, error: assignedError } = await supabase
+        .from('project_assignments')
+        .select('student_id')
+        .eq('project_id', id);
+
+      if (assignedError) throw assignedError;
+
+      const assignedStudentIds = (assignedStudents || []).map(a => a.student_id);
+
       // 해당 학년/반의 미할당 학생들 가져오기
-      const { data: studentsData, error: studentsError } = await supabase
+      let query = supabase
         .from('students')
         .select('id')
         .eq('grade', grade)
-        .eq('class_number', classNumber)
-        .not('id', 'in', `(
-          SELECT student_id 
-          FROM project_assignments 
-          WHERE project_id = '${id}'
-        )`);
+        .eq('class_number', classNumber);
+
+      if (assignedStudentIds.length > 0) {
+        query = query.not('id', 'in', `(${assignedStudentIds.join(',')})`);
+      }
+
+      const { data: studentsData, error: studentsError } = await query;
 
       if (studentsError) throw studentsError;
 

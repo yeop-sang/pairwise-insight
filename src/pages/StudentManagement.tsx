@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, Upload, Trash2, Search } from 'lucide-react';
+import { Users, Plus, Upload, Trash2, Search, ArrowLeft } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Student {
@@ -28,6 +29,7 @@ interface ClassStats {
 }
 
 export const StudentManagement: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -249,6 +251,14 @@ export const StudentManagement: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          대시보드로 돌아가기
+        </Button>
         <h1 className="text-3xl font-bold mb-2">학생 관리</h1>
         <p className="text-muted-foreground">전체 학생을 관리하고 프로젝트에 할당할 수 있습니다.</p>
       </div>
