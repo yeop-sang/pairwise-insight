@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Users, Plus, BookOpen } from 'lucide-react';
+import { ArrowLeft, Users, Plus, BookOpen, Power } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -245,6 +245,34 @@ export const ProjectDetail: React.FC = () => {
     }
   };
 
+  const toggleProjectStatus = async () => {
+    if (!id || !project) return;
+
+    try {
+      const newStatus = !project.is_active;
+      const { error } = await supabase
+        .from('projects')
+        .update({ is_active: newStatus })
+        .eq('id', id);
+
+      if (error) throw error;
+
+      setProject({ ...project, is_active: newStatus });
+      
+      toast({
+        title: '성공',
+        description: `프로젝트가 ${newStatus ? '활성화' : '비활성화'}되었습니다.`,
+      });
+    } catch (error: any) {
+      console.error('Error toggling project status:', error);
+      toast({
+        title: '오류',
+        description: error.message || '프로젝트 상태 변경에 실패했습니다.',
+        variant: 'destructive',
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -285,6 +313,14 @@ export const ProjectDetail: React.FC = () => {
             <Badge variant={project.is_active ? "default" : "secondary"}>
               {project.is_active ? '활성' : '비활성'}
             </Badge>
+            <Button
+              onClick={toggleProjectStatus}
+              variant={project.is_active ? "default" : "outline"}
+              size="sm"
+            >
+              <Power className="w-4 h-4 mr-2" />
+              {project.is_active ? '비활성화' : '활성화'}
+            </Button>
             <Button
               onClick={() => navigate(`/project/${id}/assignments`)}
               variant="outline"
