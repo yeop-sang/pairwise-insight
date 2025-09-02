@@ -1,25 +1,46 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { BarChart3, Users, FileText, Zap } from "lucide-react";
+import { AuthForm } from "@/components/AuthForm";
+import { BarChart3, Users, FileText } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import ppaLogo from "@/assets/ppa-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
 
+  const handleLogin = (email: string, password: string) => {
+    // 로그인 로직 - 수파베이스 연결 후 구현
+    console.log("로그인 시도:", { email, password });
+    // 임시로 대시보드로 이동
+    navigate("/dashboard");
+  };
+
+  const handleSignup = (email: string, password: string, name: string) => {
+    // 회원가입 로직 - 수파베이스 연결 후 구현
+    console.log("회원가입 시도:", { email, password, name });
+    // 임시로 대시보드로 이동
+    navigate("/dashboard");
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-subtle">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16">
+    <div className="min-h-screen bg-gradient-subtle relative">
+      {/* Main Content - Left 3/4 */}
+      <div className="container mx-auto px-4 py-16 pr-96">
+        {/* Logo and Hero Section */}
         <div className="text-center max-w-4xl mx-auto">
-          <h1 className="text-5xl font-bold text-foreground mb-6 leading-tight">
-            쌍대비교 동료평가
-          </h1>
+          <div className="flex items-center justify-center mb-8">
+            <img src={ppaLogo} alt="PPA Logo" className="h-20 w-20 mr-4" />
+            <h1 className="text-5xl font-bold text-foreground leading-tight">
+              쌍대비교 동료평가
+            </h1>
+          </div>
+          
           <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
             비교 평가를 통해 학생 평가를 혁신하세요. 
             Bradley-Terry 모델링을 사용하여 간단한 쌍대비교에서 신뢰할 수 있는 순위를 생성합니다.
           </p>
           
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
+          <div className="flex justify-center mb-16">
             <Button
               variant="academic"
               size="xl"
@@ -28,16 +49,6 @@ const Index = () => {
             >
               <BarChart3 className="h-5 w-5" />
               대시보드 보기
-            </Button>
-            
-            <Button
-              variant="outline"
-              size="xl"
-              onClick={() => navigate("/compare-demo")}
-              className="flex items-center gap-2"
-            >
-              <Zap className="h-5 w-5" />
-              데모 체험하기
             </Button>
           </div>
 
@@ -83,6 +94,11 @@ const Index = () => {
             </Card>
           </div>
         </div>
+      </div>
+
+      {/* Auth Form - Right 1/4 Fixed Position */}
+      <div className="fixed top-1/2 right-8 transform -translate-y-1/2 w-80">
+        <AuthForm onLogin={handleLogin} onSignup={handleSignup} />
       </div>
     </div>
   );
