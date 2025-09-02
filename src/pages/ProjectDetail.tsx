@@ -132,54 +132,81 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !user) return;
 
     try {
-      // 먼저 이미 할당된 학생들의 ID 가져오기
+      console.log('할당 시작:', { grade, classNumber, projectId: id });
+
+      // 먼저 해당 학년/반의 학생들이 존재하는지 확인
+      const { data: allStudents, error: allStudentsError } = await supabase
+        .from('students')
+        .select('id, student_id, name, grade, class_number')
+        .eq('grade', grade)
+        .eq('class_number', classNumber);
+
+      if (allStudentsError) {
+        console.error('학생 조회 오류:', allStudentsError);
+        throw allStudentsError;
+      }
+
+      console.log('해당 학년/반 학생들:', allStudents);
+
+      if (!allStudents || allStudents.length === 0) {
+        toast({
+          title: '알림',
+          description: `${grade}학년 ${classNumber}반에 등록된 학생이 없습니다. 먼저 학생 관리에서 학생을 등록해주세요.`,
+        });
+        return;
+      }
+
+      // 이미 할당된 학생들의 ID 가져오기
       const { data: assignedStudents, error: assignedError } = await supabase
         .from('project_assignments')
         .select('student_id')
         .eq('project_id', id);
 
-      if (assignedError) throw assignedError;
-
-      const assignedStudentIds = (assignedStudents || []).map(a => a.student_id);
-
-      // 해당 학년/반의 미할당 학생들 가져오기
-      let query = supabase
-        .from('students')
-        .select('id')
-        .eq('grade', grade)
-        .eq('class_number', classNumber);
-
-      if (assignedStudentIds.length > 0) {
-        query = query.not('id', 'in', `(${assignedStudentIds.join(',')})`);
+      if (assignedError) {
+        console.error('할당된 학생 조회 오류:', assignedError);
+        throw assignedError;
       }
 
-      const { data: studentsData, error: studentsError } = await query;
+      console.log('이미 할당된 학생들:', assignedStudents);
 
-      if (studentsError) throw studentsError;
+      const assignedStudentIds = (assignedStudents || []).map(a => a.student_id);
+      console.log('할당된 학생 ID 목록:', assignedStudentIds);
 
-      if (!studentsData || studentsData.length === 0) {
+      // 미할당 학생들 필터링
+      const unassignedStudents = allStudents.filter(student => 
+        !assignedStudentIds.includes(student.id)
+      );
+
+      console.log('미할당 학생들:', unassignedStudents);
+
+      if (unassignedStudents.length === 0) {
         toast({
           title: '알림',
-          description: '할당할 수 있는 학생이 없습니다.',
+          description: `${grade}학년 ${classNumber}반의 모든 학생이 이미 할당되었습니다.`,
         });
         return;
       }
 
       // 프로젝트에 학생들 할당
-      const assignments = studentsData.map(student => ({
+      const assignments = unassignedStudents.map(student => ({
         project_id: id,
         student_id: student.id,
       }));
+
+      console.log('할당할 데이터:', assignments);
 
       const { error: assignError } = await supabase
         .from('project_assignments')
         .insert(assignments);
 
-      if (assignError) throw assignError;
+      if (assignError) {
+        console.error('할당 삽입 오류:', assignError);
+        throw assignError;
+      }
 
       toast({
         title: '성공',
-        description: `${grade}학년 ${classNumber}반 학생 ${studentsData.length}명이 할당되었습니다.`,
+        description: `${grade}학년 ${classNumber}반 학생 ${unassignedStudents.length}명이 할당되었습니다.`,
       });
 
       fetchClassInfo();
