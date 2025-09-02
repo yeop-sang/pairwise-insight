@@ -43,6 +43,8 @@ export const CreateProject = () => {
   };
 
   const parseFile = async (file: File): Promise<Array<{code: string, answer: string, questionIndex: number}>> => {
+    console.log("파일 파싱 시작:", file.name, "크기:", file.size);
+    
     return new Promise((resolve, reject) => {
       const fileExtension = file.name.toLowerCase().split('.').pop();
       
@@ -50,8 +52,10 @@ export const CreateProject = () => {
         // CSV 파싱
         const reader = new FileReader();
         reader.onload = (e) => {
+          console.log("CSV 파일 읽기 완료");
           const text = e.target?.result as string;
           const lines = text.split('\n').filter(line => line.trim());
+          console.log("CSV 총 줄 수:", lines.length);
           
           if (lines.length < 2) {
             reject(new Error("파일에는 최소 2줄(헤더 + 데이터)이 필요합니다."));
@@ -60,6 +64,8 @@ export const CreateProject = () => {
           
           const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
           const questions = headerCells.slice(1);
+          console.log("헤더:", headerCells);
+          console.log("문항 수:", questions.length);
           
           if (questions.length === 0) {
             reject(new Error("문항이 없습니다. 2열부터 문항을 입력해주세요."));
@@ -70,21 +76,34 @@ export const CreateProject = () => {
           
           for (let i = 1; i < lines.length; i++) {
             const cells = lines[i].split(',').map(cell => cell.trim().replace(/"/g, ''));
-            const studentCode = cells[0];
+            const rawStudentCode = cells[0];
             
-            if (!studentCode) continue;
+            // 숫자 학생번호 처리 강화
+            const studentCode = rawStudentCode?.toString()?.trim();
             
-            for (let j = 1; j < cells.length && j - 1 < questions.length; j++) {
-              const answer = cells[j];
-              if (answer && answer.trim()) {
-                data.push({
-                  code: studentCode,
-                  answer: answer,
-                  questionIndex: j - 1
-                });
-              }
+            if (!studentCode) {
+              console.log(`줄 ${i + 1}: 학생번호가 비어있음`);
+              continue;
             }
+            
+            let responseCount = 0;
+            for (let j = 1; j < cells.length && j - 1 < questions.length; j++) {
+              const rawAnswer = cells[j];
+              // 빈 셀도 빈 문자열로 저장
+              const answer = rawAnswer?.toString()?.trim() || "";
+              
+              data.push({
+                code: studentCode,
+                answer: answer,
+                questionIndex: j - 1
+              });
+              responseCount++;
+            }
+            
+            console.log(`학생 ${studentCode}: ${responseCount}개 응답 파싱 (빈 응답 포함)`);
           }
+          
+          console.log("CSV 파싱 완료, 총 응답:", data.length);
           
           if (data.length === 0) {
             reject(new Error("유효한 학생 응답이 없습니다."));
@@ -93,7 +112,10 @@ export const CreateProject = () => {
           
           resolve(data);
         };
-        reader.onerror = reject;
+        reader.onerror = (error) => {
+          console.error("CSV 파일 읽기 오류:", error);
+          reject(error);
+        };
         reader.readAsText(file);
         
       } else if (fileExtension === 'xlsx' || fileExtension === 'xls') {
@@ -101,6 +123,7 @@ export const CreateProject = () => {
         const reader = new FileReader();
         reader.onload = (e) => {
           try {
+            console.log("엑셀 파일 읽기 완료");
             const arrayBuffer = e.target?.result as ArrayBuffer;
             const workbook = XLSX.read(arrayBuffer, { type: 'array' });
             const firstSheetName = workbook.SheetNames[0];
@@ -108,6 +131,8 @@ export const CreateProject = () => {
             
             // 엑셀을 JSON으로 변환 (헤더 포함)
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
+            console.log("엑셀 원본 데이터 구조:", jsonData.slice(0, 3)); // 처음 3줄만 로깅
+            console.log("엑셀 총 행 수:", jsonData.length);
             
             if (jsonData.length < 2) {
               reject(new Error("파일에는 최소 2줄(헤더 + 데이터)이 필요합니다."));
@@ -116,6 +141,8 @@ export const CreateProject = () => {
             
             const headerRow = jsonData[0];
             const questions = headerRow.slice(1); // 첫 번째 열(학생번호) 제외
+            console.log("헤더:", headerRow);
+            console.log("문항 수:", questions.length);
             
             if (questions.length === 0) {
               reject(new Error("문항이 없습니다. 2열부터 문항을 입력해주세요."));
@@ -126,21 +153,47 @@ export const CreateProject = () => {
             
             for (let i = 1; i < jsonData.length; i++) {
               const row = jsonData[i];
-              const studentCode = row[0]?.toString();
               
-              if (!studentCode) continue;
-              
-              for (let j = 1; j < row.length && j - 1 < questions.length; j++) {
-                const answer = row[j]?.toString();
-                if (answer && answer.trim()) {
-                  data.push({
-                    code: studentCode,
-                    answer: answer,
-                    questionIndex: j - 1
-                  });
-                }
+              if (!row || row.length === 0) {
+                console.log(`행 ${i + 1}: 빈 행 건너뜀`);
+                continue;
               }
+              
+              const rawStudentCode = row[0];
+              
+              // 학생번호 처리 강화 - null, undefined, 숫자 모두 처리
+              let studentCode = "";
+              if (rawStudentCode !== null && rawStudentCode !== undefined) {
+                studentCode = rawStudentCode.toString().trim();
+              }
+              
+              if (!studentCode) {
+                console.log(`행 ${i + 1}: 학생번호가 비어있음 (원본: ${rawStudentCode})`);
+                continue;
+              }
+              
+              let responseCount = 0;
+              for (let j = 1; j < row.length && j - 1 < questions.length; j++) {
+                const rawAnswer = row[j];
+                
+                // 빈 셀 처리 개선 - null, undefined, 빈 문자열 모두 빈 문자열로 변환
+                let answer = "";
+                if (rawAnswer !== null && rawAnswer !== undefined) {
+                  answer = rawAnswer.toString().trim();
+                }
+                
+                data.push({
+                  code: studentCode,
+                  answer: answer,
+                  questionIndex: j - 1
+                });
+                responseCount++;
+              }
+              
+              console.log(`학생 ${studentCode}: ${responseCount}개 응답 파싱 (빈 응답 포함)`);
             }
+            
+            console.log("엑셀 파싱 완료, 총 응답:", data.length);
             
             if (data.length === 0) {
               reject(new Error("유효한 학생 응답이 없습니다."));
@@ -149,10 +202,14 @@ export const CreateProject = () => {
             
             resolve(data);
           } catch (error) {
-            reject(new Error("엑셀 파일 파싱에 실패했습니다."));
+            console.error("엑셀 파싱 오류:", error);
+            reject(new Error(`엑셀 파일 파싱에 실패했습니다: ${error}`));
           }
         };
-        reader.onerror = reject;
+        reader.onerror = (error) => {
+          console.error("엑셀 파일 읽기 오류:", error);
+          reject(error);
+        };
         reader.readAsArrayBuffer(file);
         
       } else {
@@ -201,8 +258,9 @@ export const CreateProject = () => {
       const duplicateCheck = new Set();
       
       for (const response of responses) {
-        if (!response.code || !response.answer) {
-          validationErrors.push("빈 학생번호 또는 응답이 있습니다.");
+        // 학생번호는 반드시 있어야 하지만 응답은 빈 문자열 허용
+        if (!response.code) {
+          validationErrors.push("빈 학생번호가 있습니다.");
           continue;
         }
         
