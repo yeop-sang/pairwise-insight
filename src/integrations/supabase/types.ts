@@ -67,6 +67,13 @@ export type Database = {
             referencedRelation: "student_responses"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "comparisons_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
         ]
       }
       profiles: {
@@ -263,7 +270,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      calculate_bradley_terry_scores: {
+        Args: { project_uuid: string }
+        Returns: {
+          loss_count: number
+          rank: number
+          response_id: string
+          score: number
+          student_code: string
+          total_comparisons: number
+          win_count: number
+        }[]
+      }
     }
     Enums: {
       user_role: "teacher" | "student"
