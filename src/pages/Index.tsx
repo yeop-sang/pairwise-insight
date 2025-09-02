@@ -44,46 +44,29 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-subtle relative">
-      {/* Main Content - Left 3/4 */}
-      <div className="container mx-auto px-4 py-16 pr-96">
-        {/* Logo and Hero Section */}
-        <div className="text-center max-w-4xl mx-auto">
-          <div className="flex items-center justify-center mb-8">
-            <img src={ppaLogo} alt="PPA Logo" className="h-20 w-20 mr-4" />
-            <h1 className="text-5xl font-bold text-foreground leading-tight">
-              쌍대비교 동료평가
+    <div className="min-h-screen bg-gradient-subtle flex">
+      {/* Left Side - Logo and Content */}
+      <div className="flex-1 flex items-center justify-center px-8">
+        <div className="text-center max-w-2xl">
+          <div className="flex flex-col items-center mb-8">
+            <img src={ppaLogo} alt="PPA Logo" className="h-24 w-24 mb-6" />
+            <h1 className="text-6xl font-bold text-foreground mb-4">
+              Pairwise
             </h1>
+            <h2 className="text-3xl font-medium text-primary">
+              동료평가
+            </h2>
           </div>
           
-          <p className="text-xl text-muted-foreground mb-8 leading-relaxed">
+          <p className="text-xl text-muted-foreground leading-relaxed">
             비교 평가를 통해 학생 평가를 혁신하세요. 
             Bradley-Terry 모델링을 사용하여 간단한 쌍대비교에서 신뢰할 수 있는 순위를 생성합니다.
           </p>
-          
-          <div className="flex justify-center mb-16">
-            <Button
-              variant="academic"
-              size="xl"
-              onClick={() => navigate("/dashboard")}
-              className="flex items-center gap-2"
-            >
-              <BarChart3 className="h-5 w-5" />
-              대시보드 보기
-            </Button>
-          </div>
-
-          {/* Simple catchphrase */}
-          <div className="mt-16 text-center">
-            <p className="text-2xl font-medium text-primary italic">
-              "간단한 비교, 명확한 순위"
-            </p>
-          </div>
         </div>
       </div>
 
-      {/* Auth Form - Right 1/4 Fixed Position */}
-      <div className="fixed top-1/2 right-8 transform -translate-y-1/2 w-80">
+      {/* Right Side - Auth Forms */}
+      <div className="w-96 flex items-center justify-center p-8 bg-card/50 backdrop-blur-sm">
         <AuthForm onLogin={handleLogin} onSignup={handleSignup} />
       </div>
     </div>
