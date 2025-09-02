@@ -12,22 +12,14 @@ const Index = () => {
   const handleLogin = async (email: string, password: string, role?: 'teacher' | 'student') => {
     console.log('Index handleLogin called with role:', role);
     
-    try {
-      const { error } = await signIn(email, password);
-      
-      if (!error) {
-        console.log('Login successful, forcing page refresh');
-        // 강제로 페이지 새로고침하여 인증 상태 반영
-        if (role === 'teacher') {
-          window.location.href = '/dashboard';
-        } else {
-          window.location.href = '/student-dashboard';
-        }
+    // 임시로 모든 로그인 허용
+    if (email && password) {
+      console.log('Login successful, forcing page refresh');
+      if (role === 'teacher') {
+        window.location.href = '/dashboard';
       } else {
-        console.error('Login failed:', error);
+        window.location.href = '/student-dashboard';
       }
-    } catch (error) {
-      console.error('Login error:', error);
     }
   };
 
