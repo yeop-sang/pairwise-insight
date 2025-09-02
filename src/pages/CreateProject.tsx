@@ -252,31 +252,51 @@ export const CreateProject = () => {
         throw new Error("파일에 유효한 데이터가 없습니다.");
       }
 
-      // Validate data structure
+      // Validate data structure and handle duplicates
       const validationErrors = [];
       const studentCodes = new Set();
-      const duplicateCheck = new Set();
+      const responseMap = new Map<string, {code: string, answer: string, questionIndex: number, rowNumber: number}>();
       
-      for (const response of responses) {
+      // 행 번호와 함께 처리하여 중복 발생 위치 추적
+      for (let i = 0; i < responses.length; i++) {
+        const response = responses[i];
+        
         // 학생번호는 반드시 있어야 하지만 응답은 빈 문자열 허용
         if (!response.code) {
-          validationErrors.push("빈 학생번호가 있습니다.");
+          validationErrors.push(`데이터 ${i + 1}번째: 빈 학생번호가 있습니다.`);
           continue;
         }
         
         const key = `${response.code}-${response.questionIndex}`;
-        if (duplicateCheck.has(key)) {
-          validationErrors.push(`중복된 응답: 학생 ${response.code}, 문항 ${response.questionIndex + 1}`);
+        
+        if (responseMap.has(key)) {
+          const existing = responseMap.get(key)!;
+          console.log(`중복 발견: 학생 ${response.code}, 문항 ${response.questionIndex + 1} - 기존: 데이터 ${existing.rowNumber}, 새로운: 데이터 ${i + 1}`);
+          
+          // 첫 번째 유효한 응답 우선 선택 (빈 응답보다는 내용이 있는 응답 우선)
+          if (!existing.answer && response.answer) {
+            // 기존이 빈 응답이고 새로운 것이 내용이 있다면 교체
+            responseMap.set(key, {...response, rowNumber: i + 1});
+            console.log(`학생 ${response.code}, 문항 ${response.questionIndex + 1}: 빈 응답을 내용이 있는 응답으로 교체`);
+          } else {
+            // 그 외의 경우 첫 번째 응답 유지
+            console.log(`학생 ${response.code}, 문항 ${response.questionIndex + 1}: 첫 번째 응답 유지`);
+          }
+        } else {
+          responseMap.set(key, {...response, rowNumber: i + 1});
         }
-        duplicateCheck.add(key);
+        
         studentCodes.add(response.code);
       }
+      
+      // 중복 제거된 응답들을 배열로 변환
+      const deduplicatedResponses = Array.from(responseMap.values()).map(({rowNumber, ...response}) => response);
       
       if (validationErrors.length > 0) {
         throw new Error(`데이터 검증 실패:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? '\n...' : ''}`);
       }
       
-      console.log(`검증 완료: 학생 ${studentCodes.size}명, 응답 ${responses.length}개`);
+      console.log(`검증 완료: 학생 ${studentCodes.size}명, 원본 응답 ${responses.length}개, 중복 제거 후 ${deduplicatedResponses.length}개`);
 
       // Create project
       console.log("프로젝트 생성 중...");
@@ -304,8 +324,8 @@ export const CreateProject = () => {
       const batchSize = 100;
       const responseBatches = [];
       
-      for (let i = 0; i < responses.length; i += batchSize) {
-        responseBatches.push(responses.slice(i, i + batchSize));
+      for (let i = 0; i < deduplicatedResponses.length; i += batchSize) {
+        responseBatches.push(deduplicatedResponses.slice(i, i + batchSize));
       }
       
       for (let i = 0; i < responseBatches.length; i++) {
