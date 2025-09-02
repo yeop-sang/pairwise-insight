@@ -17,22 +17,33 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
   const [teacherLoginData, setTeacherLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ email: "", password: "", name: "" });
 
+  const normalizeEmail = (email: string): string => {
+    // @가 없으면 기본 도메인 추가
+    if (email && !email.includes('@')) {
+      return `${email}@example.com`;
+    }
+    return email;
+  };
+
   const handleStudentLogin = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Student login:', studentLoginData);
-    onLogin(studentLoginData.email, studentLoginData.password, 'student');
+    const normalizedEmail = normalizeEmail(studentLoginData.email);
+    onLogin(normalizedEmail, studentLoginData.password, 'student');
   };
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
     console.log('Teacher login:', teacherLoginData);
     console.log('Calling onLogin with teacher role');
-    onLogin(teacherLoginData.email, teacherLoginData.password, 'teacher');
+    const normalizedEmail = normalizeEmail(teacherLoginData.email);
+    onLogin(normalizedEmail, teacherLoginData.password, 'teacher');
   };
 
   const handleSignup = (e: React.FormEvent) => {
     e.preventDefault();
-    onSignup(signupData.email, signupData.password, signupData.name, 'teacher'); // 교사 회원가입만 가능
+    const normalizedEmail = normalizeEmail(signupData.email);
+    onSignup(normalizedEmail, signupData.password, signupData.name, 'teacher'); // 교사 회원가입만 가능
   };
 
   return (
@@ -48,13 +59,13 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
         <CardContent>
           <form onSubmit={handleStudentLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="student-email">이메일</Label>
+              <Label htmlFor="student-email">이메일 또는 ID</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="student-email"
-                  type="email"
-                  placeholder="학생 이메일을 입력하세요"
+                  type="text"
+                  placeholder="이메일 또는 ID를 입력하세요"
                   className="pl-10"
                   value={studentLoginData.email}
                   onChange={(e) => setStudentLoginData({...studentLoginData, email: e.target.value})}
@@ -104,13 +115,13 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
             <TabsContent value="login" className="space-y-4">
               <form onSubmit={handleTeacherLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="teacher-login-email">이메일</Label>
+                  <Label htmlFor="teacher-login-email">이메일 또는 ID</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                     <Input
                       id="teacher-login-email"
-                      type="email"
-                      placeholder="교사 이메일을 입력하세요"
+                      type="text"
+                      placeholder="이메일 또는 ID를 입력하세요"
                       className="pl-10"
                       value={teacherLoginData.email}
                       onChange={(e) => setTeacherLoginData({...teacherLoginData, email: e.target.value})}
@@ -163,15 +174,15 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                   <Label htmlFor="teacher-signup-email">이메일</Label>
                   <div className="relative">
                     <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="teacher-signup-email"
-                      type="email"
-                      placeholder="교사 이메일을 입력하세요"
-                      className="pl-10"
-                      value={signupData.email}
-                      onChange={(e) => setSignupData({...signupData, email: e.target.value})}
-                      required
-                    />
+                <Input
+                  id="teacher-signup-email"
+                  type="text"
+                  placeholder="이메일을 입력하세요"
+                  className="pl-10"
+                  value={signupData.email}
+                  onChange={(e) => setSignupData({...signupData, email: e.target.value})}
+                  required
+                />
                   </div>
                 </div>
                 
