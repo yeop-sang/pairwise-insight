@@ -185,14 +185,43 @@ export const CreateProject = () => {
     setLoading(true);
 
     try {
+      console.log("파일 파싱 시작:", csvFile.name);
+      
       // Parse file (CSV or Excel)
       const responses = await parseFile(csvFile);
+      console.log("파싱된 응답 개수:", responses.length);
       
       if (responses.length === 0) {
         throw new Error("파일에 유효한 데이터가 없습니다.");
       }
 
+      // Validate data structure
+      const validationErrors = [];
+      const studentCodes = new Set();
+      const duplicateCheck = new Set();
+      
+      for (const response of responses) {
+        if (!response.code || !response.answer) {
+          validationErrors.push("빈 학생번호 또는 응답이 있습니다.");
+          continue;
+        }
+        
+        const key = `${response.code}-${response.questionIndex}`;
+        if (duplicateCheck.has(key)) {
+          validationErrors.push(`중복된 응답: 학생 ${response.code}, 문항 ${response.questionIndex + 1}`);
+        }
+        duplicateCheck.add(key);
+        studentCodes.add(response.code);
+      }
+      
+      if (validationErrors.length > 0) {
+        throw new Error(`데이터 검증 실패:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? '\n...' : ''}`);
+      }
+      
+      console.log(`검증 완료: 학생 ${studentCodes.size}명, 응답 ${responses.length}개`);
+
       // Create project
+      console.log("프로젝트 생성 중...");
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
@@ -205,21 +234,42 @@ export const CreateProject = () => {
         .select()
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error("프로젝트 생성 오류:", projectError);
+        throw new Error(`프로젝트 생성 실패: ${projectError.message}`);
+      }
+      
+      console.log("프로젝트 생성 완료:", project.id);
 
-      // Insert student responses
-      const { error: responsesError } = await supabase
-        .from('student_responses')
-        .insert(
-          responses.map(response => ({
-            project_id: project.id,
-            student_code: response.code,
-            response_text: response.answer,
-            question_number: response.questionIndex + 1 // 1-based indexing
-          }))
-        );
+      // Insert student responses in batches
+      console.log("학생 응답 삽입 중...");
+      const batchSize = 100;
+      const responseBatches = [];
+      
+      for (let i = 0; i < responses.length; i += batchSize) {
+        responseBatches.push(responses.slice(i, i + batchSize));
+      }
+      
+      for (let i = 0; i < responseBatches.length; i++) {
+        const batch = responseBatches[i];
+        const { error: responsesError } = await supabase
+          .from('student_responses')
+          .insert(
+            batch.map(response => ({
+              project_id: project.id,
+              student_code: response.code,
+              response_text: response.answer,
+              question_number: response.questionIndex + 1 // 1-based indexing
+            }))
+          );
 
-      if (responsesError) throw responsesError;
+        if (responsesError) {
+          console.error(`응답 삽입 오류 (배치 ${i + 1}/${responseBatches.length}):`, responsesError);
+          throw new Error(`학생 응답 삽입 실패 (배치 ${i + 1}): ${responsesError.message}`);
+        }
+        
+        console.log(`응답 배치 ${i + 1}/${responseBatches.length} 삽입 완료`);
+      }
 
       // Assign all students to this project
       const { data: students, error: studentsError } = await supabase
