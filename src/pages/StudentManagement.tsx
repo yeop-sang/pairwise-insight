@@ -175,6 +175,35 @@ export const StudentManagement: React.FC = () => {
         });
       }
 
+      // 1. 먼저 Supabase Auth에 학생 계정들을 생성
+      const authResults = [];
+      for (const student of studentsData) {
+        try {
+          const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+            email: `${student.student_id}@student.school`,
+            password: student.password,
+            user_metadata: {
+              name: student.name,
+              role: 'student',
+              student_id: student.student_id,
+              grade: student.grade,
+              class_number: student.class_number,
+              student_number: student.student_number
+            }
+          });
+
+          if (authError) {
+            console.error(`Auth creation failed for ${student.student_id}:`, authError);
+            // Auth 생성 실패해도 students 테이블에는 추가
+          } else {
+            authResults.push({ student_id: student.student_id, auth_user_id: authData.user?.id });
+          }
+        } catch (authError) {
+          console.error(`Auth creation error for ${student.student_id}:`, authError);
+        }
+      }
+
+      // 2. students 테이블에 학생 정보 추가
       const { error } = await supabase
         .from('students')
         .insert(studentsData);
@@ -183,7 +212,7 @@ export const StudentManagement: React.FC = () => {
 
       toast({
         title: '성공',
-        description: `${studentsData.length}명의 학생이 추가되었습니다.`,
+        description: `${studentsData.length}명의 학생이 추가되었습니다. (Auth 계정: ${authResults.length}개 생성됨)`,
       });
 
       setIsDialogOpen(false);
