@@ -13,17 +13,20 @@ interface AuthFormProps {
 }
 
 export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
-  const [loginData, setLoginData] = useState({ email: "", password: "" });
+  const [studentLoginData, setStudentLoginData] = useState({ email: "", password: "" });
+  const [teacherLoginData, setTeacherLoginData] = useState({ email: "", password: "" });
   const [signupData, setSignupData] = useState({ email: "", password: "", name: "" });
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleStudentLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(loginData.email, loginData.password, 'student'); // 학생 로그인
+    console.log('Student login:', studentLoginData);
+    onLogin(studentLoginData.email, studentLoginData.password, 'student');
   };
 
   const handleTeacherLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(loginData.email, loginData.password, 'teacher'); // 교사 로그인
+    console.log('Teacher login:', teacherLoginData);
+    onLogin(teacherLoginData.email, teacherLoginData.password, 'teacher');
   };
 
   const handleSignup = (e: React.FormEvent) => {
@@ -42,7 +45,7 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleLogin} className="space-y-4">
+          <form onSubmit={handleStudentLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="student-email">이메일</Label>
               <div className="relative">
@@ -52,8 +55,8 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                   type="email"
                   placeholder="학생 이메일을 입력하세요"
                   className="pl-10"
-                  value={loginData.email}
-                  onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                  value={studentLoginData.email}
+                  onChange={(e) => setStudentLoginData({...studentLoginData, email: e.target.value})}
                   required
                 />
               </div>
@@ -68,8 +71,8 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                   type="password"
                   placeholder="비밀번호를 입력하세요"
                   className="pl-10"
-                  value={loginData.password}
-                  onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                  value={studentLoginData.password}
+                  onChange={(e) => setStudentLoginData({...studentLoginData, password: e.target.value})}
                   required
                 />
               </div>
@@ -108,8 +111,8 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                       type="email"
                       placeholder="교사 이메일을 입력하세요"
                       className="pl-10"
-                      value={loginData.email}
-                      onChange={(e) => setLoginData({...loginData, email: e.target.value})}
+                      value={teacherLoginData.email}
+                      onChange={(e) => setTeacherLoginData({...teacherLoginData, email: e.target.value})}
                       required
                     />
                   </div>
@@ -124,8 +127,8 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                       type="password"
                       placeholder="비밀번호를 입력하세요"
                       className="pl-10"
-                      value={loginData.password}
-                      onChange={(e) => setLoginData({...loginData, password: e.target.value})}
+                      value={teacherLoginData.password}
+                      onChange={(e) => setTeacherLoginData({...teacherLoginData, password: e.target.value})}
                       required
                     />
                   </div>
