@@ -118,7 +118,7 @@ export const ComparisonResults = () => {
         '승리횟수': result.win_count,
         '패배횟수': result.loss_count,
         '총비교횟수': result.total_comparisons,
-        '승률': result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) + '%' : '0%'
+        '선호도': result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) + '%' : '0%'
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
@@ -146,15 +146,11 @@ export const ComparisonResults = () => {
   };
 
   const getRankColor = (rank: number) => {
-    if (rank === 1) return 'bg-gradient-to-r from-yellow-400 to-yellow-600';
-    if (rank === 2) return 'bg-gradient-to-r from-gray-300 to-gray-500';
-    if (rank === 3) return 'bg-gradient-to-r from-amber-600 to-amber-800';
-    return 'bg-muted';
+    return 'bg-primary/10 text-primary border border-primary/20';
   };
 
   const getRankIcon = (rank: number) => {
-    if (rank <= 3) return <Trophy className="h-5 w-5" />;
-    return <Target className="h-5 w-5" />;
+    return null; // No icons needed
   };
 
   // 문항별 질문 내용
@@ -254,14 +250,13 @@ export const ComparisonResults = () => {
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-4">
-                            <div className={`flex items-center justify-center w-12 h-12 rounded-full text-white font-bold ${getRankColor(result.rank)}`}>
-                              {getRankIcon(result.rank)}
-                              <span className="ml-1">{result.rank}</span>
+                            <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold ${getRankColor(result.rank)}`}>
+                              <span>{result.rank}</span>
                             </div>
                             <div>
                               <h3 className="text-lg font-semibold">{result.student_code}</h3>
                               <p className="text-sm text-muted-foreground">
-                                승률: {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
+                                선호도: {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
                               </p>
                             </div>
                           </div>
@@ -291,7 +286,7 @@ export const ComparisonResults = () => {
                         
                         <div className="mt-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-muted-foreground">승률</span>
+                            <span className="text-sm text-muted-foreground">선호도</span>
                             <span className="text-sm font-medium">
                               {result.total_comparisons > 0 ? ((result.win_count / result.total_comparisons) * 100).toFixed(1) : 0}%
                             </span>
