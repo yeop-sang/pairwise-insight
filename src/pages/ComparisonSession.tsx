@@ -133,8 +133,18 @@ export const ComparisonSession = () => {
     }
   }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed]);
 
-  // Check if all questions are completed - more precise logic
-  const allQuestionsComplete = currentQuestion > maxQuestions && (reviewerStats?.completed === 15);
+  // Check if all questions are completed - simplified logic
+  const allQuestionsComplete = currentQuestion > maxQuestions;
+  
+  // Debug logging
+  console.log('Debug - allQuestionsComplete check:', {
+    currentQuestion,
+    maxQuestions,
+    allQuestionsComplete,
+    reviewerStatsCompleted: reviewerStats?.completed,
+    currentPair: !!currentPair,
+    isInitializing
+  });
 
   // Complete project assignment when all questions are done (but don't auto-navigate)
   useEffect(() => {
