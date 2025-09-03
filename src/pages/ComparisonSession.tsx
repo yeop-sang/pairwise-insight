@@ -323,14 +323,30 @@ export const ComparisonSession = () => {
   if (allQuestionsComplete) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <Card className="p-8 text-center">
-          <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-            ✓
+        <Card className="p-8 text-center max-w-2xl mx-auto">
+          <div className="h-20 w-20 text-green-500 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center text-3xl">
+            🎉
           </div>
-          <h2 className="text-2xl font-bold mb-4">모든 문항 완료!</h2>
-          <p className="text-muted-foreground mb-4">
-            {maxQuestions}개 문항의 비교를 모두 완료하셨습니다.
+          <h2 className="text-3xl font-bold mb-4 text-foreground">평가 완료! 수고하셨습니다!</h2>
+          <p className="text-lg text-muted-foreground mb-6">
+            {maxQuestions}개 문항의 비교를 모두 완료하셨습니다.<br/>
+            동료 평가에 참여해주셔서 감사합니다.
           </p>
+          <div className="bg-muted/50 p-6 rounded-lg mb-6">
+            <p className="text-sm text-muted-foreground mb-2">
+              총 <span className="font-semibold text-foreground">{reviewerStats?.completed || 0}개</span>의 비교를 완료했습니다
+            </p>
+            <p className="text-sm text-muted-foreground">
+              여러분의 소중한 피드백이 동료들의 학습에 큰 도움이 됩니다
+            </p>
+          </div>
+          <Button 
+            size="lg" 
+            onClick={() => navigate('/student-dashboard')}
+            className="min-w-48"
+          >
+            학생 대시보드로 돌아가기
+          </Button>
         </Card>
       </div>
     );
