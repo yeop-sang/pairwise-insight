@@ -1,6 +1,9 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ComparisonAlgorithm } from '@/utils/comparisonAlgorithm';
+import { useTimeTracking } from './useTimeTracking';
+import { useSessionMetadata } from './useSessionMetadata';
+import { useQualityManager } from './useQualityManager';
 
 interface StudentResponse {
   id: string;
@@ -30,6 +33,25 @@ export const useAdvancedComparisonLogic = ({
   const [currentPair, setCurrentPair] = useState<ComparisonPair | null>(null);
   const [algorithm, setAlgorithm] = useState<ComparisonAlgorithm | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
+  
+  // Enhanced tracking hooks
+  const { timeStamps, initializeShown, handleSubmission } = useTimeTracking();
+  const { sessionMetadata, isLoading: sessionLoading } = useSessionMetadata(projectId, currentQuestion);
+  const { 
+    reviewerStats: qualityStats, 
+    processDecision, 
+    initializeStats 
+  } = useQualityManager({
+    studentId: reviewerId,
+    projectId,
+    questionNumber: currentQuestion,
+    config: sessionMetadata?.config || {
+      shortResponseThresholdMs: 3000,
+      consecutiveBiasThreshold: 5,
+      mirrorReshowGap: 4,
+      duplicateReevalGap: 10,
+    }
+  });
   const [completionStats, setCompletionStats] = useState({
     totalComparisons: 0,
     targetComparisons: 0,
@@ -118,31 +140,71 @@ export const useAdvancedComparisonLogic = ({
     initializeAlgorithm();
   }, [initializeAlgorithm]);
 
-  const submitComparison = useCallback(async (decision: 'A' | 'B') => {
-    if (!algorithm || !currentPair || !projectId || !reviewerId) {
+  useEffect(() => {
+    if (reviewerId && projectId && currentQuestion) {
+      initializeStats();
+    }
+  }, [reviewerId, projectId, currentQuestion, initializeStats]);
+
+  // Initialize timing when new pair is loaded
+  useEffect(() => {
+    if (currentPair) {
+      initializeShown();
+    }
+  }, [currentPair, initializeShown]);
+
+  const submitComparison = useCallback(async (decision: 'A' | 'B' | 'N') => {
+    if (!algorithm || !currentPair || !projectId || !reviewerId || !sessionMetadata) {
       console.error("Missing required data for comparison submission");
       return false;
     }
 
     try {
-      const startTime = Date.now();
+      // Handle submission timing
+      const submissionTimeData = handleSubmission();
       
       // Map decision to database format
-      const dbDecision = decision === 'A' ? 'left' : 'right';
+      const dbDecision = decision === 'A' ? 'left' : decision === 'B' ? 'right' : 'neutral';
+      const decisionTimeMs = timeStamps.comparisonTimeMs || 0;
       
-      console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}`);
+      console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}, time: ${decisionTimeMs}ms`);
       
+      // Process decision with quality manager
+      const qualityResult = await processDecision(dbDecision as 'left' | 'right' | 'neutral', decisionTimeMs);
+      
+      // Generate decision ID for duplicate prevention
+      const decisionId = crypto.randomUUID();
+      
+      // Prepare comparison data with enhanced tracking
+      const comparisonData = {
+        decision_id: decisionId,
+        project_id: projectId,
+        response_a_id: currentPair.responseA.id,
+        response_b_id: currentPair.responseB.id,
+        decision: dbDecision,
+        student_id: reviewerId,
+        comparison_time_ms: decisionTimeMs,
+        shown_at_client: timeStamps.shownAtClient.toISOString(),
+        shown_at_server: new Date().toISOString(),
+        submitted_at_client: timeStamps.submittedAtClient?.toISOString(),
+        submitted_at_server: new Date().toISOString(),
+        focus_window_at: timeStamps.focusWindowAt?.toISOString(),
+        focus_interaction_at: timeStamps.focusInteractionAt?.toISOString(),
+        focus_to_click_ms: timeStamps.focusToClickMs,
+        ui_order_left_id: currentPair.responseA.id,
+        ui_order_right_id: currentPair.responseB.id,
+        weight_applied: qualityStats?.finalWeightApplied || 1.0,
+        popup_shown: qualityResult?.popupInfo?.popupShown || false,
+        popup_reason: qualityResult?.popupInfo?.popupReason,
+        popup_at_server: qualityResult?.popupInfo?.popupAt?.toISOString(),
+        is_mirror: false, // Will be set by mirror reshow logic
+        is_duplicate_reeval: false, // Will be set by duplicate reeval logic
+      };
+
       // Insert comparison into database
       const { error } = await supabase
         .from('comparisons')
-        .insert({
-          project_id: projectId,
-          response_a_id: currentPair.responseA.id,
-          response_b_id: currentPair.responseB.id,
-          decision: dbDecision,
-          student_id: reviewerId, // reviewerId is now the UUID from student.id
-          comparison_time_ms: Date.now() - startTime
-        });
+        .insert(comparisonData);
 
       if (error) {
         console.error("Error saving comparison:", error);
@@ -157,9 +219,18 @@ export const useAdvancedComparisonLogic = ({
         dbDecision
       );
 
-      // Get next pair
+      // Handle mirror reshow if needed
+      if (qualityResult?.shouldMirror) {
+        // Schedule mirror reshow (implementation would go here)
+        console.log(`Mirror reshow triggered for bias pattern: ${qualityResult.mirrorType}`);
+      }
+
+      // Get next pair and initialize timing for next comparison
       const nextPair = algorithm.getNextComparison(reviewerId);
       setCurrentPair(nextPair);
+      if (nextPair) {
+        initializeShown();
+      }
       
       // Update stats
       updateStats(algorithm);
@@ -169,7 +240,7 @@ export const useAdvancedComparisonLogic = ({
       console.error("Error in submitComparison:", error);
       return false;
     }
-  }, [algorithm, currentPair, projectId, reviewerId, updateStats]);
+  }, [algorithm, currentPair, projectId, reviewerId, sessionMetadata, handleSubmission, timeStamps, processDecision, qualityStats, updateStats, initializeShown]);
 
   const canContinue = useCallback(() => {
     if (!algorithm || !reviewerId) return false;
@@ -216,6 +287,8 @@ export const useAdvancedComparisonLogic = ({
     isInitializing,
     completionStats,
     reviewerStats,
+    qualityStats,
+    sessionMetadata,
     
     // 액션
     submitComparison,
@@ -230,6 +303,10 @@ export const useAdvancedComparisonLogic = ({
     isComplete: reviewerStats.remaining === 0 || !canContinue(),
     
     // 알고리즘 재초기화 함수
-    reinitialize: initializeAlgorithm
+    reinitialize: initializeAlgorithm,
+    
+    // Enhanced features
+    timeStamps,
+    initializeShown
   };
 };

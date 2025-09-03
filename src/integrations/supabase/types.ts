@@ -16,34 +16,112 @@ export type Database = {
     Tables: {
       comparisons: {
         Row: {
+          agreement_snapshot: number | null
           comparison_time_ms: number | null
           created_at: string
           decision: string | null
+          decision_id: string | null
+          focus_interaction_at: string | null
+          focus_to_click_ms: number | null
+          focus_window_at: string | null
           id: string
+          is_duplicate_reeval: boolean | null
+          is_duplicate_submission: boolean | null
+          is_mirror: boolean | null
+          min_gap_comparisons: number | null
+          mirror_cross_question: boolean | null
+          mirror_group_id: string | null
+          mirror_of_pair_id: string | null
+          mirror_seq: number | null
+          mirror_type: string | null
+          popup_at_server: string | null
+          popup_reason: string | null
+          popup_shown: boolean | null
           project_id: string
+          reeval_group_id: string | null
+          reeval_type: string | null
           response_a_id: string
           response_b_id: string
+          shown_at_client: string | null
+          shown_at_server: string | null
           student_id: string
+          submitted_at_client: string | null
+          submitted_at_server: string | null
+          ui_order_left_id: string | null
+          ui_order_right_id: string | null
+          weight_applied: number | null
         }
         Insert: {
+          agreement_snapshot?: number | null
           comparison_time_ms?: number | null
           created_at?: string
           decision?: string | null
+          decision_id?: string | null
+          focus_interaction_at?: string | null
+          focus_to_click_ms?: number | null
+          focus_window_at?: string | null
           id?: string
+          is_duplicate_reeval?: boolean | null
+          is_duplicate_submission?: boolean | null
+          is_mirror?: boolean | null
+          min_gap_comparisons?: number | null
+          mirror_cross_question?: boolean | null
+          mirror_group_id?: string | null
+          mirror_of_pair_id?: string | null
+          mirror_seq?: number | null
+          mirror_type?: string | null
+          popup_at_server?: string | null
+          popup_reason?: string | null
+          popup_shown?: boolean | null
           project_id: string
+          reeval_group_id?: string | null
+          reeval_type?: string | null
           response_a_id: string
           response_b_id: string
+          shown_at_client?: string | null
+          shown_at_server?: string | null
           student_id: string
+          submitted_at_client?: string | null
+          submitted_at_server?: string | null
+          ui_order_left_id?: string | null
+          ui_order_right_id?: string | null
+          weight_applied?: number | null
         }
         Update: {
+          agreement_snapshot?: number | null
           comparison_time_ms?: number | null
           created_at?: string
           decision?: string | null
+          decision_id?: string | null
+          focus_interaction_at?: string | null
+          focus_to_click_ms?: number | null
+          focus_window_at?: string | null
           id?: string
+          is_duplicate_reeval?: boolean | null
+          is_duplicate_submission?: boolean | null
+          is_mirror?: boolean | null
+          min_gap_comparisons?: number | null
+          mirror_cross_question?: boolean | null
+          mirror_group_id?: string | null
+          mirror_of_pair_id?: string | null
+          mirror_seq?: number | null
+          mirror_type?: string | null
+          popup_at_server?: string | null
+          popup_reason?: string | null
+          popup_shown?: boolean | null
           project_id?: string
+          reeval_group_id?: string | null
+          reeval_type?: string | null
           response_a_id?: string
           response_b_id?: string
+          shown_at_client?: string | null
+          shown_at_server?: string | null
           student_id?: string
+          submitted_at_client?: string | null
+          submitted_at_server?: string | null
+          ui_order_left_id?: string | null
+          ui_order_right_id?: string | null
+          weight_applied?: number | null
         }
         Relationships: [
           {
@@ -187,6 +265,147 @@ export type Database = {
           rubric?: string | null
           teacher_id?: string
           title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reviewer_stats: {
+        Row: {
+          agreement_rate: number | null
+          consecutive_left_choices: number | null
+          consecutive_right_choices: number | null
+          created_at: string
+          final_weight_applied: number | null
+          id: string
+          inconsistency_count: number | null
+          inconsistency_rate: number | null
+          last_popup_at: string | null
+          low_agreement_flag: boolean | null
+          max_consecutive_left: number | null
+          max_consecutive_right: number | null
+          popup_cooldown_remaining: number | null
+          project_id: string
+          question_number: number
+          short_decision_count: number | null
+          short_decision_streaks: number | null
+          student_id: string
+          total_comparisons: number | null
+          updated_at: string
+        }
+        Insert: {
+          agreement_rate?: number | null
+          consecutive_left_choices?: number | null
+          consecutive_right_choices?: number | null
+          created_at?: string
+          final_weight_applied?: number | null
+          id?: string
+          inconsistency_count?: number | null
+          inconsistency_rate?: number | null
+          last_popup_at?: string | null
+          low_agreement_flag?: boolean | null
+          max_consecutive_left?: number | null
+          max_consecutive_right?: number | null
+          popup_cooldown_remaining?: number | null
+          project_id: string
+          question_number?: number
+          short_decision_count?: number | null
+          short_decision_streaks?: number | null
+          student_id: string
+          total_comparisons?: number | null
+          updated_at?: string
+        }
+        Update: {
+          agreement_rate?: number | null
+          consecutive_left_choices?: number | null
+          consecutive_right_choices?: number | null
+          created_at?: string
+          final_weight_applied?: number | null
+          id?: string
+          inconsistency_count?: number | null
+          inconsistency_rate?: number | null
+          last_popup_at?: string | null
+          low_agreement_flag?: boolean | null
+          max_consecutive_left?: number | null
+          max_consecutive_right?: number | null
+          popup_cooldown_remaining?: number | null
+          project_id?: string
+          question_number?: number
+          short_decision_count?: number | null
+          short_decision_streaks?: number | null
+          student_id?: string
+          total_comparisons?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      session_metadata: {
+        Row: {
+          agreement_update_interval: number | null
+          allow_tie: boolean | null
+          app_version: string
+          closed_at: string | null
+          consecutive_bias_threshold: number | null
+          created_at: string
+          duplicate_reeval_gap: number | null
+          global_score_refresh_interval: number | null
+          id: string
+          k_elo: number | null
+          mirror_reshow_gap: number | null
+          pairing_strategy: string | null
+          project_id: string
+          question_number: number
+          random_seed: string
+          reviewer_target_per_person: number | null
+          session_id: string
+          short_response_threshold_ms: number | null
+          started_at: string
+          target_per_response: number | null
+          updated_at: string
+        }
+        Insert: {
+          agreement_update_interval?: number | null
+          allow_tie?: boolean | null
+          app_version: string
+          closed_at?: string | null
+          consecutive_bias_threshold?: number | null
+          created_at?: string
+          duplicate_reeval_gap?: number | null
+          global_score_refresh_interval?: number | null
+          id?: string
+          k_elo?: number | null
+          mirror_reshow_gap?: number | null
+          pairing_strategy?: string | null
+          project_id: string
+          question_number?: number
+          random_seed: string
+          reviewer_target_per_person?: number | null
+          session_id: string
+          short_response_threshold_ms?: number | null
+          started_at?: string
+          target_per_response?: number | null
+          updated_at?: string
+        }
+        Update: {
+          agreement_update_interval?: number | null
+          allow_tie?: boolean | null
+          app_version?: string
+          closed_at?: string | null
+          consecutive_bias_threshold?: number | null
+          created_at?: string
+          duplicate_reeval_gap?: number | null
+          global_score_refresh_interval?: number | null
+          id?: string
+          k_elo?: number | null
+          mirror_reshow_gap?: number | null
+          pairing_strategy?: string | null
+          project_id?: string
+          question_number?: number
+          random_seed?: string
+          reviewer_target_per_person?: number | null
+          session_id?: string
+          short_response_threshold_ms?: number | null
+          started_at?: string
+          target_per_response?: number | null
           updated_at?: string
         }
         Relationships: []
