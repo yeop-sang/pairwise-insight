@@ -57,7 +57,8 @@ export const ComparisonSession = () => {
     getEstimatedTimeRemaining,
     getCurrentPhaseInfo,
     hasMoreComparisons,
-    isComplete
+    isComplete,
+    reinitialize
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
@@ -102,11 +103,16 @@ export const ComparisonSession = () => {
     }
   }, [isStudent, isTeacher, projectId, navigate]);
 
-  // 문항별 응답 업데이트
+  // 문항별 응답 업데이트 및 알고리즘 재초기화
   useEffect(() => {
     if (allResponses.length > 0) {
       const currentQuestionResponses = allResponses.filter(r => r.question_number === currentQuestion);
       setResponses(currentQuestionResponses);
+      
+      // 문항이 변경되면 reviewerStats를 리셋
+      if (currentQuestionResponses.length > 0) {
+        console.log(`Moving to question ${currentQuestion}, reinitializing algorithm`);
+      }
     }
   }, [currentQuestion, allResponses]);
 
@@ -121,7 +127,8 @@ export const ComparisonSession = () => {
         });
         setCurrentQuestion(prev => prev + 1);
       } else {
-        // 모든 문항 완료
+        // 모든 문항 완료 - project_assignments 업데이트
+        updateProjectAssignmentCompletion();
         toast({
           title: "모든 비교 완료!",
           description: `${maxQuestions}개 문항의 비교를 모두 완료하셨습니다.`
@@ -130,6 +137,26 @@ export const ComparisonSession = () => {
       }
     }
   }, [isInitialized, isComplete, hasMoreComparisons, currentQuestion, maxQuestions, navigate, isStudent, toast]);
+
+  // 프로젝트 할당 완료 상태 업데이트
+  const updateProjectAssignmentCompletion = async () => {
+    if (!student || !projectId) return;
+
+    try {
+      const { error } = await supabase
+        .from('project_assignments')
+        .update({
+          has_completed: true,
+          completed_at: new Date().toISOString()
+        })
+        .eq('project_id', projectId)
+        .eq('student_id', student.id);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error updating project assignment completion:', error);
+    }
+  };
 
   const fetchProjectAndResponses = async () => {
     try {

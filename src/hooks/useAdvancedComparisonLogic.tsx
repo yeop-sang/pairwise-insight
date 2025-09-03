@@ -47,6 +47,26 @@ export const useAdvancedComparisonLogic = ({
 
   const algorithmRef = useRef<ComparisonAlgorithm | null>(null);
 
+  // 자기 응답 제외 함수
+  const isOwnResponse = useCallback(async (response: StudentResponse, studentId: string) => {
+    try {
+      // 학생 ID를 통해 student_code 조회
+      const { data: student, error } = await supabase
+        .from('students')
+        .select('student_id')
+        .eq('id', studentId)
+        .single();
+
+      if (error || !student) return false;
+      
+      // 응답의 student_code와 학생의 student_id가 일치하는지 확인
+      return response.student_code === student.student_id;
+    } catch (error) {
+      console.error('Error checking own response:', error);
+      return false;
+    }
+  }, []);
+
   const initializeAlgorithm = useCallback(async () => {
     if (!projectId || responses.length === 0 || !reviewerId) return;
 
@@ -61,8 +81,17 @@ export const useAdvancedComparisonLogic = ({
 
       const reviewerIds = assignments?.map(a => a.student_id) || [reviewerId];
       
+      // 자기 응답 제외하여 필터링
+      const filteredResponses = [];
+      for (const response of responses) {
+        const isOwn = await isOwnResponse(response, reviewerId);
+        if (!isOwn) {
+          filteredResponses.push(response);
+        }
+      }
+      
       // 알고리즘 인스턴스 생성
-      const newAlgorithm = new ComparisonAlgorithm(responses, reviewerIds);
+      const newAlgorithm = new ComparisonAlgorithm(filteredResponses, reviewerIds);
       await newAlgorithm.initializeWithExistingComparisons(projectId, supabase);
       
       setAlgorithm(newAlgorithm);
@@ -79,7 +108,7 @@ export const useAdvancedComparisonLogic = ({
     } catch (error) {
       console.error('Error initializing comparison algorithm:', error);
     }
-  }, [projectId, responses, reviewerId]);
+  }, [projectId, responses, reviewerId, isOwnResponse]);
 
   const updateStats = useCallback((alg: ComparisonAlgorithm) => {
     const completion = alg.getCompletionStats();
@@ -92,6 +121,12 @@ export const useAdvancedComparisonLogic = ({
   }, [reviewerId]);
 
   useEffect(() => {
+    // 응답이 변경될 때마다 알고리즘을 재초기화
+    setIsInitialized(false);
+    setCurrentPair(null);
+    setAlgorithm(null);
+    algorithmRef.current = null;
+    
     initializeAlgorithm();
   }, [initializeAlgorithm]);
 
@@ -191,6 +226,9 @@ export const useAdvancedComparisonLogic = ({
     
     // 상태 확인
     hasMoreComparisons: canContinue(),
-    isComplete: reviewerStats.remaining === 0 || !canContinue()
+    isComplete: reviewerStats.remaining === 0 || !canContinue(),
+    
+    // 알고리즘 재초기화 함수
+    reinitialize: initializeAlgorithm
   };
 };

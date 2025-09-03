@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Users, CheckCircle, XCircle } from 'lucide-react';
+import { StudentComparisonProgress } from '@/components/StudentComparisonProgress';
 
 interface Project {
   id: string;
@@ -37,6 +38,7 @@ export const ProjectAssignment: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [assignedStudents, setAssignedStudents] = useState<AssignedStudent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [maxQuestions, setMaxQuestions] = useState<number>(5);
 
   useEffect(() => {
     if (!user || !id) {
@@ -59,6 +61,17 @@ export const ProjectAssignment: React.FC = () => {
 
       if (error) throw error;
       setProject(data);
+
+      // 최대 문항 수 계산
+      const { data: responsesData, error: responsesError } = await supabase
+        .from('student_responses')
+        .select('question_number')
+        .eq('project_id', id);
+
+      if (!responsesError && responsesData) {
+        const maxQuestionNumber = Math.max(...responsesData.map(r => r.question_number));
+        setMaxQuestions(maxQuestionNumber);
+      }
     } catch (error) {
       console.error('Error fetching project:', error);
       toast({
@@ -110,6 +123,17 @@ export const ProjectAssignment: React.FC = () => {
       setLoading(false);
     }
   };
+
+  // 실시간 할당 상태 업데이트를 위한 interval 설정
+  useEffect(() => {
+    if (!id) return;
+
+    const interval = setInterval(() => {
+      fetchAssignedStudents();
+    }, 30000); // 30초마다 업데이트
+
+    return () => clearInterval(interval);
+  }, [id]);
 
   const removeAssignment = async (assignmentId: string) => {
     if (!confirm('이 학생의 할당을 취소하시겠습니까?')) return;
@@ -232,6 +256,16 @@ export const ProjectAssignment: React.FC = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* 학생별 비교 진행 상황 */}
+      {totalCount > 0 && (
+        <div className="mb-8">
+          <StudentComparisonProgress 
+            projectId={id!} 
+            maxQuestions={maxQuestions}
+          />
+        </div>
+      )}
 
       {/* 할당된 학생 목록 */}
       <Card>
