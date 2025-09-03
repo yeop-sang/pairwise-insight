@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Users, CheckCircle, XCircle } from 'lucide-react';
 import { StudentComparisonProgress } from '@/components/StudentComparisonProgress';
+import { StudentProgressModal } from '@/components/StudentProgressModal';
 
 interface Project {
   id: string;
@@ -39,6 +40,7 @@ export const ProjectAssignment: React.FC = () => {
   const [assignedStudents, setAssignedStudents] = useState<AssignedStudent[]>([]);
   const [loading, setLoading] = useState(true);
   const [maxQuestions, setMaxQuestions] = useState<number>(5);
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; name: string } | null>(null);
 
   useEffect(() => {
     if (!user || !id) {
@@ -310,10 +312,14 @@ export const ProjectAssignment: React.FC = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {students
-                        .sort((a, b) => a.student_number - b.student_number)
-                        .map((student) => (
-                        <TableRow key={student.id}>
+                       {students
+                         .sort((a, b) => a.student_number - b.student_number)
+                         .map((student) => (
+                        <TableRow 
+                          key={student.id}
+                          className="hover:bg-muted/50 cursor-pointer"
+                          onClick={() => setSelectedStudent({ id: student.id, name: student.name })}
+                        >
                           <TableCell className="font-mono text-sm">
                             {student.student_id}
                           </TableCell>
@@ -337,7 +343,10 @@ export const ProjectAssignment: React.FC = () => {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => removeAssignment(student.id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeAssignment(student.id);
+                              }}
                             >
                               할당 취소
                             </Button>
@@ -352,6 +361,18 @@ export const ProjectAssignment: React.FC = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Student Progress Modal */}
+      {selectedStudent && (
+        <StudentProgressModal
+          isOpen={!!selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          projectId={id!}
+          studentId={selectedStudent.id}
+          studentName={selectedStudent.name}
+          maxQuestions={maxQuestions}
+        />
+      )}
     </div>
   );
 };

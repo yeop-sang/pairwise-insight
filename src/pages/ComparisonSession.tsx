@@ -49,7 +49,7 @@ export const ComparisonSession = () => {
   // 고급 비교 알고리즘 훅 사용
   const {
     currentPair,
-    isInitialized,
+    isInitializing,
     completionStats,
     reviewerStats,
     submitComparison,
@@ -62,7 +62,8 @@ export const ComparisonSession = () => {
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
-    reviewerId: student?.id || ''
+    reviewerId: student?.student_id || '',
+    currentQuestion
   });
 
   // 키보드 이벤트 핸들러
@@ -116,27 +117,35 @@ export const ComparisonSession = () => {
     }
   }, [currentQuestion, allResponses]);
 
-  // 비교 완료 시 다음 문항으로 이동 또는 종료
+  // Check if current question is complete (15 comparisons for this specific question)
+  const isCurrentQuestionComplete = reviewerStats?.completed === 15;
+  
+  // Auto-advance to next question when current is complete
   useEffect(() => {
-    if (isInitialized && isComplete && !hasMoreComparisons) {
-      if (currentQuestion < maxQuestions) {
-        // 다음 문항으로 이동
-        toast({
-          title: `${currentQuestion}번 문항 완료!`,
-          description: `${currentQuestion + 1}번 문항으로 이동합니다.`
-        });
+    if (isCurrentQuestionComplete && !isInitializing && currentQuestion < maxQuestions) {
+      console.log(`Question ${currentQuestion} completed with ${reviewerStats?.completed} comparisons. Moving to next question.`);
+      const timer = setTimeout(() => {
         setCurrentQuestion(prev => prev + 1);
-      } else {
-        // 모든 문항 완료 - project_assignments 업데이트
-        updateProjectAssignmentCompletion();
-        toast({
-          title: "모든 비교 완료!",
-          description: `${maxQuestions}개 문항의 비교를 모두 완료하셨습니다.`
-        });
-        navigate(isStudent ? '/student-dashboard' : '/dashboard');
-      }
+      }, 1000); // Small delay to show completion message
+      
+      return () => clearTimeout(timer);
     }
-  }, [isInitialized, isComplete, hasMoreComparisons, currentQuestion, maxQuestions, navigate, isStudent, toast]);
+  }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed]);
+
+  // Check if all questions are completed
+  const allQuestionsComplete = currentQuestion >= maxQuestions && isCurrentQuestionComplete;
+
+  // Complete project assignment when all questions are done
+  useEffect(() => {
+    if (allQuestionsComplete && !isInitializing) {
+      updateProjectAssignmentCompletion();
+      toast({
+        title: "모든 비교 완료!",
+        description: `${maxQuestions}개 문항의 비교를 모두 완료하셨습니다.`
+      });
+      navigate(isStudent ? '/student-dashboard' : '/dashboard');
+    }
+  }, [allQuestionsComplete, isInitializing, maxQuestions, navigate, isStudent, toast]);
 
   // 프로젝트 할당 완료 상태 업데이트
   const updateProjectAssignmentCompletion = async () => {
@@ -220,7 +229,7 @@ export const ComparisonSession = () => {
     const comparisonTime = Date.now() - startTime;
 
     try {
-      const success = await submitComparison(decision, comparisonTime);
+      const success = await submitComparison(decision === 'left' ? 'A' : 'B');
       
       if (success) {
         const decisionText = decision === 'left' ? '응답 A' : decision === 'right' ? '응답 B' : '중립';
@@ -268,12 +277,58 @@ export const ComparisonSession = () => {
     );
   }
 
-  if (!project || !currentPair) {
+  if (!project) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">프로젝트를 불러오고 있습니다...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (isCurrentQuestionComplete && currentQuestion < maxQuestions) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-8 text-center">
+          <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+            ✓
+          </div>
+          <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
+          <p className="text-muted-foreground mb-4">
+            {currentQuestion}번 문항의 비교 15개가 완료되었습니다. 다음 문항으로 이동합니다.
+          </p>
+          <div className="flex items-center justify-center space-x-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span>다음 문항 준비 중...</span>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  if (allQuestionsComplete) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-8 text-center">
+          <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+            ✓
+          </div>
+          <h2 className="text-2xl font-bold mb-4">모든 문항 완료!</h2>
+          <p className="text-muted-foreground mb-4">
+            {maxQuestions}개 문항의 비교를 모두 완료하셨습니다.
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (!currentPair) {
     return (
       <div className="container mx-auto px-4 py-8">
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">
-            {!isInitialized ? "알고리즘을 초기화하고 있습니다..." : "비교할 응답을 찾을 수 없습니다."}
+            {isInitializing ? "비교 쌍을 준비하고 있습니다..." : "비교할 응답을 찾을 수 없습니다."}
           </p>
         </div>
       </div>

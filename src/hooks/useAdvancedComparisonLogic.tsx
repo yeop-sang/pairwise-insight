@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { ComparisonAlgorithm } from '@/utils/comparisonAlgorithm';
 
@@ -17,17 +17,19 @@ interface ComparisonPair {
 interface UseAdvancedComparisonLogicProps {
   projectId: string;
   responses: StudentResponse[];
-  reviewerId: string; // 현재 리뷰어 ID (학생 ID)
+  reviewerId: string;
+  currentQuestion: number;
 }
 
 export const useAdvancedComparisonLogic = ({ 
   projectId, 
   responses, 
-  reviewerId 
+  reviewerId,
+  currentQuestion 
 }: UseAdvancedComparisonLogicProps) => {
   const [currentPair, setCurrentPair] = useState<ComparisonPair | null>(null);
   const [algorithm, setAlgorithm] = useState<ComparisonAlgorithm | null>(null);
-  const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(false);
   const [completionStats, setCompletionStats] = useState({
     totalComparisons: 0,
     targetComparisons: 0,
@@ -45,70 +47,62 @@ export const useAdvancedComparisonLogic = ({
     progress: 0
   });
 
-  const algorithmRef = useRef<ComparisonAlgorithm | null>(null);
-
-  // 자기 응답 제외 함수
-  const isOwnResponse = useCallback(async (response: StudentResponse, studentId: string) => {
-    try {
-      // 학생 ID를 통해 student_code 조회
-      const { data: student, error } = await supabase
-        .from('students')
-        .select('student_id')
-        .eq('id', studentId)
-        .single();
-
-      if (error || !student) return false;
+  // Improved own response checking
+  const isOwnResponse = useMemo(() => {
+    return (responseId: string) => {
+      if (!reviewerId || !responses) return false;
       
-      // 응답의 student_code와 학생의 student_id가 일치하는지 확인
-      return response.student_code === student.student_id;
-    } catch (error) {
-      console.error('Error checking own response:', error);
-      return false;
-    }
-  }, []);
+      const response = responses.find(r => r.id === responseId);
+      if (!response) return false;
+      
+      // Match student login ID with response student_code
+      // reviewerId is the student's login ID (student_id from students table)
+      // response.student_code is the student_code field from student_responses
+      return response.student_code === reviewerId;
+    };
+  }, [reviewerId, responses]);
 
   const initializeAlgorithm = useCallback(async () => {
-    if (!projectId || responses.length === 0 || !reviewerId) return;
-
     try {
-      // 프로젝트에 할당된 학생들의 ID 가져오기
-      const { data: assignments, error: assignmentsError } = await supabase
-        .from('project_assignments')
-        .select('student_id')
-        .eq('project_id', projectId);
-
-      if (assignmentsError) throw assignmentsError;
-
-      const reviewerIds = assignments?.map(a => a.student_id) || [reviewerId];
+      setIsInitializing(true);
       
-      // 자기 응답 제외하여 필터링
-      const filteredResponses = [];
-      for (const response of responses) {
-        const isOwn = await isOwnResponse(response, reviewerId);
-        if (!isOwn) {
-          filteredResponses.push(response);
-        }
+      if (!projectId || !responses || responses.length === 0 || !reviewerId) {
+        console.log("Missing required data for initialization");
+        return;
       }
+
+      // Filter responses for current question only
+      const currentQuestionResponses = responses.filter(r => r.question_number === currentQuestion);
       
-      // 알고리즘 인스턴스 생성
-      const newAlgorithm = new ComparisonAlgorithm(filteredResponses, reviewerIds);
+      if (currentQuestionResponses.length === 0) {
+        console.log(`No responses found for question ${currentQuestion}`);
+        return;
+      }
+
+      console.log(`Initializing algorithm for question ${currentQuestion} with ${currentQuestionResponses.length} responses`);
+      console.log(`Reviewer ID: ${reviewerId}`);
+      console.log(`Current question responses:`, currentQuestionResponses.map(r => ({ id: r.id, student_code: r.student_code })));
+      
+      // Create new algorithm instance with only current question responses
+      const newAlgorithm = new ComparisonAlgorithm(currentQuestionResponses, [reviewerId]);
+      
+      // Initialize with existing comparisons for current question only
       await newAlgorithm.initializeWithExistingComparisons(projectId, supabase);
       
       setAlgorithm(newAlgorithm);
-      algorithmRef.current = newAlgorithm;
       
-      // 초기 페어 로드
-      const nextPair = newAlgorithm.getNextComparison(reviewerId);
-      setCurrentPair(nextPair);
+      // Get initial pair
+      const initialPair = newAlgorithm.getNextComparison(reviewerId);
+      setCurrentPair(initialPair);
       
-      // 통계 업데이트
       updateStats(newAlgorithm);
       
-      setIsInitialized(true);
+      setIsInitializing(false);
     } catch (error) {
-      console.error('Error initializing comparison algorithm:', error);
+      console.error("Error initializing algorithm:", error);
+      setIsInitializing(false);
     }
-  }, [projectId, responses, reviewerId, isOwnResponse]);
+  }, [projectId, responses, reviewerId, currentQuestion]);
 
   const updateStats = useCallback((alg: ComparisonAlgorithm) => {
     const completion = alg.getCompletionStats();
@@ -121,61 +115,68 @@ export const useAdvancedComparisonLogic = ({
   }, [reviewerId]);
 
   useEffect(() => {
-    // 응답이 변경될 때마다 알고리즘을 재초기화
-    setIsInitialized(false);
-    setCurrentPair(null);
-    setAlgorithm(null);
-    algorithmRef.current = null;
-    
     initializeAlgorithm();
   }, [initializeAlgorithm]);
 
-  const submitComparison = useCallback(async (
-    decision: 'left' | 'right' | 'neutral',
-    comparisonTimeMs: number
-  ) => {
-    if (!algorithm || !currentPair) return false;
+  const submitComparison = useCallback(async (decision: 'A' | 'B') => {
+    if (!algorithm || !currentPair || !projectId || !reviewerId) {
+      console.error("Missing required data for comparison submission");
+      return false;
+    }
 
     try {
-      // 데이터베이스에 비교 결과 저장
+      const startTime = Date.now();
+      
+      // Map decision to database format
+      const dbDecision = decision === 'A' ? 'left' : 'right';
+      
+      console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}`);
+      
+      // Insert comparison into database
       const { error } = await supabase
         .from('comparisons')
         .insert({
           project_id: projectId,
-          student_id: reviewerId,
           response_a_id: currentPair.responseA.id,
           response_b_id: currentPair.responseB.id,
-          decision: decision,
-          comparison_time_ms: comparisonTimeMs
+          decision: dbDecision,
+          student_id: reviewerId,
+          comparison_time_ms: Date.now() - startTime
         });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Error saving comparison:", error);
+        return false;
+      }
 
-      // 알고리즘 상태 업데이트
+      // Update algorithm state
       algorithm.processComparison(
         reviewerId,
         currentPair.responseA.id,
         currentPair.responseB.id,
-        decision
+        dbDecision
       );
 
-      // 다음 페어 로드
+      // Get next pair
       const nextPair = algorithm.getNextComparison(reviewerId);
       setCurrentPair(nextPair);
-
-      // 통계 업데이트
+      
+      // Update stats
       updateStats(algorithm);
 
       return true;
     } catch (error) {
-      console.error('Error submitting comparison:', error);
+      console.error("Error in submitComparison:", error);
       return false;
     }
   }, [algorithm, currentPair, projectId, reviewerId, updateStats]);
 
   const canContinue = useCallback(() => {
-    if (!algorithm) return false;
-    return algorithm.canReviewerContinue(reviewerId);
+    if (!algorithm || !reviewerId) return false;
+    const canCont = algorithm.canReviewerContinue(reviewerId);
+    const stats = algorithm.getReviewerStats(reviewerId);
+    console.log(`Can continue: ${canCont}, remaining: ${stats?.remaining}, completed: ${stats?.completed}`);
+    return canCont;
   }, [algorithm, reviewerId]);
 
   const getEstimatedTimeRemaining = useCallback(() => {
@@ -212,7 +213,7 @@ export const useAdvancedComparisonLogic = ({
   return {
     // 상태
     currentPair,
-    isInitialized,
+    isInitializing,
     completionStats,
     reviewerStats,
     

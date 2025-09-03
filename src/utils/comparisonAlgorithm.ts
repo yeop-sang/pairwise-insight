@@ -205,10 +205,14 @@ export class ComparisonAlgorithm {
   }
 
   private isOwnResponse(reviewerId: string, responseId: string): boolean {
-    // 학생 ID를 통해 자신의 응답인지 확인
-    // 현재는 reviewerId가 student.id이고, response의 student_code와 매칭이 어려움
-    // 임시로 false 반환하여 모든 응답 비교 허용 (실제 환경에서는 수정 필요)
-    return false;
+    // Find the response by ID
+    const response = this.responses.find(r => r.id === responseId);
+    if (!response) return false;
+    
+    // Match reviewer's student_id with response's student_code
+    // reviewerId is the student_id from the students table
+    // response.student_code is the student_code from student_responses
+    return response.student_code === reviewerId;
   }
 
   private calculatePairPriority(responseAId: string, responseBId: string, reviewerId: string): number {
