@@ -82,7 +82,7 @@ const Index = () => {
           <div className="flex flex-col items-center mb-8">
             <img src={ppaLogo} alt="PPA Logo" className="h-24 w-24 mb-6" />
             <h1 className="text-6xl font-bold text-foreground mb-4">
-              Pairwise
+              PEER
             </h1>
             <h2 className="text-3xl font-medium text-primary">
               동료평가
