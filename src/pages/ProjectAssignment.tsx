@@ -8,7 +8,6 @@ import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Users, CheckCircle, XCircle } from 'lucide-react';
-import { StudentComparisonProgress } from '@/components/StudentComparisonProgress';
 import { StudentProgressModal } from '@/components/StudentProgressModal';
 
 interface Project {
@@ -259,15 +258,6 @@ export const ProjectAssignment: React.FC = () => {
         </Card>
       </div>
 
-      {/* 학생별 비교 진행 상황 */}
-      {totalCount > 0 && (
-        <div className="mb-8">
-          <StudentComparisonProgress 
-            projectId={id!} 
-            maxQuestions={maxQuestions}
-          />
-        </div>
-      )}
 
       {/* 할당된 학생 목록 */}
       <Card>
