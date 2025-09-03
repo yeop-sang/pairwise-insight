@@ -159,6 +159,7 @@ export type Database = {
           id: string
           is_active: boolean
           question: string
+          questions: Json | null
           rubric: string | null
           teacher_id: string
           title: string
@@ -170,6 +171,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           question: string
+          questions?: Json | null
           rubric?: string | null
           teacher_id: string
           title: string
@@ -181,6 +183,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           question?: string
+          questions?: Json | null
           rubric?: string | null
           teacher_id?: string
           title?: string

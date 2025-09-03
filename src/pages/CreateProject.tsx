@@ -62,10 +62,13 @@ export const CreateProject = () => {
             return;
           }
           
-          const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
-          const questions = headerCells.slice(1);
-          console.log("헤더:", headerCells);
-          console.log("문항 수:", questions.length);
+      const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
+      const questions = headerCells.slice(1);
+      console.log("헤더:", headerCells);
+      console.log("문항 수:", questions.length);
+      
+      // Store questions for later use when creating project
+      (parseFile as any).extractedQuestions = questions;
           
           if (questions.length === 0) {
             reject(new Error("문항이 없습니다. 2열부터 문항을 입력해주세요."));
@@ -143,6 +146,9 @@ export const CreateProject = () => {
             const questions = headerRow.slice(1); // 첫 번째 열(학생번호) 제외
             console.log("헤더:", headerRow);
             console.log("문항 수:", questions.length);
+            
+            // Store questions for later use when creating project
+            (parseFile as any).extractedQuestions = questions;
             
             if (questions.length === 0) {
               reject(new Error("문항이 없습니다. 2열부터 문항을 입력해주세요."));
@@ -248,6 +254,10 @@ export const CreateProject = () => {
       const responses = await parseFile(csvFile);
       console.log("파싱된 응답 개수:", responses.length);
       
+      // Extract questions from the parsed file
+      const extractedQuestions = (parseFile as any).extractedQuestions || [];
+      console.log("추출된 문항:", extractedQuestions);
+      
       if (responses.length === 0) {
         throw new Error("파일에 유효한 데이터가 없습니다.");
       }
@@ -307,7 +317,8 @@ export const CreateProject = () => {
           description: projectData.description,
           question: projectData.question,
           rubric: projectData.rubric,
-          teacher_id: user.id
+          teacher_id: user.id,
+          questions: extractedQuestions // Save extracted questions as JSONB array
         })
         .select()
         .single();

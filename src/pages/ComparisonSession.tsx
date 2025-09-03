@@ -23,6 +23,7 @@ interface Project {
   title: string;
   question: string;
   rubric: string;
+  questions: any; // JSON type from Supabase
 }
 
 export const ComparisonSession = () => {
@@ -133,7 +134,7 @@ export const ComparisonSession = () => {
   }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed]);
 
   // Check if all questions are completed
-  const allQuestionsComplete = currentQuestion >= maxQuestions && isCurrentQuestionComplete;
+  const allQuestionsComplete = currentQuestion > maxQuestions;
 
   // Complete project assignment when all questions are done
   useEffect(() => {
@@ -172,13 +173,19 @@ export const ComparisonSession = () => {
       // Fetch project details
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
-        .select('id, title, question, rubric')
+        .select('id, title, question, rubric, questions')
         .eq('id', projectId)
         .eq('is_active', true)
         .single();
 
       if (projectError) throw projectError;
-      setProject(projectData);
+      
+      // Convert questions JSON to array if needed
+      const processedProject = {
+        ...projectData,
+        questions: Array.isArray(projectData.questions) ? projectData.questions : []
+      };
+      setProject(processedProject);
 
       // Fetch all responses for this project
       const { data: responsesData, error: responsesError } = await supabase
@@ -255,8 +262,14 @@ export const ComparisonSession = () => {
     }
   };
 
-  // 문항별 질문을 가져오는 함수
+  // 문항별 질문을 가져오는 함수 - 동적으로 project.questions에서 로드
   const getQuestionByNumber = (questionNumber: number) => {
+    // Use questions from project.questions array if available
+    if (project?.questions && Array.isArray(project.questions) && project.questions.length > 0) {
+      return project.questions[questionNumber - 1] || project?.question || "";
+    }
+    
+    // Fallback to default questions if project.questions is not available
     const questionMap: Record<number, string> = {
       1: "눈으로 보고 자를 잡을 때와 '땅' 소리를 들을 때의 자극 전달 과정을 감각 기관, 감각 신경, 대뇌 중추의 순서로 서술하시오.",
       2: "어두운 곳에서 밝은 곳으로 나왔을 때 일어나는 동공 반사의 자극 전달 과정을 서술하시오.",
