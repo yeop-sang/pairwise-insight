@@ -18,6 +18,8 @@ interface StudentProgressData {
   current_question: number;
   is_active: boolean;
   last_activity: string | null;
+  has_completed: boolean;
+  completed_at: string | null;
 }
 
 interface StudentComparisonProgressProps {
@@ -40,11 +42,13 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
 
   const fetchProgressData = async () => {
     try {
-      // 프로젝트에 할당된 학생들 조회
+      // 프로젝트에 할당된 학생들 조회 (완료 상태 포함)
       const { data: assignments, error: assignmentsError } = await supabase
         .from('project_assignments')
         .select(`
           student_id,
+          has_completed,
+          completed_at,
           students!fk_project_assignments_student_id (
             student_id,
             name
@@ -58,12 +62,14 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
         const studentId = assignment.student_id;
         const studentName = assignment.students?.name || '';
         const studentCode = assignment.students?.student_id || '';
+        const hasCompleted = assignment.has_completed;
+        const completedAt = assignment.completed_at;
 
         // 각 문항별 비교 진행 상황 조회
         const questionProgress = [];
         let totalComparisons = 0;
         let currentQuestion = 1;
-        let lastActivity = null;
+        let lastActivity = completedAt || null;
 
         for (let q = 1; q <= maxQuestions; q++) {
           // 해당 문항의 응답들 조회
@@ -116,9 +122,11 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
           question_4_progress: questionProgress[3] || 0,
           question_5_progress: questionProgress[4] || 0,
           total_comparisons: totalComparisons,
-          current_question: Math.min(currentQuestion, maxQuestions),
-          is_active: totalComparisons > 0 && currentQuestion <= maxQuestions,
-          last_activity: lastActivity
+          current_question: hasCompleted ? maxQuestions : Math.min(currentQuestion, maxQuestions),
+          is_active: hasCompleted || (totalComparisons > 0 && currentQuestion <= maxQuestions),
+          last_activity: lastActivity,
+          has_completed: hasCompleted,
+          completed_at: completedAt
         };
       }) || [];
 
@@ -132,6 +140,9 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
   };
 
   const getOverallProgress = (student: StudentProgressData) => {
+    // 완료된 학생은 100% 진행률
+    if (student.has_completed) return 100;
+    
     const totalProgress = (
       student.question_1_progress +
       student.question_2_progress +
@@ -148,11 +159,12 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
     return "outline";
   };
 
-  const getActivityStatus = (lastActivity: string | null) => {
-    if (!lastActivity) return "미시작";
+  const getActivityStatus = (student: StudentProgressData) => {
+    if (student.has_completed) return "완료";
+    if (!student.last_activity) return "미시작";
     
     const now = new Date();
-    const activityTime = new Date(lastActivity);
+    const activityTime = new Date(student.last_activity);
     const diffMinutes = Math.floor((now.getTime() - activityTime.getTime()) / (1000 * 60));
     
     if (diffMinutes < 5) return "활동 중";
@@ -185,7 +197,7 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
         <div className="space-y-6">
           {progressData.map((student) => {
             const overallProgress = getOverallProgress(student);
-            const activityStatus = getActivityStatus(student.last_activity);
+            const activityStatus = getActivityStatus(student);
             
             return (
               <div key={student.student_id} className="border rounded-lg p-4 space-y-3">
@@ -199,12 +211,19 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
                   </div>
                   
                   <div className="flex items-center gap-2">
-                    <Badge variant={student.is_active ? "default" : "outline"}>
+                    <Badge variant={student.has_completed ? "default" : student.is_active ? "secondary" : "outline"}>
                       {activityStatus}
                     </Badge>
-                    <Badge variant="secondary">
-                      {student.current_question}번 문항
-                    </Badge>
+                    {!student.has_completed && (
+                      <Badge variant="secondary">
+                        {student.current_question}번 문항
+                      </Badge>
+                    )}
+                    {student.has_completed && (
+                      <Badge variant="default" className="bg-green-500">
+                        전체 완료
+                      </Badge>
+                    )}
                   </div>
                 </div>
 
@@ -253,7 +272,9 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
                 {student.last_activity && (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground">
                     <Clock className="h-3 w-3" />
-                    <span>최근 활동: {new Date(student.last_activity).toLocaleString()}</span>
+                    <span>
+                      {student.has_completed ? '완료 시간' : '최근 활동'}: {new Date(student.last_activity).toLocaleString()}
+                    </span>
                   </div>
                 )}
               </div>
