@@ -133,20 +133,15 @@ export const ComparisonSession = () => {
     }
   }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed]);
 
-  // Check if all questions are completed
-  const allQuestionsComplete = currentQuestion > maxQuestions;
+  // Check if all questions are completed - more precise logic
+  const allQuestionsComplete = currentQuestion > maxQuestions && (reviewerStats?.completed === 15);
 
-  // Complete project assignment when all questions are done
+  // Complete project assignment when all questions are done (but don't auto-navigate)
   useEffect(() => {
     if (allQuestionsComplete && !isInitializing) {
       updateProjectAssignmentCompletion();
-      toast({
-        title: "모든 비교 완료!",
-        description: `${maxQuestions}개 문항의 비교를 모두 완료하셨습니다.`
-      });
-      navigate(isStudent ? '/student-dashboard' : '/dashboard');
     }
-  }, [allQuestionsComplete, isInitializing, maxQuestions, navigate, isStudent, toast]);
+  }, [allQuestionsComplete, isInitializing]);
 
   // 프로젝트 할당 완료 상태 업데이트
   const updateProjectAssignmentCompletion = async () => {
