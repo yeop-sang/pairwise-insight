@@ -121,29 +121,36 @@ export const ComparisonSession = () => {
   // Check if current question is complete (15 comparisons for this specific question)
   const isCurrentQuestionComplete = reviewerStats?.completed === 15;
   
-  // Auto-advance to next question when current is complete
+  // Auto-advance to next question when current is complete (but not on the last question)
   useEffect(() => {
     if (isCurrentQuestionComplete && !isInitializing && currentQuestion < maxQuestions) {
-      console.log(`Question ${currentQuestion} completed with ${reviewerStats?.completed} comparisons. Moving to next question.`);
-      const timer = setTimeout(() => {
-        setCurrentQuestion(prev => prev + 1);
-      }, 1000); // Small delay to show completion message
-      
-      return () => clearTimeout(timer);
+      // For questions 1-4, auto-advance to next question
+      if (currentQuestion < maxQuestions) {
+        console.log(`Question ${currentQuestion} completed with ${reviewerStats?.completed} comparisons. Moving to next question.`);
+        const timer = setTimeout(() => {
+          setCurrentQuestion(prev => prev + 1);
+        }, 1000); // Small delay to show completion message
+        
+        return () => clearTimeout(timer);
+      }
     }
   }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed]);
 
-  // Check if all questions are completed - simplified logic
-  const allQuestionsComplete = currentQuestion > maxQuestions;
+  // Check if all questions are completed - with safety checks
+  const allQuestionsComplete = currentQuestion > maxQuestions || 
+    (currentQuestion === maxQuestions && reviewerStats?.completed === 15);
   
-  // Debug logging
-  console.log('Debug - allQuestionsComplete check:', {
+  // Debug logging with render conditions
+  console.log('Debug - Render conditions check:', {
     currentQuestion,
     maxQuestions,
     allQuestionsComplete,
+    isCurrentQuestionComplete,
     reviewerStatsCompleted: reviewerStats?.completed,
     currentPair: !!currentPair,
-    isInitializing
+    isInitializing,
+    loading,
+    project: !!project
   });
 
   // Complete project assignment when all questions are done (but don't auto-navigate)
@@ -305,26 +312,7 @@ export const ComparisonSession = () => {
     );
   }
 
-  if (isCurrentQuestionComplete && currentQuestion < maxQuestions) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="p-8 text-center">
-          <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-            ✓
-          </div>
-          <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
-          <p className="text-muted-foreground mb-4">
-            {currentQuestion}번 문항의 비교 15개가 완료되었습니다. 다음 문항으로 이동합니다.
-          </p>
-          <div className="flex items-center justify-center space-x-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span>다음 문항 준비 중...</span>
-          </div>
-        </Card>
-      </div>
-    );
-  }
-
+  // Priority 1: Check if ALL questions are completed first
   if (allQuestionsComplete) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -352,6 +340,27 @@ export const ComparisonSession = () => {
           >
             학생 대시보드로 돌아가기
           </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // Priority 2: Check if current question is completed (but not the last question)
+  if (isCurrentQuestionComplete && currentQuestion < maxQuestions) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-8 text-center">
+          <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+            ✓
+          </div>
+          <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
+          <p className="text-muted-foreground mb-4">
+            {currentQuestion}번 문항의 비교 15개가 완료되었습니다. 다음 문항으로 이동합니다.
+          </p>
+          <div className="flex items-center justify-center space-x-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span>다음 문항 준비 중...</span>
+          </div>
         </Card>
       </div>
     );
