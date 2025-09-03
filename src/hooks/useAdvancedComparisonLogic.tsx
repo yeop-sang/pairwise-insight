@@ -140,7 +140,7 @@ export const useAdvancedComparisonLogic = ({
           response_a_id: currentPair.responseA.id,
           response_b_id: currentPair.responseB.id,
           decision: dbDecision,
-          student_id: reviewerId,
+          student_id: reviewerId, // reviewerId is now the UUID from student.id
           comparison_time_ms: Date.now() - startTime
         });
 

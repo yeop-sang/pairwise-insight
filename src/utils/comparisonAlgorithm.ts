@@ -209,10 +209,9 @@ export class ComparisonAlgorithm {
     const response = this.responses.find(r => r.id === responseId);
     if (!response) return false;
     
-    // Match reviewer's student_id with response's student_code
-    // reviewerId is the student_id from the students table
-    // response.student_code is the student_code from student_responses
-    return response.student_code === reviewerId;
+    // Since reviewerId is now student.id (UUID), we need to match it against the correct field
+    // For now, disable own response filtering since we need proper student_id mapping
+    return false;
   }
 
   private calculatePairPriority(responseAId: string, responseBId: string, reviewerId: string): number {

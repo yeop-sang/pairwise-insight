@@ -62,7 +62,7 @@ export const ComparisonSession = () => {
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
-    reviewerId: student?.student_id || '',
+    reviewerId: student?.id || '', // Use student.id (UUID) not student.student_id (string)
     currentQuestion
   });
 
