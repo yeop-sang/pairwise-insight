@@ -155,16 +155,22 @@ export const ComparisonSession = () => {
 
   // Complete project assignment when all questions are done (but don't auto-navigate)
   useEffect(() => {
-    if (allQuestionsComplete && !isInitializing) {
+    if (allQuestionsComplete && !isInitializing && isStudent) {
+      console.log('Triggering project completion update:', { allQuestionsComplete, isInitializing, isStudent });
       updateProjectAssignmentCompletion();
     }
-  }, [allQuestionsComplete, isInitializing]);
+  }, [allQuestionsComplete, isInitializing, isStudent]);
 
   // 프로젝트 할당 완료 상태 업데이트
   const updateProjectAssignmentCompletion = async () => {
-    if (!student || !projectId) return;
+    if (!student?.id || !projectId) {
+      console.log('Missing required data for completion update:', { studentId: student?.id, projectId });
+      return;
+    }
 
     try {
+      console.log('Updating project assignment completion for:', { studentId: student.id, projectId });
+      
       const { error } = await supabase
         .from('project_assignments')
         .update({
@@ -174,9 +180,28 @@ export const ComparisonSession = () => {
         .eq('project_id', projectId)
         .eq('student_id', student.id);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error updating project assignment completion:', error);
+        toast({
+          title: "오류",
+          description: "완료 상태 업데이트 중 오류가 발생했습니다.",
+          variant: "destructive",
+        });
+      } else {
+        console.log('Project assignment completion updated successfully');
+        toast({
+          title: "완료",
+          description: "모든 문항이 완료되었습니다!",
+          variant: "default",
+        });
+      }
     } catch (error) {
-      console.error('Error updating project assignment completion:', error);
+      console.error('Error updating project assignment:', error);
+      toast({
+        title: "오류", 
+        description: "완료 상태 업데이트 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
     }
   };
 
