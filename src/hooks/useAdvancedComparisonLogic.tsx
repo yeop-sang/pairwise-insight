@@ -208,7 +208,10 @@ export const useAdvancedComparisonLogic = ({
 
       if (error) {
         console.error("Error saving comparison:", error);
-        return false;
+        if (error.code === '42501') {
+          throw new Error('비교 저장 권한이 없습니다. 로그인 상태를 확인해주세요.');
+        }
+        throw new Error('비교 저장 중 오류가 발생했습니다.');
       }
 
       // Update algorithm state

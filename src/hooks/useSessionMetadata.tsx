@@ -62,13 +62,18 @@ export const useSessionMetadata = (projectId: string, questionNumber: number) =>
       setIsLoading(true);
       
       // Check if session already exists for this project/question
-      const { data: existingSession } = await supabase
+      const { data: existingSession, error: selectError } = await supabase
         .from('session_metadata')
         .select('*')
         .eq('project_id', projectId)
         .eq('question_number', questionNumber)
         .is('closed_at', null)
-        .single();
+        .maybeSingle();
+
+      if (selectError) {
+        console.error('Error checking existing session:', selectError);
+        throw new Error('세션 확인 중 오류가 발생했습니다.');
+      }
 
       if (existingSession) {
         // Use existing session
@@ -122,7 +127,10 @@ export const useSessionMetadata = (projectId: string, questionNumber: number) =>
 
         if (error) {
           console.error('Error creating session metadata:', error);
-          throw error;
+          if (error.code === '42501') {
+            throw new Error('세션 생성 권한이 없습니다. 활성 프로젝트인지 확인해주세요.');
+          }
+          throw new Error('세션 생성 중 오류가 발생했습니다.');
         }
 
         setSessionMetadata({
@@ -137,6 +145,8 @@ export const useSessionMetadata = (projectId: string, questionNumber: number) =>
       }
     } catch (error) {
       console.error('Error initializing session:', error);
+      // Re-throw error so calling components can handle it
+      throw error;
     } finally {
       setIsLoading(false);
     }
