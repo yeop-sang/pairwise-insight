@@ -134,7 +134,7 @@ export const useDataDownload = () => {
         inconsistencyCount: stats.inconsistency_count,
         inconsistencyRate: stats.inconsistency_rate,
         finalWeightApplied: stats.final_weight_applied,
-        agreementRate: stats.agreement_rate,
+        agreementRate: stats.agreement_score,
       })) || [];
 
       // Transform session data

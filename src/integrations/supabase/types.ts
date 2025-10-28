@@ -16,6 +16,7 @@ export type Database = {
     Tables: {
       comparisons: {
         Row: {
+          agreement_snapshot: number | null
           comparison_time_ms: number
           created_at: string
           decision: string
@@ -23,8 +24,12 @@ export type Database = {
           id: string
           is_duplicate_reeval: boolean
           is_mirror: boolean
+          mirror_group_id: string | null
+          popup_reason: string | null
+          popup_shown: boolean | null
           project_id: string
           question_number: number
+          reeval_group_id: string | null
           response_a_id: string
           response_b_id: string
           session_id: string | null
@@ -35,8 +40,10 @@ export type Database = {
           submitted_at_server: string
           ui_order_left_id: string
           ui_order_right_id: string
+          weight_applied: number | null
         }
         Insert: {
+          agreement_snapshot?: number | null
           comparison_time_ms: number
           created_at?: string
           decision: string
@@ -44,8 +51,12 @@ export type Database = {
           id?: string
           is_duplicate_reeval?: boolean
           is_mirror?: boolean
+          mirror_group_id?: string | null
+          popup_reason?: string | null
+          popup_shown?: boolean | null
           project_id: string
           question_number: number
+          reeval_group_id?: string | null
           response_a_id: string
           response_b_id: string
           session_id?: string | null
@@ -56,8 +67,10 @@ export type Database = {
           submitted_at_server?: string
           ui_order_left_id: string
           ui_order_right_id: string
+          weight_applied?: number | null
         }
         Update: {
+          agreement_snapshot?: number | null
           comparison_time_ms?: number
           created_at?: string
           decision?: string
@@ -65,8 +78,12 @@ export type Database = {
           id?: string
           is_duplicate_reeval?: boolean
           is_mirror?: boolean
+          mirror_group_id?: string | null
+          popup_reason?: string | null
+          popup_shown?: boolean | null
           project_id?: string
           question_number?: number
+          reeval_group_id?: string | null
           response_a_id?: string
           response_b_id?: string
           session_id?: string | null
@@ -77,6 +94,7 @@ export type Database = {
           submitted_at_server?: string
           ui_order_left_id?: string
           ui_order_right_id?: string
+          weight_applied?: number | null
         }
         Relationships: [
           {
@@ -215,12 +233,23 @@ export type Database = {
         Row: {
           agreement_score: number | null
           consecutive_bias_count: number
+          consecutive_left_choices: number | null
+          consecutive_right_choices: number | null
           created_at: string
+          final_weight_applied: number | null
           id: string
+          inconsistency_count: number | null
+          inconsistency_rate: number | null
           last_decision: string | null
+          last_popup_at: string | null
+          low_agreement_flag: boolean | null
+          max_consecutive_left: number | null
+          max_consecutive_right: number | null
+          popup_cooldown_remaining: number | null
           project_id: string
           question_number: number
           recent_decision_history: string[] | null
+          short_decision_streaks: number | null
           short_response_count: number
           student_id: string
           total_comparisons: number
@@ -229,12 +258,23 @@ export type Database = {
         Insert: {
           agreement_score?: number | null
           consecutive_bias_count?: number
+          consecutive_left_choices?: number | null
+          consecutive_right_choices?: number | null
           created_at?: string
+          final_weight_applied?: number | null
           id?: string
+          inconsistency_count?: number | null
+          inconsistency_rate?: number | null
           last_decision?: string | null
+          last_popup_at?: string | null
+          low_agreement_flag?: boolean | null
+          max_consecutive_left?: number | null
+          max_consecutive_right?: number | null
+          popup_cooldown_remaining?: number | null
           project_id: string
           question_number: number
           recent_decision_history?: string[] | null
+          short_decision_streaks?: number | null
           short_response_count?: number
           student_id: string
           total_comparisons?: number
@@ -243,12 +283,23 @@ export type Database = {
         Update: {
           agreement_score?: number | null
           consecutive_bias_count?: number
+          consecutive_left_choices?: number | null
+          consecutive_right_choices?: number | null
           created_at?: string
+          final_weight_applied?: number | null
           id?: string
+          inconsistency_count?: number | null
+          inconsistency_rate?: number | null
           last_decision?: string | null
+          last_popup_at?: string | null
+          low_agreement_flag?: boolean | null
+          max_consecutive_left?: number | null
+          max_consecutive_right?: number | null
+          popup_cooldown_remaining?: number | null
           project_id?: string
           question_number?: number
           recent_decision_history?: string[] | null
+          short_decision_streaks?: number | null
           short_response_count?: number
           student_id?: string
           total_comparisons?: number

@@ -204,7 +204,7 @@ export const useAdvancedComparisonLogic = ({
       // Insert comparison into database
       const { error } = await supabase
         .from('comparisons')
-        .insert(comparisonData);
+        .insert([comparisonData]);
 
       if (error) {
         console.error("Error saving comparison:", error);
