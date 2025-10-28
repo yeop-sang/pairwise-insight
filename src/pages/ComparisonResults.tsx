@@ -77,19 +77,24 @@ export const ComparisonResults = () => {
       // Call the Bradley-Terry calculation function for all questions
       const allResults: ComparisonResult[] = [];
       for (const qNum of questionNumbers) {
-        const { data: resultsData, error: resultsError } = await supabase
-          .rpc('calculate_bradley_terry_by_question' as any, { 
-            project_uuid: projectId, 
-            question_num: qNum 
-          });
+        try {
+          const { data: resultsData, error: resultsError } = await (supabase as any)
+            .rpc('calculate_bradley_terry_by_question', { 
+              project_uuid: projectId, 
+              question_num: qNum 
+            });
 
-        if (resultsError) throw resultsError;
-        
-        const questionResults = (resultsData || []).map((r: any) => ({
-          ...r,
-          question_number: qNum
-        }));
-        allResults.push(...questionResults);
+          if (resultsError) throw resultsError;
+          
+          const questionResults: ComparisonResult[] = (resultsData || []).map((r: any) => ({
+            ...r,
+            question_number: qNum
+          }));
+          allResults.push(...questionResults);
+        } catch (err) {
+          console.error(`Error calculating results for question ${qNum}:`, err);
+          // Continue with other questions even if one fails
+        }
       }
       
       setResults(allResults);

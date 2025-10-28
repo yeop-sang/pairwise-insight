@@ -183,6 +183,7 @@ export const useAdvancedComparisonLogic = ({
         response_b_id: currentPair.responseB.id,
         decision: dbDecision,
         student_id: reviewerId,
+        question_number: currentPair.responseA.question_number,
         comparison_time_ms: decisionTimeMs,
         shown_at_client: timeStamps.shownAtClient.toISOString(),
         shown_at_server: new Date().toISOString(),

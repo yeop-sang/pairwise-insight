@@ -184,6 +184,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "fk_project_assignments_student_id"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "project_assignments_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
