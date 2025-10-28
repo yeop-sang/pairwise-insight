@@ -75,7 +75,7 @@ export const StudentDashboard = () => {
       title: '로그아웃',
       description: '성공적으로 로그아웃되었습니다.',
     });
-    navigate('/student-login');
+    navigate('/');
   };
 
   if (!student || loading) {

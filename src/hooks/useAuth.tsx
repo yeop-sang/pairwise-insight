@@ -153,6 +153,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         title: "로그아웃 완료",
         description: "성공적으로 로그아웃되었습니다."
       });
+      // 메인 페이지로 리다이렉트
+      window.location.href = '/';
     } catch (error: any) {
       toast({
         variant: "destructive",

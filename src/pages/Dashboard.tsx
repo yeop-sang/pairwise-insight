@@ -140,7 +140,10 @@ export const Dashboard = () => {
               <Plus className="h-4 w-4" />
               새 프로젝트
             </Button>
-            <Button variant="outline" onClick={signOut}>
+            <Button variant="outline" onClick={async () => {
+              await signOut();
+              navigate('/');
+            }}>
               로그아웃
             </Button>
           </div>
