@@ -55,8 +55,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               .eq('user_id', session.user.id)
               .maybeSingle();
             
-            if (!profileError) {
-              setProfile(profileData);
+            if (!profileError && profileData) {
+              setProfile(profileData as Profile);
               // Navigation will be handled by components using useAuth
             } else {
               console.error('Profile fetch error:', profileError);

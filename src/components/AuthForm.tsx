@@ -40,18 +40,20 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
   return (
     <div className="w-full max-w-md space-y-6">
       {/* Teacher Login */}
-      <Card className="shadow-medium">
+      <Card className="shadow-strong border-0 bg-gradient-card hover-lift">
         <CardHeader className="text-center pb-4">
-          <CardTitle className="text-xl font-bold flex items-center justify-center gap-2">
-            <BookOpen className="h-5 w-5 text-success" />
-            교사 로그인
+          <CardTitle className="text-2xl font-bold flex items-center justify-center gap-2">
+            <div className="p-2 bg-primary/10 rounded-lg">
+              <BookOpen className="h-6 w-6 text-primary" />
+            </div>
           </CardTitle>
+          <p className="text-muted-foreground mt-2">교사 계정으로 시작하기</p>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="login" className="w-full">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">로그인</TabsTrigger>
-              <TabsTrigger value="signup">회원가입</TabsTrigger>
+            <TabsList className="grid w-full grid-cols-2 bg-muted/50">
+              <TabsTrigger value="login" className="data-[state=active]:bg-background data-[state=active]:shadow-soft">로그인</TabsTrigger>
+              <TabsTrigger value="signup" className="data-[state=active]:bg-background data-[state=active]:shadow-soft">회원가입</TabsTrigger>
             </TabsList>
             
             <TabsContent value="login" className="space-y-4">
@@ -88,7 +90,7 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                   </div>
                 </div>
                 
-                <Button type="submit" className="w-full" variant="default">
+                <Button type="submit" className="w-full shadow-medium hover:shadow-strong transition-all" variant="default">
                   교사로 로그인
                 </Button>
               </form>
@@ -144,7 +146,7 @@ export const AuthForm = ({ onLogin, onSignup }: AuthFormProps) => {
                   </div>
                 </div>
                 
-                <Button type="submit" className="w-full" variant="default">
+                <Button type="submit" className="w-full shadow-medium hover:shadow-strong transition-all" variant="default">
                   교사로 회원가입
                 </Button>
               </form>

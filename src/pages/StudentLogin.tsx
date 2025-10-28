@@ -50,31 +50,40 @@ export const StudentLogin = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
+    <div className="min-h-screen bg-gradient-subtle flex items-center justify-center p-4 relative overflow-hidden">
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-20 right-20 w-72 h-72 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-20 left-20 w-72 h-72 bg-primary/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="w-full max-w-md space-y-6 relative z-10 animate-fade-in">
         <div className="text-center">
           <Link
             to="/"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-6"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-primary transition-colors mb-6 group"
           >
-            <ArrowLeft className="w-4 h-4 mr-2" />
+            <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
             메인으로 돌아가기
           </Link>
           
           <div className="flex justify-center mb-4">
-            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center">
-              <GraduationCap className="w-6 h-6 text-primary-foreground" />
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl"></div>
+              <div className="w-16 h-16 bg-gradient-primary rounded-full flex items-center justify-center shadow-glow relative">
+                <GraduationCap className="w-8 h-8 text-primary-foreground" />
+              </div>
             </div>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">학생 로그인</h1>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">학생 로그인</h1>
           <p className="text-muted-foreground">
             학생 ID와 비밀번호로 로그인하세요
           </p>
         </div>
 
-        <Card>
+        <Card className="shadow-strong border-0 bg-gradient-card hover-lift">
           <CardHeader className="space-y-1">
-            <CardTitle className="text-xl">로그인</CardTitle>
+            <CardTitle className="text-2xl">로그인</CardTitle>
             <CardDescription>
               선생님이 제공한 학생 ID와 비밀번호를 입력하세요
             </CardDescription>
@@ -107,7 +116,7 @@ export const StudentLogin = () => {
 
               <Button
                 type="submit"
-                className="w-full"
+                className="w-full shadow-medium hover:shadow-strong transition-all"
                 disabled={loading}
               >
                 {loading ? '로그인 중...' : '로그인'}
