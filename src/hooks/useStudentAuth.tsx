@@ -72,6 +72,7 @@ export const StudentAuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setStudent(null);
     localStorage.removeItem('student_session');
+    window.location.href = '/';
   };
 
   return (
