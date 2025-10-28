@@ -14,6 +14,101 @@ export type Database = {
   }
   public: {
     Tables: {
+      comparisons: {
+        Row: {
+          comparison_time_ms: number
+          created_at: string
+          decision: string
+          decision_id: string
+          id: string
+          is_duplicate_reeval: boolean
+          is_mirror: boolean
+          project_id: string
+          question_number: number
+          response_a_id: string
+          response_b_id: string
+          session_id: string | null
+          shown_at_client: string
+          shown_at_server: string
+          student_id: string
+          submitted_at_client: string
+          submitted_at_server: string
+          ui_order_left_id: string
+          ui_order_right_id: string
+        }
+        Insert: {
+          comparison_time_ms: number
+          created_at?: string
+          decision: string
+          decision_id: string
+          id?: string
+          is_duplicate_reeval?: boolean
+          is_mirror?: boolean
+          project_id: string
+          question_number: number
+          response_a_id: string
+          response_b_id: string
+          session_id?: string | null
+          shown_at_client: string
+          shown_at_server?: string
+          student_id: string
+          submitted_at_client: string
+          submitted_at_server?: string
+          ui_order_left_id: string
+          ui_order_right_id: string
+        }
+        Update: {
+          comparison_time_ms?: number
+          created_at?: string
+          decision?: string
+          decision_id?: string
+          id?: string
+          is_duplicate_reeval?: boolean
+          is_mirror?: boolean
+          project_id?: string
+          question_number?: number
+          response_a_id?: string
+          response_b_id?: string
+          session_id?: string | null
+          shown_at_client?: string
+          shown_at_server?: string
+          student_id?: string
+          submitted_at_client?: string
+          submitted_at_server?: string
+          ui_order_left_id?: string
+          ui_order_right_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comparisons_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparisons_response_a_id_fkey"
+            columns: ["response_a_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparisons_response_b_id_fkey"
+            columns: ["response_b_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparisons_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -38,6 +133,320 @@ export type Database = {
           role?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      project_assignments: {
+        Row: {
+          completed_at: string | null
+          created_at: string
+          has_completed: boolean
+          id: string
+          project_id: string
+          student_id: string
+        }
+        Insert: {
+          completed_at?: string | null
+          created_at?: string
+          has_completed?: boolean
+          id?: string
+          project_id: string
+          student_id: string
+        }
+        Update: {
+          completed_at?: string | null
+          created_at?: string
+          has_completed?: boolean
+          id?: string
+          project_id?: string
+          student_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_assignments_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          num_questions: number
+          teacher_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          num_questions?: number
+          teacher_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          num_questions?: number
+          teacher_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      reviewer_stats: {
+        Row: {
+          agreement_score: number | null
+          consecutive_bias_count: number
+          created_at: string
+          id: string
+          last_decision: string | null
+          project_id: string
+          question_number: number
+          recent_decision_history: string[] | null
+          short_response_count: number
+          student_id: string
+          total_comparisons: number
+          updated_at: string
+        }
+        Insert: {
+          agreement_score?: number | null
+          consecutive_bias_count?: number
+          created_at?: string
+          id?: string
+          last_decision?: string | null
+          project_id: string
+          question_number: number
+          recent_decision_history?: string[] | null
+          short_response_count?: number
+          student_id: string
+          total_comparisons?: number
+          updated_at?: string
+        }
+        Update: {
+          agreement_score?: number | null
+          consecutive_bias_count?: number
+          created_at?: string
+          id?: string
+          last_decision?: string | null
+          project_id?: string
+          question_number?: number
+          recent_decision_history?: string[] | null
+          short_response_count?: number
+          student_id?: string
+          total_comparisons?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reviewer_stats_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reviewer_stats_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_metadata: {
+        Row: {
+          agreement_update_interval: number
+          allow_tie: boolean
+          app_version: string
+          closed_at: string | null
+          consecutive_bias_threshold: number
+          created_at: string
+          duplicate_reeval_gap: number
+          global_score_refresh_interval: number
+          id: string
+          k_elo: number
+          mirror_reshow_gap: number
+          pairing_strategy: string
+          project_id: string
+          question_number: number
+          random_seed: string
+          reviewer_target_per_person: number
+          session_id: string
+          short_response_threshold_ms: number
+          started_at: string
+          target_per_response: number
+        }
+        Insert: {
+          agreement_update_interval?: number
+          allow_tie?: boolean
+          app_version: string
+          closed_at?: string | null
+          consecutive_bias_threshold?: number
+          created_at?: string
+          duplicate_reeval_gap?: number
+          global_score_refresh_interval?: number
+          id?: string
+          k_elo?: number
+          mirror_reshow_gap?: number
+          pairing_strategy?: string
+          project_id: string
+          question_number: number
+          random_seed: string
+          reviewer_target_per_person?: number
+          session_id: string
+          short_response_threshold_ms?: number
+          started_at?: string
+          target_per_response?: number
+        }
+        Update: {
+          agreement_update_interval?: number
+          allow_tie?: boolean
+          app_version?: string
+          closed_at?: string | null
+          consecutive_bias_threshold?: number
+          created_at?: string
+          duplicate_reeval_gap?: number
+          global_score_refresh_interval?: number
+          id?: string
+          k_elo?: number
+          mirror_reshow_gap?: number
+          pairing_strategy?: string
+          project_id?: string
+          question_number?: number
+          random_seed?: string
+          reviewer_target_per_person?: number
+          session_id?: string
+          short_response_threshold_ms?: number
+          started_at?: string
+          target_per_response?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_metadata_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      student_responses: {
+        Row: {
+          created_at: string
+          elo_score: number | null
+          id: string
+          num_comparisons: number | null
+          num_losses: number | null
+          num_ties: number | null
+          num_wins: number | null
+          project_id: string
+          question_number: number
+          response_text: string
+          student_id: string
+          submitted_at: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          elo_score?: number | null
+          id?: string
+          num_comparisons?: number | null
+          num_losses?: number | null
+          num_ties?: number | null
+          num_wins?: number | null
+          project_id: string
+          question_number: number
+          response_text: string
+          student_id: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          elo_score?: number | null
+          id?: string
+          num_comparisons?: number | null
+          num_losses?: number | null
+          num_ties?: number | null
+          num_wins?: number | null
+          project_id?: string
+          question_number?: number
+          response_text?: string
+          student_id?: string
+          submitted_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "student_responses_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "student_responses_student_id_fkey"
+            columns: ["student_id"]
+            isOneToOne: false
+            referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      students: {
+        Row: {
+          class_number: number
+          created_at: string
+          grade: number
+          id: string
+          name: string
+          password: string
+          student_id: string
+          student_number: number
+          teacher_id: string
+          updated_at: string
+        }
+        Insert: {
+          class_number: number
+          created_at?: string
+          grade: number
+          id?: string
+          name: string
+          password: string
+          student_id: string
+          student_number: number
+          teacher_id: string
+          updated_at?: string
+        }
+        Update: {
+          class_number?: number
+          created_at?: string
+          grade?: number
+          id?: string
+          name?: string
+          password?: string
+          student_id?: string
+          student_number?: number
+          teacher_id?: string
+          updated_at?: string
         }
         Relationships: []
       }
