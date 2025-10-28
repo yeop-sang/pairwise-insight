@@ -18,6 +18,10 @@ export default {
 			}
 		},
 		extend: {
+			fontFamily: {
+				sans: ['Inter', 'system-ui', 'sans-serif'],
+				display: ['Space Grotesk', 'Inter', 'sans-serif'],
+			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
@@ -28,6 +32,11 @@ export default {
 					DEFAULT: 'hsl(var(--primary))',
 					foreground: 'hsl(var(--primary-foreground))',
 					muted: 'hsl(var(--primary-muted))'
+				},
+				metallic: {
+					silver: 'hsl(var(--metallic-silver))',
+					dark: 'hsl(var(--metallic-dark))',
+					light: 'hsl(var(--metallic-light))'
 				},
 				secondary: {
 					DEFAULT: 'hsl(var(--secondary))',
@@ -98,10 +107,15 @@ export default {
 			boxShadow: {
 				'soft': 'var(--shadow-soft)',
 				'medium': 'var(--shadow-medium)',
-				'strong': 'var(--shadow-strong)'
+				'strong': 'var(--shadow-strong)',
+				'glow': 'var(--shadow-glow)',
+				'metallic': 'var(--shadow-metallic)'
 			},
 			backgroundImage: {
 				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-metallic': 'var(--gradient-metallic)',
+				'gradient-hero': 'var(--gradient-hero)',
+				'gradient-card': 'var(--gradient-card)',
 				'gradient-subtle': 'var(--gradient-subtle)'
 			},
 			transitionDuration: {

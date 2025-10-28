@@ -75,54 +75,73 @@ const Index = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-subtle flex overflow-hidden relative">
-      {/* Decorative background elements */}
+    <div className="min-h-screen bg-gradient-subtle flex flex-col overflow-hidden relative">
+      {/* Metallic decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-primary/5 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-metallic opacity-30 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-metallic-silver/20 rounded-full blur-3xl"></div>
       </div>
 
-      {/* Left Side - Logo and Content */}
-      <div className="flex-1 flex items-center justify-center px-8 relative z-10">
-        <div className="text-center max-w-2xl animate-fade-in">
-          <div className="flex flex-col items-center mb-8">
-            <div className="relative mb-6">
-              <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl"></div>
-              <img src={ppaLogo} alt="PPA Logo" className="h-24 w-24 relative" />
+      {/* Main Content */}
+      <div className="flex-1 flex items-center justify-center relative z-10">
+        <div className="w-full max-w-7xl mx-auto px-8 grid lg:grid-cols-2 gap-12 items-center">
+          
+          {/* Left Side - Hero Content */}
+          <div className="space-y-8 animate-slide-right">
+            <div className="space-y-6">
+              <h1 className="text-7xl lg:text-8xl font-bold font-display text-gradient leading-tight">
+                PPA
+              </h1>
+              <div className="space-y-2">
+                <h2 className="text-4xl lg:text-5xl font-display font-semibold text-metallic-dark">
+                  Peer Assessment
+                </h2>
+                <p className="text-2xl text-primary font-medium">
+                  AI 기반 동료평가 플랫폼
+                </p>
+              </div>
             </div>
-            <h1 className="text-7xl font-bold bg-gradient-hero bg-clip-text text-transparent mb-4">
-              PEER
-            </h1>
-            <h2 className="text-4xl font-medium text-primary">
-              동료평가
-            </h2>
+            
+            <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
+              데이터 기반의 공정하고 객관적인 평가 시스템으로 
+              학생들의 성장을 돕습니다.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Button 
+                asChild 
+                size="lg" 
+                className="hover-lift shadow-strong text-lg h-14 px-8 font-semibold bg-gradient-primary border-0"
+              >
+                <Link to="/dashboard">
+                  <BarChart3 className="mr-2 h-5 w-5" />
+                  교사 대시보드
+                </Link>
+              </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                asChild 
+                className="hover-lift text-lg h-14 px-8 font-semibold border-2 border-metallic-dark/20 hover:border-primary hover:bg-primary/5"
+              >
+                <Link to="/student-login">
+                  <UserCheck className="mr-2 h-5 w-5" />
+                  학생 로그인
+                </Link>
+              </Button>
+            </div>
           </div>
-          
-          <p className="text-xl text-muted-foreground leading-relaxed mb-8 max-w-lg mx-auto">
-            비교 평가를 통해 학생 평가를 혁신하세요. 
-            <span className="text-foreground font-semibold"> Bradley-Terry 모델링</span>을 사용하여 간단한 쌍대비교에서 신뢰할 수 있는 순위를 생성합니다.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" className="hover-lift shadow-medium">
-              <Link to="/dashboard">
-                <BarChart3 className="mr-2 h-5 w-5" />
-                교사용 대시보드
-              </Link>
-            </Button>
-            <Button variant="outline" size="lg" asChild className="hover-lift">
-              <Link to="/student-login">
-                <UserCheck className="mr-2 h-5 w-5" />
-                학생 로그인
-              </Link>
-            </Button>
+
+          {/* Right Side - Auth Forms */}
+          <div className="flex items-center justify-center lg:justify-end animate-slide-up">
+            <div className="w-full max-w-md">
+              <div className="glass-effect rounded-2xl p-8 shadow-glow border-2 border-white/40">
+                <AuthForm onLogin={handleLogin} onSignup={handleSignup} />
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Right Side - Auth Forms */}
-      <div className="w-96 flex items-center justify-center p-8 glass-effect relative z-10 animate-slide-up">
-        <AuthForm onLogin={handleLogin} onSignup={handleSignup} />
       </div>
     </div>
   );

@@ -8,48 +8,51 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Academic color palette */
-    --background: 0 0% 100%;
-    --foreground: 217 32% 17%;
+    /* Modern metallic blue palette */
+    --background: 220 25% 98%;
+    --foreground: 220 15% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 217 32% 17%;
+    --card-foreground: 220 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 217 32% 17%;
+    --popover-foreground: 220 15% 15%;
 
-    /* Academic blue as primary */
-    --primary: 213 94% 68%;
+    /* Metallic blue as primary */
+    --primary: 214 95% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 213 94% 85%;
+    --primary-muted: 214 85% 75%;
+    
+    /* Metallic colors */
+    --metallic-silver: 210 20% 80%;
+    --metallic-dark: 215 25% 27%;
+    --metallic-light: 210 30% 92%;
 
     /* Neutral grays for secondary */
-    --secondary: 210 40% 96%;
-    --secondary-foreground: 217 32% 17%;
+    --secondary: 220 15% 95%;
+    --secondary-foreground: 220 15% 15%;
 
-    --muted: 210 40% 96%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 213 94% 95%;
-    --accent-foreground: 213 94% 68%;
+    --accent: 214 95% 96%;
+    --accent-foreground: 214 95% 58%;
 
-    /* Academic red for warnings */
+    /* Status colors */
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    /* Success green */
     --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    /* Warning amber */
     --warning: 43 96% 56%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 213 94% 68%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 214 95% 58%;
 
-    --radius: 0.5rem;
+    --radius: 0.75rem;
 
     --sidebar-background: 0 0% 98%;
 
@@ -65,19 +68,21 @@ All colors MUST be HSL.
 
     --sidebar-border: 220 13% 91%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 214 95% 58%;
 
-    /* Gradients for visual interest */
-    --gradient-primary: linear-gradient(135deg, hsl(213 94% 68%), hsl(213 94% 85%));
-    --gradient-subtle: linear-gradient(180deg, hsl(0 0% 100%), hsl(213 94% 98%));
-    --gradient-hero: linear-gradient(135deg, hsl(213 94% 68%) 0%, hsl(270 80% 70%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(213 94% 99%));
+    /* Metallic gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 95% 58%), hsl(214 85% 75%));
+    --gradient-metallic: linear-gradient(135deg, hsl(210 30% 92%), hsl(210 20% 80%), hsl(215 25% 27%));
+    --gradient-hero: linear-gradient(135deg, hsl(214 95% 58%) 0%, hsl(210 20% 80%) 50%, hsl(215 25% 27%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 25% 98%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 25% 98%), hsl(214 95% 98%));
 
-    /* Shadows for depth */
-    --shadow-soft: 0 2px 8px hsl(213 94% 68% / 0.08);
-    --shadow-medium: 0 8px 24px hsl(213 94% 68% / 0.12);
-    --shadow-strong: 0 16px 48px hsl(213 94% 68% / 0.18);
-    --shadow-glow: 0 0 40px hsl(213 94% 68% / 0.15);
+    /* Shadows with metallic tint */
+    --shadow-soft: 0 2px 8px hsl(214 95% 58% / 0.08);
+    --shadow-medium: 0 8px 24px hsl(214 95% 58% / 0.12);
+    --shadow-strong: 0 20px 60px hsl(214 95% 58% / 0.2);
+    --shadow-glow: 0 0 60px hsl(214 95% 58% / 0.25);
+    --shadow-metallic: 0 8px 32px hsl(215 25% 27% / 0.15);
 
     /* Academic spacing */
     --space-xs: 0.25rem;
@@ -190,20 +195,24 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
-  /* Academic typography */
+  /* Modern typography */
   h1 {
     @apply text-3xl font-bold tracking-tight;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
   }
   
   h2 {
     @apply text-2xl font-semibold tracking-tight;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
   }
   
   h3 {
     @apply text-xl font-semibold;
+    font-family: 'Space Grotesk', 'Inter', sans-serif;
   }
   
   h4 {
@@ -213,19 +222,33 @@ All colors MUST be HSL.
 
 @layer utilities {
   .animate-fade-in {
-    animation: fade-in 0.5s ease-out;
+    animation: fade-in 0.6s ease-out;
   }
   
   .animate-slide-up {
-    animation: slide-up 0.5s ease-out;
+    animation: slide-up 0.6s ease-out;
+  }
+  
+  .animate-slide-right {
+    animation: slide-right 0.7s ease-out;
   }
 
   .glass-effect {
-    @apply backdrop-blur-xl bg-white/70 dark:bg-card/70 border border-white/20;
+    @apply backdrop-blur-2xl bg-white/60 dark:bg-card/60 border border-white/30;
+  }
+  
+  .metallic-effect {
+    background: linear-gradient(135deg, hsl(210 30% 92%), hsl(210 20% 80%));
+    box-shadow: 0 8px 32px hsl(215 25% 27% / 0.15);
   }
 
   .hover-lift {
-    @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-strong;
+    @apply transition-all duration-300 hover:-translate-y-2 hover:shadow-strong;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--gradient-hero);
   }
 }
 
@@ -246,5 +269,16 @@ All colors MUST be HSL.
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes slide-right {
+  from {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
