@@ -91,7 +91,7 @@ const Index = () => {
           <div className="space-y-8 animate-slide-right">
             <div className="space-y-6">
               <h1 className="text-7xl lg:text-8xl font-bold font-display text-gradient leading-tight">
-                PPA
+                PEER
               </h1>
               <div className="space-y-2">
                 <h2 className="text-4xl lg:text-5xl font-display font-semibold text-metallic-dark">
@@ -110,16 +110,6 @@ const Index = () => {
             
             <div className="flex flex-col sm:flex-row gap-4">
               <Button 
-                asChild 
-                size="lg" 
-                className="hover-lift shadow-strong text-lg h-14 px-8 font-semibold bg-gradient-primary border-0"
-              >
-                <Link to="/dashboard">
-                  <BarChart3 className="mr-2 h-5 w-5" />
-                  교사 대시보드
-                </Link>
-              </Button>
-              <Button 
                 variant="outline" 
                 size="lg" 
                 asChild 
@@ -136,7 +126,10 @@ const Index = () => {
           {/* Right Side - Auth Forms */}
           <div className="flex items-center justify-center lg:justify-end animate-slide-up">
             <div className="w-full max-w-md">
-              <div className="glass-effect rounded-2xl p-8 shadow-glow border-2 border-white/40">
+              <div className="glass-effect rounded-2xl p-10 shadow-glow border-2 border-white/40">
+                <h2 className="text-3xl font-display font-bold text-metallic-dark mb-6 text-center">
+                  교사 계정으로 시작하기
+                </h2>
                 <AuthForm onLogin={handleLogin} onSignup={handleSignup} />
               </div>
             </div>

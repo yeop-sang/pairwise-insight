@@ -156,6 +156,7 @@ export type Database = {
       }
       project_assignments: {
         Row: {
+          assigned_at: string | null
           completed_at: string | null
           created_at: string
           has_completed: boolean
@@ -164,6 +165,7 @@ export type Database = {
           student_id: string
         }
         Insert: {
+          assigned_at?: string | null
           completed_at?: string | null
           created_at?: string
           has_completed?: boolean
@@ -172,6 +174,7 @@ export type Database = {
           student_id: string
         }
         Update: {
+          assigned_at?: string | null
           completed_at?: string | null
           created_at?: string
           has_completed?: boolean
@@ -203,6 +206,8 @@ export type Database = {
           id: string
           is_active: boolean
           num_questions: number
+          question: string | null
+          rubric: string | null
           teacher_id: string
           title: string
           updated_at: string
@@ -213,6 +218,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           num_questions?: number
+          question?: string | null
+          rubric?: string | null
           teacher_id: string
           title: string
           updated_at?: string
@@ -223,6 +230,8 @@ export type Database = {
           id?: string
           is_active?: boolean
           num_questions?: number
+          question?: string | null
+          rubric?: string | null
           teacher_id?: string
           title?: string
           updated_at?: string
@@ -411,6 +420,7 @@ export type Database = {
           project_id: string
           question_number: number
           response_text: string
+          student_code: string | null
           student_id: string
           submitted_at: string
           updated_at: string
@@ -426,6 +436,7 @@ export type Database = {
           project_id: string
           question_number: number
           response_text: string
+          student_code?: string | null
           student_id: string
           submitted_at?: string
           updated_at?: string
@@ -441,6 +452,7 @@ export type Database = {
           project_id?: string
           question_number?: number
           response_text?: string
+          student_code?: string | null
           student_id?: string
           submitted_at?: string
           updated_at?: string
