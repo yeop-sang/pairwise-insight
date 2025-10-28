@@ -15,6 +15,7 @@ import { ProjectDetail } from "./pages/ProjectDetail";
 import { StudentManagement } from "./pages/StudentManagement";
 import { ProjectAssignment } from "./pages/ProjectAssignment";
 import { StudentLogin } from "./pages/StudentLogin";
+import { AdminDashboard } from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/admin" element={<AdminDashboard />} />
               <Route path="/student-login" element={<StudentLogin />} />
               <Route path="/student-dashboard" element={<StudentDashboard />} />
               <Route path="/student-management" element={<StudentManagement />} />

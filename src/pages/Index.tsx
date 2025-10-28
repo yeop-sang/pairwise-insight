@@ -4,6 +4,7 @@ import { BarChart3, UserCheck } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
+import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import ppaLogo from "@/assets/ppa-logo.png";
 import { useEffect } from "react";
@@ -12,12 +13,15 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, profile, signIn, signUp } = useAuth();
   const { student, login: studentLogin } = useStudentAuth();
+  const { isAdmin, isTeacher } = useUserRole();
   const { toast } = useToast();
 
   // Redirect if user is already logged in
   useEffect(() => {
     if (user && profile) {
-      if (profile.role === 'teacher') {
+      if (isAdmin) {
+        navigate('/admin');
+      } else if (profile.role === 'teacher' || isTeacher) {
         navigate('/dashboard');
       } else if (profile.role === 'student') {
         navigate('/student-dashboard');
@@ -27,7 +31,7 @@ const Index = () => {
     if (student) {
       navigate('/student-dashboard');
     }
-  }, [user, profile, student, navigate]);
+  }, [user, profile, student, isAdmin, isTeacher, navigate]);
 
   const handleLogin = async (email: string, password: string) => {
     console.log('Index handleLogin called - teacher login');
