@@ -124,6 +124,17 @@ const Index = () => {
                   학생 로그인
                 </Link>
               </Button>
+              <Button 
+                variant="outline" 
+                size="lg" 
+                asChild 
+                className="hover-lift text-lg h-14 px-8 font-semibold border-2 border-metallic-dark/20 hover:border-primary hover:bg-primary/5"
+              >
+                <Link to="/user-guide">
+                  <BarChart3 className="mr-2 h-5 w-5" />
+                  사용방법
+                </Link>
+              </Button>
             </div>
           </div>
 
