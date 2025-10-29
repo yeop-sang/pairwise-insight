@@ -13,25 +13,26 @@ const Index = () => {
   const navigate = useNavigate();
   const { user, profile, signIn, signUp } = useAuth();
   const { student, login: studentLogin } = useStudentAuth();
-  const { isAdmin, isTeacher } = useUserRole();
+  const { isAdmin, isTeacher, isLoading } = useUserRole();
   const { toast } = useToast();
 
   // Redirect if user is already logged in
   useEffect(() => {
+    // Wait for role loading to complete before redirecting
+    if (isLoading) return;
+    
     if (user && profile) {
       if (isAdmin) {
         navigate('/admin');
-      } else if (profile.role === 'teacher' || isTeacher) {
+      } else if (isTeacher) {
         navigate('/dashboard');
-      } else if (profile.role === 'student') {
-        navigate('/student-dashboard');
       }
     }
     // Also redirect if student is logged in
     if (student) {
       navigate('/student-dashboard');
     }
-  }, [user, profile, student, isAdmin, isTeacher, navigate]);
+  }, [user, profile, student, isAdmin, isTeacher, isLoading, navigate]);
 
   const handleLogin = async (email: string, password: string) => {
     console.log('Index handleLogin called - teacher login');
