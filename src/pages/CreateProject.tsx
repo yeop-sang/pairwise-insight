@@ -337,17 +337,27 @@ export const CreateProject = () => {
           studentCodeToIdMap.set(code, existingStudent.id);
           console.log(`학생 ${code}: 기존 학생 사용`);
         } else {
+          // Parse student code to extract grade, class, student number
+          // Assuming code format: ABC10101 (3 letters + 5 digits)
+          const codeDigits = code.slice(-5); // Get last 5 digits
+          const grade = parseInt(codeDigits[0]) || 1;
+          const classNumber = parseInt(codeDigits.slice(1, 3)) || 1;
+          const studentNumber = parseInt(codeDigits.slice(3, 5)) || 1;
+          
+          // Password is the 5-digit number part
+          const password = codeDigits;
+          
           // Create new student with minimal data
           const { data: newStudent, error: studentError } = await supabase
             .from('students')
             .insert({
               student_id: code,
               name: `학생 ${code}`,
-              password: code, // Using student_id as default password
+              password: password,
               teacher_id: user.id,
-              grade: 1,
-              class_number: 1,
-              student_number: parseInt(code) || 1
+              grade: grade,
+              class_number: classNumber,
+              student_number: studentNumber
             })
             .select('id')
             .single();
