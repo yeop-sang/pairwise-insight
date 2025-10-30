@@ -8,19 +8,31 @@ import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import ppaLogo from "@/assets/ppa-logo.png";
 import { useEffect } from "react";
-
 const Index = () => {
   const navigate = useNavigate();
-  const { user, profile, signIn, signUp } = useAuth();
-  const { student, login: studentLogin } = useStudentAuth();
-  const { isAdmin, isTeacher, isLoading } = useUserRole();
-  const { toast } = useToast();
+  const {
+    user,
+    profile,
+    signIn,
+    signUp
+  } = useAuth();
+  const {
+    student,
+    login: studentLogin
+  } = useStudentAuth();
+  const {
+    isAdmin,
+    isTeacher,
+    isLoading
+  } = useUserRole();
+  const {
+    toast
+  } = useToast();
 
   // Redirect if user is already logged in
   useEffect(() => {
     // Wait for role loading to complete before redirecting
     if (isLoading) return;
-    
     if (user && profile) {
       if (isAdmin) {
         navigate('/admin');
@@ -33,13 +45,12 @@ const Index = () => {
       navigate('/student-dashboard');
     }
   }, [user, profile, student, isAdmin, isTeacher, isLoading, navigate]);
-
   const handleLogin = async (email: string, password: string) => {
     console.log('Index handleLogin called - teacher login');
-    
     try {
-      const { error } = await signIn(email, password);
-      
+      const {
+        error
+      } = await signIn(email, password);
       if (!error) {
         console.log('Teacher login successful');
         // 로그인 성공 후 onAuthStateChange에서 자동으로 라우팅 처리
@@ -48,7 +59,7 @@ const Index = () => {
         toast({
           title: '로그인 실패',
           description: '이메일 또는 비밀번호가 올바르지 않습니다.',
-          variant: 'destructive',
+          variant: 'destructive'
         });
       }
     } catch (error) {
@@ -56,17 +67,16 @@ const Index = () => {
       toast({
         title: '로그인 오류',
         description: '로그인 중 오류가 발생했습니다.',
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
-
   const handleSignup = async (email: string, password: string, name: string) => {
     console.log('Index handleSignup called - teacher signup');
-    
     try {
-      const { error } = await signUp(email, password, name, 'teacher');
-      
+      const {
+        error
+      } = await signUp(email, password, name, 'teacher');
       if (!error) {
         console.log('Signup successful');
         // 회원가입 후 이메일 확인 안내 (toast는 useAuth에서 처리)
@@ -77,10 +87,7 @@ const Index = () => {
       console.error('Signup error:', error);
     }
   };
-
-
-  return (
-    <div className="min-h-screen bg-gradient-subtle flex flex-col overflow-hidden relative">
+  return <div className="min-h-screen bg-gradient-subtle flex flex-col overflow-hidden relative">
       {/* Metallic decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-gradient-metallic opacity-30 rounded-full blur-3xl"></div>
@@ -99,12 +106,8 @@ const Index = () => {
                 PEER
               </h1>
               <div className="space-y-2">
-                <h2 className="text-4xl lg:text-5xl font-display font-semibold text-metallic-dark">
-                  Peer Assessment
-                </h2>
-                <p className="text-2xl text-primary font-medium">
-                  AI 기반 동료평가 플랫폼
-                </p>
+                <h2 className="text-4xl lg:text-5xl font-display font-semibold text-metallic-dark">Peer Evaluation Encouraging Reflection</h2>
+                <p className="text-2xl text-primary font-medium">ai 기반 동료평가 시스템</p>
               </div>
             </div>
             
@@ -114,23 +117,13 @@ const Index = () => {
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button 
-                variant="outline" 
-                size="lg" 
-                asChild 
-                className="hover-lift text-lg h-14 px-8 font-semibold border-2 border-metallic-dark/20 hover:border-primary hover:bg-primary/5"
-              >
+              <Button variant="outline" size="lg" asChild className="hover-lift text-lg h-14 px-8 font-semibold border-2 border-metallic-dark/20 hover:border-primary hover:bg-primary/5">
                 <Link to="/student-login">
                   <UserCheck className="mr-2 h-5 w-5" />
                   학생 로그인
                 </Link>
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                asChild 
-                className="hover-lift text-lg h-14 px-8 font-semibold border-2 border-metallic-dark/20 hover:border-primary hover:bg-primary/5"
-              >
+              <Button variant="outline" size="lg" asChild className="hover-lift text-lg h-14 px-8 font-semibold border-2 border-metallic-dark/20 hover:border-primary hover:bg-primary/5">
                 <Link to="/user-guide">
                   <BarChart3 className="mr-2 h-5 w-5" />
                   사용방법
@@ -152,8 +145,6 @@ const Index = () => {
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
