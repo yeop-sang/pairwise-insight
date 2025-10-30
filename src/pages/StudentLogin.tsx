@@ -77,7 +77,7 @@ export const StudentLogin = () => {
           </div>
           <h1 className="text-3xl font-bold tracking-tight mb-2">학생 로그인</h1>
           <p className="text-muted-foreground">
-            학생 ID와 비밀번호로 로그인하세요
+            학생 ID (알파벳 3글자 + 5자리 숫자)와 비밀번호로 로그인하세요
           </p>
         </div>
 
@@ -85,7 +85,10 @@ export const StudentLogin = () => {
           <CardHeader className="space-y-1">
             <CardTitle className="text-2xl">로그인</CardTitle>
             <CardDescription>
-              선생님이 제공한 학생 ID와 비밀번호를 입력하세요
+              선생님이 제공한 학생 ID와 비밀번호를 입력하세요<br/>
+              <span className="text-xs text-muted-foreground mt-1 block">
+                예: ABC10101 (1학년 1반 1번)
+              </span>
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -95,11 +98,15 @@ export const StudentLogin = () => {
                 <Input
                   id="studentId"
                   type="text"
-                  placeholder="학생 ID를 입력하세요"
+                  placeholder="예: ABC10101"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
+                  onChange={(e) => setStudentId(e.target.value.toUpperCase())}
+                  maxLength={8}
                   required
                 />
+                <p className="text-xs text-muted-foreground">
+                  알파벳 3글자 + 학년(1자리) + 반(2자리) + 번호(2자리)
+                </p>
               </div>
               
               <div className="space-y-2">
