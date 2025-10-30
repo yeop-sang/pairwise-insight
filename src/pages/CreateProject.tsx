@@ -63,15 +63,12 @@ export const CreateProject = () => {
           }
           
       const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
-      const questions = headerCells.slice(1);
+      const numColumns = headerCells.length;
       console.log("헤더:", headerCells);
-      console.log("문항 수:", questions.length);
-      
-      // Store questions for later use when creating project
-      (parseFile as any).extractedQuestions = questions;
+      console.log("총 컬럼 수:", numColumns);
           
-          if (questions.length === 0) {
-            reject(new Error("문항이 없습니다. 2열부터 문항을 입력해주세요."));
+          if (numColumns < 2) {
+            reject(new Error("최소 2개의 컬럼(학생번호 + 응답)이 필요합니다."));
             return;
           }
           
@@ -90,7 +87,7 @@ export const CreateProject = () => {
             }
             
             let responseCount = 0;
-            for (let j = 1; j < cells.length && j - 1 < questions.length; j++) {
+            for (let j = 1; j < cells.length; j++) {
               const rawAnswer = cells[j];
               // 빈 셀도 빈 문자열로 저장
               const answer = rawAnswer?.toString()?.trim() || "";
@@ -143,15 +140,12 @@ export const CreateProject = () => {
             }
             
             const headerRow = jsonData[0];
-            const questions = headerRow.slice(1); // 첫 번째 열(학생번호) 제외
+            const numColumns = headerRow.length;
             console.log("헤더:", headerRow);
-            console.log("문항 수:", questions.length);
+            console.log("총 컬럼 수:", numColumns);
             
-            // Store questions for later use when creating project
-            (parseFile as any).extractedQuestions = questions;
-            
-            if (questions.length === 0) {
-              reject(new Error("문항이 없습니다. 2열부터 문항을 입력해주세요."));
+            if (numColumns < 2) {
+              reject(new Error("최소 2개의 컬럼(학생번호 + 응답)이 필요합니다."));
               return;
             }
             
@@ -179,7 +173,7 @@ export const CreateProject = () => {
               }
               
               let responseCount = 0;
-              for (let j = 1; j < row.length && j - 1 < questions.length; j++) {
+              for (let j = 1; j < row.length; j++) {
                 const rawAnswer = row[j];
                 
                 // 빈 셀 처리 개선 - null, undefined, 빈 문자열 모두 빈 문자열로 변환
@@ -254,10 +248,6 @@ export const CreateProject = () => {
       const responses = await parseFile(csvFile);
       console.log("파싱된 응답 개수:", responses.length);
       
-      // Extract questions from the parsed file
-      const extractedQuestions = (parseFile as any).extractedQuestions || [];
-      console.log("추출된 문항:", extractedQuestions);
-      
       if (responses.length === 0) {
         throw new Error("파일에 유효한 데이터가 없습니다.");
       }
@@ -315,10 +305,9 @@ export const CreateProject = () => {
         .insert({
           title: projectData.title,
           description: projectData.description,
-          question: projectData.question,
-          rubric: projectData.rubric,
-          teacher_id: user.id,
-          questions: extractedQuestions // Save extracted questions as JSONB array
+          question: projectData.question || null,
+          rubric: projectData.rubric || null,
+          teacher_id: user.id
         })
         .select()
         .single();
@@ -458,14 +447,13 @@ export const CreateProject = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="question">평가 질문</Label>
+              <Label htmlFor="question">평가 질문 (선택사항)</Label>
               <Textarea
                 id="question"
                 value={projectData.question}
                 onChange={(e) => setProjectData({...projectData, question: e.target.value})}
                 placeholder="학생들이 비교할 때 참고할 질문을 입력하세요"
                 rows={3}
-                required
               />
             </div>
 
@@ -498,7 +486,7 @@ export const CreateProject = () => {
                   CSV 또는 엑셀 파일을 선택하거나 드래그하여 업로드하세요
                 </p>
                 <p className="text-xs text-muted-foreground mb-4">
-                  지원 형식: .csv, .xlsx, .xls | 형식: 1열(학생번호), 2열부터(문항들)
+                  지원 형식: .csv, .xlsx, .xls | 형식: A열(학생번호), B열부터(학생 응답)
                 </p>
                 <Input
                   id="file"
@@ -519,32 +507,28 @@ export const CreateProject = () => {
               <h4 className="font-medium mb-2">파일 형식 예시:</h4>
               <div className="space-y-3">
                 <div>
-                  <p className="text-sm font-medium mb-1">CSV 형식:</p>
-                  <pre className="text-xs text-muted-foreground bg-background p-2 rounded border">
-{`학생번호,1번문항,2번문항,3번문항
-1,"1번 학생의 1번 응답","1번 학생의 2번 응답","1번 학생의 3번 응답"
-2,"2번 학생의 1번 응답","2번 학생의 2번 응답","2번 학생의 3번 응답"`}
-                  </pre>
-                </div>
-                <div>
-                  <p className="text-sm font-medium mb-1">엑셀 형식:</p>
+                  <p className="text-sm font-medium mb-1">CSV 또는 엑셀 형식:</p>
                   <div className="text-xs text-muted-foreground bg-background p-2 rounded border">
                     <div className="grid grid-cols-4 gap-1 font-mono">
                       <div className="font-bold">A1: 학생번호</div>
-                      <div className="font-bold">B1: 1번문항</div>
-                      <div className="font-bold">C1: 2번문항</div>
-                      <div className="font-bold">D1: 3번문항</div>
+                      <div className="font-bold">B1~: (문항 또는 빈칸)</div>
+                      <div></div>
+                      <div></div>
                       <div>A2: 1</div>
-                      <div>B2: 1번 학생의 1번 응답</div>
-                      <div>C2: 1번 학생의 2번 응답</div>
-                      <div>D2: 1번 학생의 3번 응답</div>
+                      <div>B2: 응답1</div>
+                      <div>C2: 응답2</div>
+                      <div>D2: 응답3</div>
+                      <div>A3: 2</div>
+                      <div>B3: 응답1</div>
+                      <div>C3: 응답2</div>
+                      <div>D3: 응답3</div>
                     </div>
                   </div>
                 </div>
               </div>
               <p className="text-xs text-muted-foreground mt-3">
-                * 1행: 1열은 "학생번호", 2열부터는 각 문항명<br/>
-                * 2행부터: 1열은 학생 식별번호, 2열부터는 해당 문항에 대한 학생 응답
+                * A열: 학생 식별번호 (필수)<br/>
+                * B열부터: 각 문항에 대한 학생 응답 (첫 번째 행은 문항명이거나 비워둘 수 있음)
               </p>
             </div>
           </CardContent>
