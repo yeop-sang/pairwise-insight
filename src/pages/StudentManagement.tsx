@@ -161,8 +161,8 @@ export const StudentManagement: React.FC = () => {
         const studentNumber = parseInt(row[2]);
         const name = row[3];
 
-        const studentId = `${prefix}_${grade}${classNumber}${studentNumber.toString().padStart(2, '0')}`;
-        const password = `${grade}${classNumber}${studentNumber.toString().padStart(2, '0')}`;
+        const studentId = `${prefix}${grade}${classNumber.toString().padStart(2, '0')}${studentNumber.toString().padStart(2, '0')}`;
+        const password = `${grade}${classNumber.toString().padStart(2, '0')}${studentNumber.toString().padStart(2, '0')}`;
 
         studentsData.push({
           teacher_id: user.id,
