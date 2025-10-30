@@ -319,6 +319,49 @@ export const CreateProject = () => {
       
       console.log("프로젝트 생성 완료:", project.id);
 
+      // Create or find students based on student codes
+      console.log("학생 정보 처리 중...");
+      const uniqueStudentCodes = Array.from(new Set(deduplicatedResponses.map(r => r.code)));
+      const studentCodeToIdMap = new Map<string, string>();
+      
+      for (const code of uniqueStudentCodes) {
+        // Check if student exists
+        const { data: existingStudent } = await supabase
+          .from('students')
+          .select('id')
+          .eq('student_id', code)
+          .eq('teacher_id', user.id)
+          .single();
+        
+        if (existingStudent) {
+          studentCodeToIdMap.set(code, existingStudent.id);
+          console.log(`학생 ${code}: 기존 학생 사용`);
+        } else {
+          // Create new student with minimal data
+          const { data: newStudent, error: studentError } = await supabase
+            .from('students')
+            .insert({
+              student_id: code,
+              name: `학생 ${code}`,
+              password: code, // Using student_id as default password
+              teacher_id: user.id,
+              grade: 1,
+              class_number: 1,
+              student_number: parseInt(code) || 1
+            })
+            .select('id')
+            .single();
+          
+          if (studentError) {
+            console.error(`학생 생성 오류 (${code}):`, studentError);
+            throw new Error(`학생 생성 실패 (${code}): ${studentError.message}`);
+          }
+          
+          studentCodeToIdMap.set(code, newStudent.id);
+          console.log(`학생 ${code}: 새로 생성됨`);
+        }
+      }
+
       // Insert student responses in batches
       console.log("학생 응답 삽입 중...");
       const batchSize = 100;
@@ -335,6 +378,7 @@ export const CreateProject = () => {
           .insert(
             batch.map(response => ({
               project_id: project.id,
+              student_id: studentCodeToIdMap.get(response.code)!,
               student_code: response.code,
               response_text: response.answer,
               question_number: response.questionIndex + 1 // 1-based indexing
