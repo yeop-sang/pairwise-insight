@@ -428,7 +428,7 @@ export type Database = {
           question_number: number
           response_text: string
           student_code: string | null
-          student_id: string
+          student_id: string | null
           submitted_at: string
           updated_at: string
         }
@@ -444,7 +444,7 @@ export type Database = {
           question_number: number
           response_text: string
           student_code?: string | null
-          student_id: string
+          student_id?: string | null
           submitted_at?: string
           updated_at?: string
         }
@@ -460,7 +460,7 @@ export type Database = {
           question_number?: number
           response_text?: string
           student_code?: string | null
-          student_id?: string
+          student_id?: string | null
           submitted_at?: string
           updated_at?: string
         }

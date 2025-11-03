@@ -319,40 +319,10 @@ export const CreateProject = () => {
       
       console.log("프로젝트 생성 완료:", project.id);
 
-      // Find existing students only - do not create new students
-      console.log("학생 정보 조회 중...");
+      // Prepare student codes from responses
+      console.log("학생 응답 데이터 준비 중...");
       const uniqueStudentCodes = Array.from(new Set(deduplicatedResponses.map(r => r.code)));
-      const studentCodeToIdMap = new Map<string, string>();
-      const notFoundStudents: string[] = [];
-      
-      for (const code of uniqueStudentCodes) {
-        // Only check if student exists - do not create
-        const { data: existingStudent } = await supabase
-          .from('students')
-          .select('id')
-          .eq('student_id', code)
-          .eq('teacher_id', user.id)
-          .single();
-        
-        if (existingStudent) {
-          studentCodeToIdMap.set(code, existingStudent.id);
-          console.log(`학생 ${code}: 기존 학생 찾음`);
-        } else {
-          notFoundStudents.push(code);
-          console.log(`학생 ${code}: 학생 목록에 없음`);
-        }
-      }
-      
-      // Warn about students not found
-      if (notFoundStudents.length > 0) {
-        console.warn(`학생 목록에 없는 학생번호 ${notFoundStudents.length}개:`, notFoundStudents);
-        toast({
-          variant: "destructive",
-          title: "학생 목록에 없는 학생번호 발견",
-          description: `${notFoundStudents.length}개의 학생번호가 학생 목록에 없습니다. 먼저 /student-management에서 학생을 추가해주세요.`
-        });
-        throw new Error(`학생 목록에 없는 학생번호: ${notFoundStudents.slice(0, 5).join(', ')}${notFoundStudents.length > 5 ? '...' : ''}`);
-      }
+      console.log(`CSV 파일에서 ${uniqueStudentCodes.length}명의 학생 코드 발견`);
 
       // Insert student responses in batches
       console.log("학생 응답 삽입 중...");
@@ -370,7 +340,7 @@ export const CreateProject = () => {
           .insert(
             batch.map(response => ({
               project_id: project.id,
-              student_id: studentCodeToIdMap.get(response.code)!,
+              student_id: null, // Not linked to students table
               student_code: response.code,
               response_text: response.answer,
               question_number: response.questionIndex + 1 // 1-based indexing
@@ -383,28 +353,6 @@ export const CreateProject = () => {
         }
         
         console.log(`응답 배치 ${i + 1}/${responseBatches.length} 삽입 완료`);
-      }
-
-      // Assign students from CSV file to this project
-      const studentIdsToAssign = Array.from(studentCodeToIdMap.values());
-      console.log(`프로젝트에 ${studentIdsToAssign.length}명의 학생 할당 중...`);
-
-      if (studentIdsToAssign.length > 0) {
-        const { error: assignmentError } = await supabase
-          .from('project_assignments')
-          .insert(
-            studentIdsToAssign.map(studentId => ({
-              project_id: project.id,
-              student_id: studentId
-            }))
-          );
-
-        if (assignmentError) {
-          console.error("프로젝트 할당 오류:", assignmentError);
-          throw new Error(`학생 할당 실패: ${assignmentError.message}`);
-        }
-        
-        console.log(`${studentIdsToAssign.length}명의 학생이 프로젝트에 할당되었습니다.`);
       }
 
       toast({
