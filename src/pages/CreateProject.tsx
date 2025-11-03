@@ -42,7 +42,10 @@ export const CreateProject = () => {
     }
   };
 
-  const parseFile = async (file: File): Promise<Array<{code: string, answer: string, questionIndex: number}>> => {
+  const parseFile = async (file: File): Promise<{
+    responses: Array<{code: string, answer: string, questionIndex: number}>,
+    questions: Record<number, string>
+  }> => {
     console.log("파일 파싱 시작:", file.name, "크기:", file.size);
     
     return new Promise((resolve, reject) => {
@@ -62,10 +65,18 @@ export const CreateProject = () => {
             return;
           }
           
-      const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
-      const numColumns = headerCells.length;
-      console.log("헤더:", headerCells);
-      console.log("총 컬럼 수:", numColumns);
+          const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
+          const numColumns = headerCells.length;
+          console.log("헤더:", headerCells);
+          console.log("총 컬럼 수:", numColumns);
+          
+          // 문항 추출 (B1, C1, D1... -> 인덱스 1, 2, 3...)
+          const questions: Record<number, string> = {};
+          for (let j = 1; j < headerCells.length; j++) {
+            const questionText = headerCells[j]?.trim() || `문항 ${j}`;
+            questions[j] = questionText;
+          }
+          console.log("추출된 문항:", questions);
           
           if (numColumns < 2) {
             reject(new Error("최소 2개의 컬럼(학생번호 + 응답)이 필요합니다."));
@@ -110,7 +121,7 @@ export const CreateProject = () => {
             return;
           }
           
-          resolve(data);
+          resolve({ responses: data, questions });
         };
         reader.onerror = (error) => {
           console.error("CSV 파일 읽기 오류:", error);
@@ -148,6 +159,14 @@ export const CreateProject = () => {
               reject(new Error("최소 2개의 컬럼(학생번호 + 응답)이 필요합니다."));
               return;
             }
+            
+            // 문항 추출 (B1, C1, D1... -> 인덱스 1, 2, 3...)
+            const questions: Record<number, string> = {};
+            for (let j = 1; j < headerRow.length; j++) {
+              const questionText = headerRow[j]?.toString()?.trim() || `문항 ${j}`;
+              questions[j] = questionText;
+            }
+            console.log("추출된 문항:", questions);
             
             const data: Array<{code: string, answer: string, questionIndex: number}> = [];
             
@@ -200,7 +219,7 @@ export const CreateProject = () => {
               return;
             }
             
-            resolve(data);
+            resolve({ responses: data, questions });
           } catch (error) {
             console.error("엑셀 파싱 오류:", error);
             reject(new Error(`엑셀 파일 파싱에 실패했습니다: ${error}`));
@@ -245,8 +264,9 @@ export const CreateProject = () => {
       console.log("파일 파싱 시작:", csvFile.name);
       
       // Parse file (CSV or Excel)
-      const responses = await parseFile(csvFile);
+      const { responses, questions } = await parseFile(csvFile);
       console.log("파싱된 응답 개수:", responses.length);
+      console.log("파싱된 문항:", questions);
       
       if (responses.length === 0) {
         throw new Error("파일에 유효한 데이터가 없습니다.");
@@ -305,7 +325,7 @@ export const CreateProject = () => {
         .insert({
           title: projectData.title,
           description: projectData.description,
-          question: projectData.question || null,
+          question: JSON.stringify(questions), // Store questions as JSON
           rubric: projectData.rubric || null,
           teacher_id: user.id
         })

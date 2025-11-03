@@ -296,15 +296,16 @@ export const ComparisonSession = () => {
 
   // 문항별 질문을 가져오는 함수
   const getQuestionByNumber = (questionNumber: number) => {
-    // Use default questions mapping
-    const questionMap: Record<number, string> = {
-      1: "눈으로 보고 자를 잡을 때와 '땅' 소리를 들을 때의 자극 전달 과정을 감각 기관, 감각 신경, 대뇌 중추의 순서로 서술하시오.",
-      2: "어두운 곳에서 밝은 곳으로 나왔을 때 일어나는 동공 반사의 자극 전달 과정을 서술하시오.",
-      3: "무조건 반사란 무엇인지 쓰고, 무릎 반사를 예로 들어 자극 전달 과정과 그 의의를 서술하시오.",
-      4: "온도 감각 실험에서 왼손과 오른손이 느끼는 감각을 예상하고 그 이유를 서술하시오.",
-      5: "입에서는 5가지 맛만 느낄 수 있는데 더 다양한 맛을 느낄 수 있는 이유와 코막힘과 맛의 관계를 설명하시오."
-    };
-    return questionMap[questionNumber] || project?.question || "";
+    if (!project?.question) return `문항 ${questionNumber}`;
+    
+    try {
+      // Parse the questions JSON from the project
+      const questionsData = JSON.parse(project.question);
+      return questionsData[questionNumber] || `문항 ${questionNumber}`;
+    } catch (error) {
+      console.error("Failed to parse questions:", error);
+      return project.question || `문항 ${questionNumber}`;
+    }
   };
 
   if (loading) {
