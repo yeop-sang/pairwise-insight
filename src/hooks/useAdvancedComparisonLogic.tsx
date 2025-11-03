@@ -155,7 +155,14 @@ export const useAdvancedComparisonLogic = ({
 
   const submitComparison = useCallback(async (decision: 'A' | 'B' | 'N') => {
     if (!algorithm || !currentPair || !projectId || !reviewerId || !sessionMetadata) {
-      console.error("Missing required data for comparison submission");
+      console.error("Missing required data for comparison submission", {
+        hasAlgorithm: !!algorithm,
+        hasCurrentPair: !!currentPair,
+        projectId,
+        reviewerId,
+        hasSessionMetadata: !!sessionMetadata,
+        sessionLoading
+      });
       return false;
     }
 

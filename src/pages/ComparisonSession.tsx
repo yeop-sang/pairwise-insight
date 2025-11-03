@@ -62,7 +62,7 @@ export const ComparisonSession = () => {
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
-    reviewerId: student?.id || '', // Use student.id (UUID) not student.student_id (string)
+    reviewerId: student?.id || user?.id || '', // Use student.id first, fallback to user.id
     currentQuestion
   });
 
@@ -100,6 +100,13 @@ export const ComparisonSession = () => {
     }
     
     if (projectId) {
+      console.log("ComparisonSession - Current user:", {
+        isStudent,
+        studentId: student?.id,
+        studentCode: student?.student_id,
+        isTeacher,
+        userId: user?.id
+      });
       fetchProjectAndResponses();
     }
   }, [isStudent, isTeacher, projectId, navigate]);
