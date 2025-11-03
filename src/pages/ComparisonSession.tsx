@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,8 @@ export const ComparisonSession = () => {
     getCurrentPhaseInfo,
     hasMoreComparisons,
     isComplete,
-    reinitialize
+    reinitialize,
+    sessionMetadata
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
@@ -124,8 +125,9 @@ export const ComparisonSession = () => {
     }
   }, [currentQuestion, allResponses]);
 
-  // Check if current question is complete (15 comparisons for this specific question)
-  const isCurrentQuestionComplete = reviewerStats?.completed === 15;
+  // Check if current question is complete (dynamic based on session metadata)
+  const requiredComparisonsForQuestion = sessionMetadata?.config.reviewerTargetPerPerson || 15;
+  const isCurrentQuestionComplete = reviewerStats?.completed >= requiredComparisonsForQuestion;
   
   // Auto-advance to next question when current is complete (but not on the last question)
   useEffect(() => {
@@ -144,7 +146,7 @@ export const ComparisonSession = () => {
 
   // Check if all questions are completed - with safety checks
   const allQuestionsComplete = currentQuestion > maxQuestions || 
-    (currentQuestion === maxQuestions && reviewerStats?.completed === 15);
+    (currentQuestion === maxQuestions && reviewerStats?.completed >= requiredComparisonsForQuestion);
   
   // Debug logging with render conditions
   console.log('Debug - Render conditions check:', {
@@ -378,7 +380,7 @@ export const ComparisonSession = () => {
           </div>
           <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
           <p className="text-muted-foreground mb-4">
-            {currentQuestion}번 문항의 비교 15개가 완료되었습니다. 다음 문항으로 이동합니다.
+            {currentQuestion}번 문항의 비교 {requiredComparisonsForQuestion}개가 완료되었습니다. 다음 문항으로 이동합니다.
           </p>
           <div className="flex items-center justify-center space-x-2">
             <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -426,7 +428,7 @@ export const ComparisonSession = () => {
           <div className="flex items-center gap-4">
             <Badge variant="secondary" className="flex items-center gap-1">
               <Target className="h-3 w-3" />
-              {reviewerStats.completed}/15 완료
+              {reviewerStats.completed}/{requiredComparisonsForQuestion} 완료
             </Badge>
             <Badge 
               variant={phaseInfo?.phase === 'balance' ? 'default' : 'destructive'} 

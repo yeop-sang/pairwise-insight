@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { calculateRequiredComparisons } from '@/utils/comparisonCalculations';
 
 interface SessionConfig {
   targetPerResponse: number;
@@ -39,7 +40,11 @@ const DEFAULT_CONFIG: SessionConfig = {
   globalScoreRefreshInterval: 50,
 };
 
-export const useSessionMetadata = (projectId: string, questionNumber: number) => {
+export const useSessionMetadata = (
+  projectId: string, 
+  questionNumber: number, 
+  numResponses?: number
+) => {
   const [sessionMetadata, setSessionMetadata] = useState<SessionMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -104,6 +109,13 @@ export const useSessionMetadata = (projectId: string, questionNumber: number) =>
         const randomSeed = generateRandomSeed();
         const appVersion = getAppVersion();
         
+        // 응답 개수에 따른 비교 횟수 계산
+        const requiredComparisons = numResponses 
+          ? calculateRequiredComparisons(numResponses)
+          : DEFAULT_CONFIG.reviewerTargetPerPerson;
+        
+        console.log(`Creating session with ${numResponses} responses, requiring ${requiredComparisons} comparisons per reviewer`);
+        
         const { error } = await supabase
           .from('session_metadata')
           .insert({
@@ -113,7 +125,7 @@ export const useSessionMetadata = (projectId: string, questionNumber: number) =>
             random_seed: randomSeed,
             app_version: appVersion,
             target_per_response: DEFAULT_CONFIG.targetPerResponse,
-            reviewer_target_per_person: DEFAULT_CONFIG.reviewerTargetPerPerson,
+            reviewer_target_per_person: requiredComparisons,
             pairing_strategy: DEFAULT_CONFIG.pairingStrategy,
             k_elo: DEFAULT_CONFIG.kElo,
             allow_tie: DEFAULT_CONFIG.allowTie,
@@ -140,7 +152,10 @@ export const useSessionMetadata = (projectId: string, questionNumber: number) =>
           randomSeed,
           appVersion,
           startedAt: new Date(),
-          config: DEFAULT_CONFIG
+          config: {
+            ...DEFAULT_CONFIG,
+            reviewerTargetPerPerson: requiredComparisons
+          }
         });
       }
     } catch (error) {

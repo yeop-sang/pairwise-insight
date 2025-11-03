@@ -36,7 +36,15 @@ export const useAdvancedComparisonLogic = ({
   
   // Enhanced tracking hooks
   const { timeStamps, initializeShown, handleSubmission } = useTimeTracking();
-  const { sessionMetadata, isLoading: sessionLoading } = useSessionMetadata(projectId, currentQuestion);
+  
+  // Calculate number of responses for session metadata
+  const numResponses = responses.length;
+  
+  const { sessionMetadata, isLoading: sessionLoading } = useSessionMetadata(
+    projectId, 
+    currentQuestion,
+    numResponses
+  );
   const { 
     reviewerStats: qualityStats, 
     processDecision, 
@@ -64,10 +72,22 @@ export const useAdvancedComparisonLogic = ({
   });
   const [reviewerStats, setReviewerStats] = useState({
     completed: 0,
-    remaining: 15,
-    total: 15,
+    remaining: sessionMetadata?.config.reviewerTargetPerPerson || 15,
+    total: sessionMetadata?.config.reviewerTargetPerPerson || 15,
     progress: 0
   });
+  
+  // Update reviewer stats when session metadata changes
+  useEffect(() => {
+    if (sessionMetadata?.config.reviewerTargetPerPerson) {
+      setReviewerStats(prev => ({
+        ...prev,
+        remaining: sessionMetadata.config.reviewerTargetPerPerson - prev.completed,
+        total: sessionMetadata.config.reviewerTargetPerPerson,
+        progress: (prev.completed / sessionMetadata.config.reviewerTargetPerPerson) * 100
+      }));
+    }
+  }, [sessionMetadata?.config.reviewerTargetPerPerson]);
 
   // Improved own response checking
   const isOwnResponse = useMemo(() => {
