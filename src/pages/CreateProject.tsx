@@ -403,25 +403,26 @@ export const CreateProject = () => {
         console.log(`응답 배치 ${i + 1}/${responseBatches.length} 삽입 완료`);
       }
 
-      // Assign all students to this project
-      const { data: students, error: studentsError } = await supabase
-        .from('profiles')
-        .select('user_id')
-        .eq('role', 'student');
+      // Assign students from CSV file to this project
+      const studentIdsToAssign = Array.from(studentCodeToIdMap.values());
+      console.log(`프로젝트에 ${studentIdsToAssign.length}명의 학생 할당 중...`);
 
-      if (studentsError) throw studentsError;
-
-      if (students && students.length > 0) {
+      if (studentIdsToAssign.length > 0) {
         const { error: assignmentError } = await supabase
           .from('project_assignments')
           .insert(
-            students.map(student => ({
+            studentIdsToAssign.map(studentId => ({
               project_id: project.id,
-              student_id: student.user_id
+              student_id: studentId
             }))
           );
 
-        if (assignmentError) throw assignmentError;
+        if (assignmentError) {
+          console.error("프로젝트 할당 오류:", assignmentError);
+          throw new Error(`학생 할당 실패: ${assignmentError.message}`);
+        }
+        
+        console.log(`${studentIdsToAssign.length}명의 학생이 프로젝트에 할당되었습니다.`);
       }
 
       toast({
