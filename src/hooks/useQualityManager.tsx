@@ -53,13 +53,18 @@ export const useQualityManager = ({
       setIsLoading(true);
       
       // Try to get existing stats
-      const { data: existingStats } = await supabase
+      const { data: existingStats, error: selectError } = await supabase
         .from('reviewer_stats')
         .select('*')
         .eq('student_id', studentId)
         .eq('project_id', projectId)
         .eq('question_number', questionNumber)
-        .single();
+        .maybeSingle();
+
+      if (selectError) {
+        console.error('Error fetching reviewer stats:', selectError);
+        throw selectError;
+      }
 
       if (existingStats) {
         setReviewerStats({
@@ -73,7 +78,7 @@ export const useQualityManager = ({
           maxConsecutiveRight: existingStats.max_consecutive_right,
           shortDecisionCount: existingStats.short_response_count,
           shortDecisionStreaks: existingStats.short_decision_streaks,
-          agreementRate: existingStats.agreement_score,
+          agreementRate: existingStats.agreement_score || 0,
           inconsistencyCount: existingStats.inconsistency_count,
           inconsistencyRate: existingStats.inconsistency_rate,
           finalWeightApplied: existingStats.final_weight_applied,
@@ -83,7 +88,33 @@ export const useQualityManager = ({
         });
       } else {
         // Create new stats
-        const newStats: ReviewerStats = {
+        const { error: insertError } = await supabase
+          .from('reviewer_stats')
+          .insert({
+            student_id: studentId,
+            project_id: projectId,
+            question_number: questionNumber,
+            total_comparisons: 0,
+            consecutive_left_choices: 0,
+            consecutive_right_choices: 0,
+            max_consecutive_left: 0,
+            max_consecutive_right: 0,
+            short_response_count: 0,
+            short_decision_streaks: 0,
+            agreement_score: 0.0,
+            inconsistency_count: 0,
+            inconsistency_rate: 0.0,
+            final_weight_applied: 1.0,
+            low_agreement_flag: false,
+            popup_cooldown_remaining: 0,
+          });
+
+        if (insertError) {
+          console.error('Error inserting reviewer stats:', insertError);
+          throw insertError;
+        }
+
+        setReviewerStats({
           studentId,
           projectId,
           questionNumber,
@@ -101,18 +132,7 @@ export const useQualityManager = ({
           lowAgreementFlag: false,
           lastPopupAt: null,
           popupCooldownRemaining: 0,
-        };
-
-        await supabase
-          .from('reviewer_stats')
-          .insert({
-            student_id: studentId,
-            project_id: projectId,
-            question_number: questionNumber,
-            ...newStats
-          });
-
-        setReviewerStats(newStats);
+        });
       }
     } catch (error) {
       console.error('Error initializing reviewer stats:', error);

@@ -196,17 +196,13 @@ export const useAdvancedComparisonLogic = ({
         shown_at_server: new Date().toISOString(),
         submitted_at_client: timeStamps.submittedAtClient?.toISOString(),
         submitted_at_server: new Date().toISOString(),
-        focus_window_at: timeStamps.focusWindowAt?.toISOString(),
-        focus_interaction_at: timeStamps.focusInteractionAt?.toISOString(),
-        focus_to_click_ms: timeStamps.focusToClickMs,
         ui_order_left_id: currentPair.responseA.id,
         ui_order_right_id: currentPair.responseB.id,
         weight_applied: qualityStats?.finalWeightApplied || 1.0,
         popup_shown: qualityResult?.popupInfo?.popupShown || false,
         popup_reason: qualityResult?.popupInfo?.popupReason,
-        popup_at_server: qualityResult?.popupInfo?.popupAt?.toISOString(),
-        is_mirror: false, // Will be set by mirror reshow logic
-        is_duplicate_reeval: false, // Will be set by duplicate reeval logic
+        is_mirror: false,
+        is_duplicate_reeval: false,
       };
 
       // Insert comparison into database
