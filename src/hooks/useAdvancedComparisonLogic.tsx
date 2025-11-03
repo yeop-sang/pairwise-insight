@@ -114,6 +114,14 @@ export const useAdvancedComparisonLogic = ({
       
       if (!projectId || !responses || responses.length === 0 || !reviewerId) {
         console.log("Missing required data for initialization");
+        setIsInitializing(false);
+        return;
+      }
+
+      // Wait for session metadata to be loaded
+      if (sessionLoading || !sessionMetadata) {
+        console.log("Waiting for session metadata to load...");
+        setIsInitializing(false);
         return;
       }
 
@@ -122,16 +130,19 @@ export const useAdvancedComparisonLogic = ({
       
       if (currentQuestionResponses.length === 0) {
         console.log(`No responses found for question ${currentQuestion}`);
+        setIsInitializing(false);
         return;
       }
 
+      const reviewerTarget = sessionMetadata.config.reviewerTargetPerPerson || 15;
+      
       console.log(`Initializing algorithm for question ${currentQuestion} with ${currentQuestionResponses.length} responses`);
       console.log(`Reviewer ID: ${reviewerId}`);
-      console.log(`Reviewer ID type: student_number (as string) = ${reviewerId}`);
+      console.log(`Reviewer target per person: ${reviewerTarget}`);
       console.log(`Current question responses:`, currentQuestionResponses.map(r => ({ id: r.id, student_code: r.student_code })));
       
-      // Create new algorithm instance with only current question responses
-      const newAlgorithm = new ComparisonAlgorithm(currentQuestionResponses, [reviewerId]);
+      // Create new algorithm instance with only current question responses and dynamic target
+      const newAlgorithm = new ComparisonAlgorithm(currentQuestionResponses, [reviewerId], reviewerTarget);
       
       // Initialize with existing comparisons for current question only
       await newAlgorithm.initializeWithExistingComparisons(projectId, supabase);
@@ -149,7 +160,7 @@ export const useAdvancedComparisonLogic = ({
       console.error("Error initializing algorithm:", error);
       setIsInitializing(false);
     }
-  }, [projectId, responses, reviewerId, currentQuestion]);
+  }, [projectId, responses, reviewerId, currentQuestion, sessionMetadata, sessionLoading]);
 
   const updateStats = useCallback((alg: ComparisonAlgorithm) => {
     const completion = alg.getCompletionStats();

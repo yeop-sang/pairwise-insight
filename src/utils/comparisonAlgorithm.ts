@@ -13,7 +13,8 @@ interface ComparisonPair {
 
 interface ReviewerState {
   id: string;
-  quota: number; // 남은 할당량 (15에서 시작)
+  quota: number; // 남은 할당량 (동적으로 설정)
+  targetQuota: number; // 목표 할당량
   recentResponses: string[]; // 최근 본 응답 ID들
   totalComparisons: number;
 }
@@ -36,16 +37,19 @@ export class ComparisonAlgorithm {
   private currentPhase: 'balance' | 'adaptive' = 'balance';
   private phaseThreshold: number; // 20% 지점
   
-  constructor(responses: StudentResponse[], reviewerIds: string[]) {
+  constructor(responses: StudentResponse[], reviewerIds: string[], reviewerTargetPerPerson: number = 15) {
     this.responses = responses;
-    this.totalTargetComparisons = reviewerIds.length * 15;
+    this.totalTargetComparisons = reviewerIds.length * reviewerTargetPerPerson;
     this.phaseThreshold = Math.floor(this.totalTargetComparisons * 0.2);
+    
+    console.log(`Initializing ComparisonAlgorithm: ${reviewerIds.length} reviewers, target ${reviewerTargetPerPerson} per person, total target: ${this.totalTargetComparisons}`);
     
     // 리뷰어 상태 초기화
     reviewerIds.forEach(id => {
       this.reviewers.set(id, {
         id,
-        quota: 15,
+        quota: reviewerTargetPerPerson,
+        targetQuota: reviewerTargetPerPerson,
         recentResponses: [],
         totalComparisons: 0
       });
@@ -324,11 +328,12 @@ export class ComparisonAlgorithm {
     const reviewer = this.reviewers.get(reviewerId);
     if (!reviewer) return null;
 
+    const completed = reviewer.targetQuota - reviewer.quota;
     return {
-      completed: 15 - reviewer.quota,
+      completed,
       remaining: reviewer.quota,
-      total: 15,
-      progress: Math.round(((15 - reviewer.quota) / 15) * 100)
+      total: reviewer.targetQuota,
+      progress: reviewer.targetQuota > 0 ? Math.round((completed / reviewer.targetQuota) * 100) : 0
     };
   }
 }
