@@ -20,9 +20,10 @@ interface ComparisonPair {
 interface UseAdvancedComparisonLogicProps {
   projectId: string;
   responses: StudentResponse[];
-  reviewerId: string;
+  reviewerId: string; // student_id (학번) for matching with response.student_code
   currentQuestion: number;
   numResponses?: number; // Optional: number of responses for current question
+  studentUUID?: string; // Optional: student UUID for database operations
 }
 
 export const useAdvancedComparisonLogic = ({ 
@@ -30,7 +31,8 @@ export const useAdvancedComparisonLogic = ({
   responses, 
   reviewerId,
   currentQuestion,
-  numResponses: providedNumResponses
+  numResponses: providedNumResponses,
+  studentUUID
 }: UseAdvancedComparisonLogicProps) => {
   const [currentPair, setCurrentPair] = useState<ComparisonPair | null>(null);
   const [algorithm, setAlgorithm] = useState<ComparisonAlgorithm | null>(null);
@@ -52,7 +54,7 @@ export const useAdvancedComparisonLogic = ({
     processDecision, 
     initializeStats 
   } = useQualityManager({
-    studentId: reviewerId,
+    studentId: studentUUID || reviewerId, // Use UUID for database operations
     projectId,
     questionNumber: currentQuestion,
     config: sessionMetadata?.config || {
@@ -125,6 +127,7 @@ export const useAdvancedComparisonLogic = ({
 
       console.log(`Initializing algorithm for question ${currentQuestion} with ${currentQuestionResponses.length} responses`);
       console.log(`Reviewer ID: ${reviewerId}`);
+      console.log(`Reviewer ID type: student_id (학번) = ${reviewerId}`);
       console.log(`Current question responses:`, currentQuestionResponses.map(r => ({ id: r.id, student_code: r.student_code })));
       
       // Create new algorithm instance with only current question responses
@@ -197,6 +200,7 @@ export const useAdvancedComparisonLogic = ({
       const decisionTimeMs = timeStamps.comparisonTimeMs || 0;
       
       console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}, time: ${decisionTimeMs}ms`);
+      console.log(`Reviewer ID: ${reviewerId}, Session metadata:`, sessionMetadata);
       
       // Process decision with quality manager
       const qualityResult = await processDecision(dbDecision as 'left' | 'right' | 'neutral', decisionTimeMs);
@@ -211,7 +215,7 @@ export const useAdvancedComparisonLogic = ({
         response_a_id: currentPair.responseA.id,
         response_b_id: currentPair.responseB.id,
         decision: dbDecision,
-        student_id: reviewerId,
+        student_id: studentUUID || reviewerId, // Use UUID for database
         question_number: currentPair.responseA.question_number,
         comparison_time_ms: decisionTimeMs,
         shown_at_client: timeStamps.shownAtClient.toISOString(),

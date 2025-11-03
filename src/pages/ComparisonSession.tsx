@@ -68,9 +68,10 @@ export const ComparisonSession = () => {
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
-    reviewerId: student?.id || user?.id || '', // Use student.id first, fallback to user.id
+    reviewerId: student?.student_id || user?.id || '', // Use student.student_id (학번) for matching with response.student_code
     currentQuestion,
-    numResponses: currentQuestionResponseCount
+    numResponses: currentQuestionResponseCount,
+    studentUUID: student?.id // Pass UUID for database operations
   });
 
   // 키보드 이벤트 핸들러
@@ -312,6 +313,7 @@ export const ComparisonSession = () => {
       }
 
     } catch (error: any) {
+      console.error('Error in handleChoice:', error);
       toast({
         variant: "destructive",
         title: "비교 저장 실패",
@@ -424,7 +426,8 @@ export const ComparisonSession = () => {
               <p>- 현재 문항: {currentQuestion}</p>
               <p>- 전체 응답 수: {allResponses.length}개</p>
               <p>- 현재 문항 응답 수: {responses.length}개</p>
-              <p>- 학생 ID: {student?.id || '없음'}</p>
+              <p>- 학생 ID (UUID): {student?.id || '없음'}</p>
+              <p>- 학생 코드 (학번): {student?.student_id || '없음'}</p>
               <p>- 세션 메타데이터: {sessionMetadata ? '있음' : '없음'}</p>
               {sessionMetadata && (
                 <p>- 필요한 비교 횟수: {sessionMetadata.config.reviewerTargetPerPerson}개</p>
