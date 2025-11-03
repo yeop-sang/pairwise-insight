@@ -627,7 +627,7 @@ export const StudentManagement: React.FC = () => {
                     <TableCell>{student.class_number}반</TableCell>
                     <TableCell>{student.student_number}번</TableCell>
                     <TableCell className="font-mono text-sm">
-                      {student.grade}{student.class_number}{student.student_number.toString().padStart(2, '0')}
+                      {student.grade}{student.class_number.toString().padStart(2, '0')}{student.student_number.toString().padStart(2, '0')}
                     </TableCell>
                     <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
                     <TableCell>
