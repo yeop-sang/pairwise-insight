@@ -148,11 +148,22 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signOut();
+      // 세션이 없어도 상태를 클리어하고 리다이렉트
+      if (error && !error.message.includes('Session not found')) {
+        throw error;
+      }
+      
+      // 상태 초기화
+      setUser(null);
+      setSession(null);
+      setProfile(null);
+      
       toast({
         title: "로그아웃 완료",
         description: "성공적으로 로그아웃되었습니다."
       });
+      
       // 메인 페이지로 리다이렉트
       window.location.href = '/';
     } catch (error: any) {

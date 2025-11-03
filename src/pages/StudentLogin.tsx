@@ -100,7 +100,7 @@ export const StudentLogin = () => {
                   type="text"
                   placeholder="예: ABC10101"
                   value={studentId}
-                  onChange={(e) => setStudentId(e.target.value.toUpperCase())}
+                  onChange={(e) => setStudentId(e.target.value)}
                   maxLength={8}
                   required
                 />
