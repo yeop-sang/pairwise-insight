@@ -46,6 +46,11 @@ export const ComparisonSession = () => {
   const isTeacher = !!user && !!profile;
   const currentUserId = student?.id || user?.id;
 
+  // 현재 문항의 응답 개수를 계산 (useAdvancedComparisonLogic보다 먼저 계산)
+  const currentQuestionResponseCount = useMemo(() => {
+    return allResponses.filter(r => r.question_number === currentQuestion).length;
+  }, [allResponses, currentQuestion]);
+
   // 고급 비교 알고리즘 훅 사용
   const {
     currentPair,
@@ -64,7 +69,8 @@ export const ComparisonSession = () => {
     projectId: projectId || '',
     responses,
     reviewerId: student?.id || user?.id || '', // Use student.id first, fallback to user.id
-    currentQuestion
+    currentQuestion,
+    numResponses: currentQuestionResponseCount
   });
 
   // 키보드 이벤트 핸들러
@@ -215,6 +221,8 @@ export const ComparisonSession = () => {
 
   const fetchProjectAndResponses = async () => {
     try {
+      console.log('Fetching project and responses for:', projectId);
+      
       // Fetch project details
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
@@ -223,9 +231,12 @@ export const ComparisonSession = () => {
         .eq('is_active', true)
         .single();
 
-      if (projectError) throw projectError;
+      if (projectError) {
+        console.error('Error fetching project:', projectError);
+        throw projectError;
+      }
       
-      // Set project data
+      console.log('Project data loaded:', projectData);
       setProject(projectData);
 
       // Fetch all responses for this project
@@ -235,18 +246,26 @@ export const ComparisonSession = () => {
         .eq('project_id', projectId)
         .order('question_number');
 
-      if (responsesError) throw responsesError;
+      if (responsesError) {
+        console.error('Error fetching responses:', responsesError);
+        throw responsesError;
+      }
+      
+      console.log('Responses loaded:', responsesData?.length, 'total responses');
       setAllResponses(responsesData || []);
       
       // 최대 문항 수 계산
       const maxQuestionNumber = Math.max(...(responsesData || []).map(r => r.question_number));
+      console.log('Max question number:', maxQuestionNumber);
       setMaxQuestions(maxQuestionNumber);
       
       // 첫 번째 문항의 응답들로 시작
       const firstQuestionResponses = (responsesData || []).filter(r => r.question_number === 1);
+      console.log('First question responses:', firstQuestionResponses.length);
       setResponses(firstQuestionResponses);
       
     } catch (error: any) {
+      console.error('Error in fetchProjectAndResponses:', error);
       toast({
         variant: "destructive",
         title: "프로젝트 로드 실패",
@@ -394,10 +413,27 @@ export const ComparisonSession = () => {
   if (!currentPair) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center h-64">
-          <p className="text-muted-foreground">
+        <div className="flex flex-col items-center justify-center h-64 space-y-4">
+          <p className="text-muted-foreground text-lg">
             {isInitializing ? "비교 쌍을 준비하고 있습니다..." : "비교할 응답을 찾을 수 없습니다."}
           </p>
+          {!isInitializing && (
+            <div className="text-sm text-muted-foreground space-y-2 text-center">
+              <p>디버그 정보:</p>
+              <p>- 프로젝트 ID: {projectId}</p>
+              <p>- 현재 문항: {currentQuestion}</p>
+              <p>- 전체 응답 수: {allResponses.length}개</p>
+              <p>- 현재 문항 응답 수: {responses.length}개</p>
+              <p>- 학생 ID: {student?.id || '없음'}</p>
+              <p>- 세션 메타데이터: {sessionMetadata ? '있음' : '없음'}</p>
+              {sessionMetadata && (
+                <p>- 필요한 비교 횟수: {sessionMetadata.config.reviewerTargetPerPerson}개</p>
+              )}
+            </div>
+          )}
+          <Button onClick={() => navigate('/student-dashboard')}>
+            대시보드로 돌아가기
+          </Button>
         </div>
       </div>
     );

@@ -22,13 +22,15 @@ interface UseAdvancedComparisonLogicProps {
   responses: StudentResponse[];
   reviewerId: string;
   currentQuestion: number;
+  numResponses?: number; // Optional: number of responses for current question
 }
 
 export const useAdvancedComparisonLogic = ({ 
   projectId, 
   responses, 
   reviewerId,
-  currentQuestion 
+  currentQuestion,
+  numResponses: providedNumResponses
 }: UseAdvancedComparisonLogicProps) => {
   const [currentPair, setCurrentPair] = useState<ComparisonPair | null>(null);
   const [algorithm, setAlgorithm] = useState<ComparisonAlgorithm | null>(null);
@@ -37,8 +39,8 @@ export const useAdvancedComparisonLogic = ({
   // Enhanced tracking hooks
   const { timeStamps, initializeShown, handleSubmission } = useTimeTracking();
   
-  // Calculate number of responses for session metadata
-  const numResponses = responses.length;
+  // Use provided numResponses if available, otherwise calculate from responses
+  const numResponses = providedNumResponses !== undefined ? providedNumResponses : responses.length;
   
   const { sessionMetadata, isLoading: sessionLoading } = useSessionMetadata(
     projectId, 
