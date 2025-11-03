@@ -319,13 +319,14 @@ export const CreateProject = () => {
       
       console.log("프로젝트 생성 완료:", project.id);
 
-      // Create or find students based on student codes
-      console.log("학생 정보 처리 중...");
+      // Find existing students only - do not create new students
+      console.log("학생 정보 조회 중...");
       const uniqueStudentCodes = Array.from(new Set(deduplicatedResponses.map(r => r.code)));
       const studentCodeToIdMap = new Map<string, string>();
+      const notFoundStudents: string[] = [];
       
       for (const code of uniqueStudentCodes) {
-        // Check if student exists
+        // Only check if student exists - do not create
         const { data: existingStudent } = await supabase
           .from('students')
           .select('id')
@@ -335,41 +336,22 @@ export const CreateProject = () => {
         
         if (existingStudent) {
           studentCodeToIdMap.set(code, existingStudent.id);
-          console.log(`학생 ${code}: 기존 학생 사용`);
+          console.log(`학생 ${code}: 기존 학생 찾음`);
         } else {
-          // Parse student code to extract grade, class, student number
-          // Assuming code format: ABC10101 (3 letters + 5 digits)
-          const codeDigits = code.slice(-5); // Get last 5 digits
-          const grade = parseInt(codeDigits[0]) || 1;
-          const classNumber = parseInt(codeDigits.slice(1, 3)) || 1;
-          const studentNumber = parseInt(codeDigits.slice(3, 5)) || 1;
-          
-          // Password is the 5-digit number part
-          const password = codeDigits;
-          
-          // Create new student with minimal data
-          const { data: newStudent, error: studentError } = await supabase
-            .from('students')
-            .insert({
-              student_id: code,
-              name: `학생 ${code}`,
-              password: password,
-              teacher_id: user.id,
-              grade: grade,
-              class_number: classNumber,
-              student_number: studentNumber
-            })
-            .select('id')
-            .single();
-          
-          if (studentError) {
-            console.error(`학생 생성 오류 (${code}):`, studentError);
-            throw new Error(`학생 생성 실패 (${code}): ${studentError.message}`);
-          }
-          
-          studentCodeToIdMap.set(code, newStudent.id);
-          console.log(`학생 ${code}: 새로 생성됨`);
+          notFoundStudents.push(code);
+          console.log(`학생 ${code}: 학생 목록에 없음`);
         }
+      }
+      
+      // Warn about students not found
+      if (notFoundStudents.length > 0) {
+        console.warn(`학생 목록에 없는 학생번호 ${notFoundStudents.length}개:`, notFoundStudents);
+        toast({
+          variant: "destructive",
+          title: "학생 목록에 없는 학생번호 발견",
+          description: `${notFoundStudents.length}개의 학생번호가 학생 목록에 없습니다. 먼저 /student-management에서 학생을 추가해주세요.`
+        });
+        throw new Error(`학생 목록에 없는 학생번호: ${notFoundStudents.slice(0, 5).join(', ')}${notFoundStudents.length > 5 ? '...' : ''}`);
       }
 
       // Insert student responses in batches
