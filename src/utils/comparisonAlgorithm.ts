@@ -182,6 +182,8 @@ export class ComparisonAlgorithm {
 
     const candidates: ComparisonPair[] = [];
     
+    console.log(`Generating candidate pairs for reviewer: ${reviewerId}`);
+    
     for (let i = 0; i < this.responses.length; i++) {
       for (let j = i + 1; j < this.responses.length; j++) {
         const responseA = this.responses[i];
@@ -189,8 +191,18 @@ export class ComparisonAlgorithm {
         const pairKey = this.getPairKey(responseA.id, responseB.id);
         
         // 제약 조건 확인
-        if (this.completedPairs.has(pairKey)) continue;
-        if (this.isOwnResponse(reviewerId, responseA.id) || this.isOwnResponse(reviewerId, responseB.id)) continue;
+        if (this.completedPairs.has(pairKey)) {
+          console.log(`Pair already completed: ${responseA.student_code} vs ${responseB.student_code}`);
+          continue;
+        }
+        
+        const isOwnA = this.isOwnResponse(reviewerId, responseA.id);
+        const isOwnB = this.isOwnResponse(reviewerId, responseB.id);
+        
+        if (isOwnA || isOwnB) {
+          console.log(`Skipping own response: ${responseA.student_code} vs ${responseB.student_code} (reviewer: ${reviewerId})`);
+          continue;
+        }
         
         const priority = this.calculatePairPriority(responseA.id, responseB.id, reviewerId);
         candidates.push({
@@ -200,7 +212,8 @@ export class ComparisonAlgorithm {
         });
       }
     }
-
+    
+    console.log(`Generated ${candidates.length} candidate pairs`);
     return candidates;
   }
 
@@ -209,9 +222,9 @@ export class ComparisonAlgorithm {
     const response = this.responses.find(r => r.id === responseId);
     if (!response) return false;
     
-    // Since reviewerId is now student.id (UUID), we need to match it against the correct field
-    // For now, disable own response filtering since we need proper student_id mapping
-    return false;
+    // reviewerId is now student_number as string (e.g., "1", "2", etc.)
+    // Compare with response.student_code
+    return response.student_code === reviewerId;
   }
 
   private calculatePairPriority(responseAId: string, responseBId: string, reviewerId: string): number {
