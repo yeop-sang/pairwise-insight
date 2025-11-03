@@ -68,7 +68,7 @@ export const ComparisonSession = () => {
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
-    reviewerId: student?.student_id || user?.id || '', // Use student.student_id (학번) for matching with response.student_code
+    reviewerId: student?.student_number?.toString() || user?.id || '', // Use student_number as string to match with response.student_code
     currentQuestion,
     numResponses: currentQuestionResponseCount,
     studentUUID: student?.id // Pass UUID for database operations
@@ -426,11 +426,15 @@ export const ComparisonSession = () => {
               <p>- 현재 문항: {currentQuestion}</p>
               <p>- 전체 응답 수: {allResponses.length}개</p>
               <p>- 현재 문항 응답 수: {responses.length}개</p>
-              <p>- 학생 ID (UUID): {student?.id || '없음'}</p>
-              <p>- 학생 코드 (학번): {student?.student_id || '없음'}</p>
+              <p>- 학생 UUID: {student?.id || '없음'}</p>
+              <p>- 학생 로그인 ID: {student?.student_id || '없음'}</p>
+              <p>- 학생 번호 (매칭용): {student?.student_number || '없음'}</p>
               <p>- 세션 메타데이터: {sessionMetadata ? '있음' : '없음'}</p>
               {sessionMetadata && (
                 <p>- 필요한 비교 횟수: {sessionMetadata.config.reviewerTargetPerPerson}개</p>
+              )}
+              {responses.length > 0 && (
+                <p>- 응답 코드 목록: {responses.map(r => r.student_code).join(', ')}</p>
               )}
             </div>
           )}
