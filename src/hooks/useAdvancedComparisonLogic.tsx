@@ -194,7 +194,7 @@ export const useAdvancedComparisonLogic = ({
         comparison_time_ms: decisionTimeMs,
         shown_at_client: timeStamps.shownAtClient.toISOString(),
         shown_at_server: new Date().toISOString(),
-        submitted_at_client: timeStamps.submittedAtClient?.toISOString(),
+        submitted_at_client: timeStamps.submittedAtClient?.toISOString() || new Date().toISOString(),
         submitted_at_server: new Date().toISOString(),
         ui_order_left_id: currentPair.responseA.id,
         ui_order_right_id: currentPair.responseB.id,
