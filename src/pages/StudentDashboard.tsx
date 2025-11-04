@@ -16,6 +16,7 @@ interface Project {
   rubric: string;
   created_at: string;
   is_active: boolean;
+  has_completed?: boolean;
 }
 
 export const StudentDashboard = () => {
@@ -29,10 +30,10 @@ export const StudentDashboard = () => {
     if (!student) return;
     
     try {
-      // First get projects that are assigned to this student
+      // Get projects with completion status
       const { data: assignedProjects, error: assignmentError } = await supabase
         .from('project_assignments')
-        .select('project_id')
+        .select('project_id, has_completed')
         .eq('student_id', student.id);
       
       if (assignmentError) throw assignmentError;
@@ -45,7 +46,7 @@ export const StudentDashboard = () => {
       
       const projectIds = assignedProjects.map(p => p.project_id);
       
-      // Then get the actual project details
+      // Get the actual project details
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
         .select('*')
@@ -53,7 +54,16 @@ export const StudentDashboard = () => {
       
       if (projectsError) throw projectsError;
       
-      setProjects(projectsData || []);
+      // Merge completion status with project data
+      const projectsWithCompletion = projectsData?.map(project => {
+        const assignment = assignedProjects.find(a => a.project_id === project.id);
+        return {
+          ...project,
+          has_completed: assignment?.has_completed || false
+        };
+      }) || [];
+      
+      setProjects(projectsWithCompletion);
     } catch (error) {
       console.error('Error fetching projects:', error);
     } finally {
@@ -145,8 +155,8 @@ export const StudentDashboard = () => {
                         <CardDescription>{project.description}</CardDescription>
                       )}
                     </div>
-                    <Badge variant={project.is_active ? "default" : "secondary"}>
-                      {project.is_active ? "진행중" : "종료됨"}
+                    <Badge variant={project.has_completed ? "outline" : project.is_active ? "default" : "secondary"}>
+                      {project.has_completed ? "평가 완료" : project.is_active ? "진행중" : "종료됨"}
                     </Badge>
                   </div>
                 </CardHeader>
