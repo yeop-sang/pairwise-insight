@@ -74,15 +74,20 @@ export class ComparisonAlgorithm {
       // 현재 문항의 응답 ID들 추출
       const currentResponseIds = this.responses.map(r => r.id);
       
-      // 현재 문항의 응답들에 대한 비교 데이터만 로드
+      // 현재 문항의 응답들에 대한 비교 데이터만 로드 (students 테이블과 조인해서 student_number 가져오기)
       const { data: comparisons, error } = await supabase
         .from('comparisons')
-        .select('*')
+        .select(`
+          *,
+          students!inner(student_number)
+        `)
         .eq('project_id', projectId)
         .in('response_a_id', currentResponseIds)
         .in('response_b_id', currentResponseIds);
 
       if (error) throw error;
+
+      console.log(`Loading ${comparisons?.length || 0} existing comparisons for question ${this.responses[0]?.question_number}`);
 
       // 완료된 페어 추적 (현재 문항의 응답만 해당하는 비교만 처리)
       comparisons?.forEach((comp: any) => {
@@ -94,8 +99,16 @@ export class ComparisonAlgorithm {
           const pairKey = this.getPairKey(comp.response_a_id, comp.response_b_id);
           this.completedPairs.add(pairKey);
           
+          // student_number를 문자열로 변환해서 reviewerId로 사용
+          const reviewerIdFromDb = comp.students?.student_number?.toString();
+          
+          if (!reviewerIdFromDb) {
+            console.warn('No student_number found for comparison:', comp.id);
+            return;
+          }
+          
           // 리뷰어 상태 업데이트 (현재 문항에 대해서만)
-          const reviewer = this.reviewers.get(comp.student_id);
+          const reviewer = this.reviewers.get(reviewerIdFromDb);
           if (reviewer) {
             reviewer.quota = Math.max(0, reviewer.quota - 1);
             reviewer.totalComparisons++;
@@ -105,6 +118,10 @@ export class ComparisonAlgorithm {
             if (reviewer.recentResponses.length > 10) {
               reviewer.recentResponses = reviewer.recentResponses.slice(-10);
             }
+            
+            console.log(`Updated reviewer ${reviewerIdFromDb}: quota=${reviewer.quota}, totalComparisons=${reviewer.totalComparisons}`);
+          } else {
+            console.log(`Reviewer ${reviewerIdFromDb} not found in reviewers map. Available reviewers:`, Array.from(this.reviewers.keys()));
           }
           
           // 응답 상태 업데이트
