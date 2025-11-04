@@ -24,8 +24,12 @@ interface ComparisonResult {
 interface Project {
   id: string;
   title: string;
-  question: string;
+  question: string | null;
   rubric?: string;
+}
+
+interface QuestionData {
+  [key: number]: string;
 }
 export const ComparisonResults = () => {
   const {
@@ -40,6 +44,7 @@ export const ComparisonResults = () => {
   const [loading, setLoading] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState<number>(1);
   const [maxQuestions, setMaxQuestions] = useState<number>(5);
+  const [questionTitles, setQuestionTitles] = useState<QuestionData>({});
   useEffect(() => {
     if (!user) {
       navigate('/');
@@ -57,6 +62,16 @@ export const ComparisonResults = () => {
       } = await supabase.from('projects').select('*').eq('id', projectId).single();
       if (projectError) throw projectError;
       setProject(projectData);
+
+      // Parse question titles from JSON
+      if (projectData.question) {
+        try {
+          const parsedQuestions = JSON.parse(projectData.question) as QuestionData;
+          setQuestionTitles(parsedQuestions);
+        } catch (err) {
+          console.error("Failed to parse question data:", err);
+        }
+      }
 
       // Get question numbers first
       const {
@@ -147,14 +162,7 @@ export const ComparisonResults = () => {
 
   // 문항별 질문 내용
   const getQuestionTitle = (questionNumber: number) => {
-    const questionMap: Record<number, string> = {
-      1: "감각 기관과 자극 전달 과정",
-      2: "동공 반사의 자극 전달 과정",
-      3: "무조건 반사와 무릎 반사",
-      4: "온도 감각 실험",
-      5: "다양한 맛과 후각의 관계"
-    };
-    return questionMap[questionNumber] || `${questionNumber}번 문항`;
+    return questionTitles[questionNumber] || `문항 ${questionNumber}`;
   };
   const filteredResults = results.filter(r => r.question_number === selectedQuestion);
   if (loading) {
