@@ -546,6 +546,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_overall_student_rankings: {
+        Args: { project_uuid: string }
+        Returns: {
+          overall_win_rate: number
+          questions_participated: number
+          rank: number
+          student_code: string
+          total_comparisons: number
+          total_loss_count: number
+          total_tie_count: number
+          total_win_count: number
+        }[]
+      }
       calculate_response_rankings: {
         Args: { project_uuid: string; question_num: number }
         Returns: {
@@ -557,6 +570,17 @@ export type Database = {
           total_comparisons: number
           win_count: number
           win_rate: number
+        }[]
+      }
+      get_headtohead_comparisons: {
+        Args: { project_uuid: string; question_num: number }
+        Returns: {
+          a_wins: number
+          b_wins: number
+          response_a_code: string
+          response_b_code: string
+          ties: number
+          total_comparisons: number
         }[]
       }
       has_role: {

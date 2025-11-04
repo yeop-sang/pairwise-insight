@@ -21,6 +21,26 @@ interface ComparisonResult {
   rank: number;
   question_number: number;
 }
+
+interface OverallResult {
+  student_code: string;
+  total_win_count: number;
+  total_loss_count: number;
+  total_tie_count: number;
+  total_comparisons: number;
+  overall_win_rate: number;
+  questions_participated: number;
+  rank: number;
+}
+
+interface HeadToHeadResult {
+  response_a_code: string;
+  response_b_code: string;
+  a_wins: number;
+  b_wins: number;
+  ties: number;
+  total_comparisons: number;
+}
 interface Project {
   id: string;
   title: string;
@@ -40,6 +60,7 @@ export const ComparisonResults = () => {
     user
   } = useAuth();
   const [results, setResults] = useState<ComparisonResult[]>([]);
+  const [overallResults, setOverallResults] = useState<OverallResult[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedQuestion, setSelectedQuestion] = useState<number>(1);
@@ -106,6 +127,17 @@ export const ComparisonResults = () => {
         }
       }
       setResults(allResults);
+
+      // Fetch overall rankings
+      try {
+        const { data: overallData, error: overallError } = await supabase.rpc('calculate_overall_student_rankings', {
+          project_uuid: projectId
+        });
+        if (overallError) throw overallError;
+        setOverallResults(overallData || []);
+      } catch (err) {
+        console.error('Error calculating overall results:', err);
+      }
     } catch (error) {
       console.error('Error fetching results:', error);
       toast.error('결과를 불러오는데 실패했습니다.');
@@ -113,17 +145,35 @@ export const ComparisonResults = () => {
       setLoading(false);
     }
   };
-  const exportToExcel = () => {
-    if (!results.length || !project) return;
+  const exportToExcel = async () => {
+    if (!results.length || !project || !projectId) return;
 
     // 문항별로 데이터 정리
     const questionNumbers = [...new Set(results.map(r => r.question_number))].sort();
     const wb = XLSX.utils.book_new();
 
-    // 각 문항별로 시트 생성
-    questionNumbers.forEach(qNum => {
+    // 종합 순위 시트 (첫 번째 시트로)
+    if (overallResults.length > 0) {
+      const overallExportData = overallResults.map(result => ({
+        '종합순위': result.rank,
+        '학생코드': result.student_code,
+        '종합승률': result.overall_win_rate.toFixed(1) + '%',
+        '총승리': result.total_win_count,
+        '총패배': result.total_loss_count,
+        '총무승부': result.total_tie_count,
+        '총비교횟수': result.total_comparisons,
+        '참여문항수': result.questions_participated
+      }));
+      const overallWs = XLSX.utils.json_to_sheet(overallExportData);
+      XLSX.utils.book_append_sheet(wb, overallWs, '종합 순위');
+    }
+
+    // 각 문항별로 시트 생성 (순위 + 상세 대결표)
+    for (const qNum of questionNumbers) {
       const questionResults = results.filter(r => r.question_number === qNum);
-      const exportData = questionResults.map(result => ({
+      
+      // 기본 순위 데이터
+      const exportData: any[] = questionResults.map(result => ({
         '순위': result.rank,
         '학생코드': result.student_code,
         '승률': result.win_rate.toFixed(1) + '%',
@@ -132,9 +182,38 @@ export const ComparisonResults = () => {
         '무승부': result.tie_count,
         '총비교횟수': result.total_comparisons
       }));
+
+      // 상세 대결표 가져오기
+      try {
+        const { data: h2hData } = await supabase.rpc('get_headtohead_comparisons', {
+          project_uuid: projectId,
+          question_num: qNum
+        });
+
+        if (h2hData && h2hData.length > 0) {
+          // 빈 줄 추가
+          exportData.push({});
+          exportData.push({ '순위': '=== 상세 대결 기록 ===' });
+          exportData.push({});
+
+          // 대결표 추가
+          const h2hExportData = (h2hData as HeadToHeadResult[]).map(h2h => ({
+            '학생A': h2h.response_a_code,
+            '학생B': h2h.response_b_code,
+            'A승': h2h.a_wins,
+            'B승': h2h.b_wins,
+            '무승부': h2h.ties,
+            '총대결': h2h.total_comparisons
+          }));
+          exportData.push(...h2hExportData);
+        }
+      } catch (err) {
+        console.error(`Error fetching head-to-head for question ${qNum}:`, err);
+      }
+
       const ws = XLSX.utils.json_to_sheet(exportData);
       XLSX.utils.book_append_sheet(wb, ws, `${qNum}번 문항`);
-    });
+    }
 
     // 전체 요약 시트
     const summaryData = questionNumbers.map(qNum => {
@@ -149,7 +228,8 @@ export const ComparisonResults = () => {
       };
     });
     const summaryWs = XLSX.utils.json_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summaryWs, '전체 요약');
+    XLSX.utils.book_append_sheet(wb, summaryWs, '문항별 요약');
+    
     XLSX.writeFile(wb, `${project.title}_문항별_비교결과.xlsx`);
     toast.success('결과를 Excel 파일로 내보냈습니다.');
   };
@@ -202,11 +282,89 @@ export const ComparisonResults = () => {
         </div>
 
         <Tabs value={selectedQuestion.toString()} onValueChange={value => setSelectedQuestion(parseInt(value))}>
-          <TabsList className="grid w-full grid-cols-5 mb-6">
+          <TabsList className="grid w-full mb-6" style={{ gridTemplateColumns: `repeat(${maxQuestions + 1}, 1fr)` }}>
+            <TabsTrigger value="overall">
+              종합 순위
+            </TabsTrigger>
             {[1, 2, 3, 4, 5].slice(0, maxQuestions).map(qNum => <TabsTrigger key={qNum} value={qNum.toString()}>
                 {qNum}번 문항
               </TabsTrigger>)}
           </TabsList>
+
+          {/* 종합 순위 탭 */}
+          <TabsContent value="overall">
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle>전체 문항 종합 순위</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  모든 문항에 대한 학생들의 종합 평가 결과입니다.
+                </p>
+              </CardContent>
+            </Card>
+
+            {overallResults.length === 0 ? <Card>
+                <CardContent className="text-center py-12">
+                  <p className="text-lg text-muted-foreground">아직 종합 순위 데이터가 없습니다.</p>
+                </CardContent>
+              </Card> : <div className="grid gap-4">
+                {overallResults.map(result => <Card key={result.student_code} className="overflow-hidden">
+                    <CardContent className="p-6">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-4">
+                          <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold ${getRankColor(result.rank)}`}>
+                            <span>{result.rank}</span>
+                          </div>
+                          <div>
+                            <h3 className="text-lg font-semibold">{result.student_code}</h3>
+                            <p className="text-sm text-muted-foreground">
+                              참여 문항: {result.questions_participated}개
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="flex items-center gap-6">
+                          <div className="text-center">
+                            <p className="text-2xl font-bold text-primary">{result.overall_win_rate.toFixed(1)}%</p>
+                            <p className="text-xs text-muted-foreground">종합 승률</p>
+                          </div>
+                          
+                          <div className="text-center">
+                            <p className="text-lg font-semibold text-green-600">{result.total_win_count}</p>
+                            <p className="text-xs text-muted-foreground">총 승리</p>
+                          </div>
+                          
+                          <div className="text-center">
+                            <p className="text-lg font-semibold text-red-600">{result.total_loss_count}</p>
+                            <p className="text-xs text-muted-foreground">총 패배</p>
+                          </div>
+
+                          <div className="text-center">
+                            <p className="text-lg font-semibold text-gray-600">{result.total_tie_count}</p>
+                            <p className="text-xs text-muted-foreground">총 무승부</p>
+                          </div>
+                          
+                          <div className="text-center">
+                            <p className="text-lg font-semibold">{result.total_comparisons}</p>
+                            <p className="text-xs text-muted-foreground">총 비교</p>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-sm text-muted-foreground">종합 승률</span>
+                          <span className="text-sm font-medium">
+                            {result.overall_win_rate.toFixed(1)}%
+                          </span>
+                        </div>
+                        <Progress value={result.overall_win_rate} className="h-2" />
+                      </div>
+                    </CardContent>
+                  </Card>)}
+              </div>}
+          </TabsContent>
           
           {[1, 2, 3, 4, 5].slice(0, maxQuestions).map(qNum => <TabsContent key={qNum} value={qNum.toString()}>
               <Card className="mb-6">
