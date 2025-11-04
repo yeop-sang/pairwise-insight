@@ -63,7 +63,7 @@ export const ComparisonResults = () => {
   const [overallResults, setOverallResults] = useState<OverallResult[]>([]);
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-  const [selectedQuestion, setSelectedQuestion] = useState<number>(1);
+  const [selectedQuestion, setSelectedQuestion] = useState<string>("overall");
   const [maxQuestions, setMaxQuestions] = useState<number>(5);
   const [questionTitles, setQuestionTitles] = useState<QuestionData>({});
   useEffect(() => {
@@ -244,7 +244,9 @@ export const ComparisonResults = () => {
   const getQuestionTitle = (questionNumber: number) => {
     return questionTitles[questionNumber] || `문항 ${questionNumber}`;
   };
-  const filteredResults = results.filter(r => r.question_number === selectedQuestion);
+  const filteredResults = selectedQuestion === "overall" 
+    ? [] 
+    : results.filter(r => r.question_number === parseInt(selectedQuestion));
   if (loading) {
     return <div className="min-h-screen bg-gradient-to-br from-background to-muted/20 flex items-center justify-center">
         <div className="text-center">
@@ -281,7 +283,7 @@ export const ComparisonResults = () => {
           </Button>
         </div>
 
-        <Tabs value={selectedQuestion.toString()} onValueChange={value => setSelectedQuestion(parseInt(value))}>
+        <Tabs value={selectedQuestion} onValueChange={value => setSelectedQuestion(value)}>
           <TabsList className="grid w-full mb-6" style={{ gridTemplateColumns: `repeat(${maxQuestions + 1}, 1fr)` }}>
             <TabsTrigger value="overall">
               종합 순위
