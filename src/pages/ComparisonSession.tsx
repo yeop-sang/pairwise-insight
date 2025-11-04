@@ -134,7 +134,10 @@ export const ComparisonSession = () => {
 
   // Check if current question is complete (dynamic based on session metadata)
   const requiredComparisonsForQuestion = sessionMetadata?.config.reviewerTargetPerPerson || 15;
-  const isCurrentQuestionComplete = reviewerStats?.completed >= requiredComparisonsForQuestion;
+  // Complete if target reached OR no more pairs available
+  const isCurrentQuestionComplete = 
+    reviewerStats?.completed >= requiredComparisonsForQuestion || 
+    (!currentPair && !isInitializing && reviewerStats?.completed > 0);
   
   // Auto-advance to next question when current is complete (but not on the last question)
   useEffect(() => {
