@@ -546,6 +546,19 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      calculate_response_rankings: {
+        Args: { project_uuid: string; question_num: number }
+        Returns: {
+          loss_count: number
+          rank: number
+          response_id: string
+          student_code: string
+          tie_count: number
+          total_comparisons: number
+          win_count: number
+          win_rate: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

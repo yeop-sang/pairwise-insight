@@ -13,10 +13,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 interface ComparisonResult {
   response_id: string;
   student_code: string;
-  score: number;
   win_count: number;
   loss_count: number;
+  tie_count: number;
   total_comparisons: number;
+  win_rate: number;
   rank: number;
   question_number: number;
 }
@@ -67,14 +68,14 @@ export const ComparisonResults = () => {
       const maxQ = Math.max(...questionNumbers);
       setMaxQuestions(maxQ);
 
-      // Call the Bradley-Terry calculation function for all questions
+      // Call the ranking calculation function for all questions
       const allResults: ComparisonResult[] = [];
       for (const qNum of questionNumbers) {
         try {
           const {
             data: resultsData,
             error: resultsError
-          } = await (supabase as any).rpc('calculate_bradley_terry_by_question', {
+          } = await supabase.rpc('calculate_response_rankings', {
             project_uuid: projectId,
             question_num: qNum
           });
@@ -110,11 +111,11 @@ export const ComparisonResults = () => {
       const exportData = questionResults.map(result => ({
         '순위': result.rank,
         '학생코드': result.student_code,
-        '점수': (result.score * 100).toFixed(1) + '%',
+        '승률': result.win_rate.toFixed(1) + '%',
         '승리횟수': result.win_count,
         '패배횟수': result.loss_count,
-        '총비교횟수': result.total_comparisons,
-        '선호도': result.total_comparisons > 0 ? (result.win_count / result.total_comparisons * 100).toFixed(1) + '%' : '0%'
+        '무승부': result.tie_count,
+        '총비교횟수': result.total_comparisons
       }));
       const ws = XLSX.utils.json_to_sheet(exportData);
       XLSX.utils.book_append_sheet(wb, ws, `${qNum}번 문항`);
@@ -127,7 +128,7 @@ export const ComparisonResults = () => {
       return {
         '문항번호': qNum,
         '1등학생': firstPlace?.student_code || '-',
-        '1등점수': firstPlace ? (firstPlace.score * 100).toFixed(1) + '%' : '-',
+        '1등승률': firstPlace ? firstPlace.win_rate.toFixed(1) + '%' : '-',
         '총응답수': questionResults.length,
         '총비교수': questionResults.reduce((sum, r) => sum + r.total_comparisons, 0)
       };
@@ -227,15 +228,15 @@ export const ComparisonResults = () => {
                             <div>
                               <h3 className="text-lg font-semibold">{result.student_code}</h3>
                               <p className="text-sm text-muted-foreground">
-                                선호도: {result.total_comparisons > 0 ? (result.win_count / result.total_comparisons * 100).toFixed(1) : 0}%
+                                승률: {result.win_rate.toFixed(1)}%
                               </p>
                             </div>
                           </div>
                           
                           <div className="flex items-center gap-6">
                             <div className="text-center">
-                              <p className="text-2xl font-bold text-primary">{(result.score * 100).toFixed(1)}%</p>
-                              <p className="text-xs text-muted-foreground">Bradley-Terry 점수</p>
+                              <p className="text-2xl font-bold text-primary">{result.win_rate.toFixed(1)}%</p>
+                              <p className="text-xs text-muted-foreground">승률</p>
                             </div>
                             
                             <div className="text-center">
@@ -247,6 +248,11 @@ export const ComparisonResults = () => {
                               <p className="text-lg font-semibold text-red-600">{result.loss_count}</p>
                               <p className="text-xs text-muted-foreground">패배</p>
                             </div>
+
+                            <div className="text-center">
+                              <p className="text-lg font-semibold text-gray-600">{result.tie_count}</p>
+                              <p className="text-xs text-muted-foreground">무승부</p>
+                            </div>
                             
                             <div className="text-center">
                               <p className="text-lg font-semibold">{result.total_comparisons}</p>
@@ -257,12 +263,12 @@ export const ComparisonResults = () => {
                         
                         <div className="mt-4">
                           <div className="flex items-center justify-between mb-2">
-                            <span className="text-sm text-muted-foreground">선호도</span>
+                            <span className="text-sm text-muted-foreground">승률</span>
                             <span className="text-sm font-medium">
-                              {result.total_comparisons > 0 ? (result.win_count / result.total_comparisons * 100).toFixed(1) : 0}%
+                              {result.win_rate.toFixed(1)}%
                             </span>
                           </div>
-                          <Progress value={result.total_comparisons > 0 ? result.win_count / result.total_comparisons * 100 : 0} className="h-2" />
+                          <Progress value={result.win_rate} className="h-2" />
                         </div>
                       </CardContent>
                     </Card>)}
