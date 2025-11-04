@@ -93,20 +93,6 @@ export const useAdvancedComparisonLogic = ({
     }
   }, [sessionMetadata?.config.reviewerTargetPerPerson]);
 
-  // Improved own response checking
-  const isOwnResponse = useMemo(() => {
-    return (responseId: string) => {
-      if (!reviewerId || !responses) return false;
-      
-      const response = responses.find(r => r.id === responseId);
-      if (!response) return false;
-      
-      // Match student login ID with response student_code
-      // reviewerId is the student's login ID (student_id from students table)
-      // response.student_code is the student_code field from student_responses
-      return response.student_code === reviewerId;
-    };
-  }, [reviewerId, responses]);
 
   const initializeAlgorithm = useCallback(async () => {
     try {
@@ -140,8 +126,9 @@ export const useAdvancedComparisonLogic = ({
       console.log(`Reviewer ID: ${reviewerId}`);
       console.log(`Reviewer target per person: ${reviewerTarget}`);
       console.log(`Current question responses:`, currentQuestionResponses.map(r => ({ id: r.id, student_code: r.student_code })));
+      console.log(`Multi-reviewer system: Same pairs can be evaluated by multiple reviewers for better objectivity`);
       
-      // Create new algorithm instance with only current question responses and dynamic target
+      // Create new algorithm instance with only reviewer ID (no self-exclusion needed)
       const newAlgorithm = new ComparisonAlgorithm(currentQuestionResponses, [reviewerId], reviewerTarget);
       
       // Initialize with existing comparisons for current question only

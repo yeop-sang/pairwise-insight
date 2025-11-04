@@ -32,7 +32,7 @@ export class ComparisonAlgorithm {
   private responses: StudentResponse[] = [];
   private reviewers: Map<string, ReviewerState> = new Map();
   private responseStates: Map<string, ResponseState> = new Map();
-  private completedPairs: Set<string> = new Set();
+  private reviewerCompletedPairs: Map<string, Set<string>> = new Map(); // Track completed pairs per reviewer
   private totalTargetComparisons: number;
   private currentPhase: 'balance' | 'adaptive' = 'balance';
   private phaseThreshold: number; // 20% 지점
@@ -89,7 +89,7 @@ export class ComparisonAlgorithm {
 
       console.log(`Loading ${comparisons?.length || 0} existing comparisons for question ${this.responses[0]?.question_number}`);
 
-      // 완료된 페어 추적 (현재 문항의 응답만 해당하는 비교만 처리)
+      // 채점자별 완료된 페어 추적
       comparisons?.forEach((comp: any) => {
         // 두 응답이 모두 현재 문항에 속하는지 확인
         const responseA = this.responseStates.get(comp.response_a_id);
@@ -97,7 +97,6 @@ export class ComparisonAlgorithm {
         
         if (responseA && responseB) {
           const pairKey = this.getPairKey(comp.response_a_id, comp.response_b_id);
-          this.completedPairs.add(pairKey);
           
           // student_number를 문자열로 변환해서 reviewerId로 사용
           const reviewerIdFromDb = comp.students?.student_number?.toString();
@@ -106,6 +105,12 @@ export class ComparisonAlgorithm {
             console.warn('No student_number found for comparison:', comp.id);
             return;
           }
+          
+          // 채점자별 완료 페어에 추가
+          if (!this.reviewerCompletedPairs.has(reviewerIdFromDb)) {
+            this.reviewerCompletedPairs.set(reviewerIdFromDb, new Set());
+          }
+          this.reviewerCompletedPairs.get(reviewerIdFromDb)!.add(pairKey);
           
           // 리뷰어 상태 업데이트 (현재 문항에 대해서만)
           const reviewer = this.reviewers.get(reviewerIdFromDb);
@@ -135,8 +140,11 @@ export class ComparisonAlgorithm {
         }
       });
       
-      // 현재 단계 결정
-      const totalCompleted = this.completedPairs.size;
+      // 현재 단계 결정 - 총 완료된 비교 횟수 계산
+      let totalCompleted = 0;
+      this.reviewerCompletedPairs.forEach(pairSet => {
+        totalCompleted += pairSet.size;
+      });
       this.currentPhase = totalCompleted < this.phaseThreshold ? 'balance' : 'adaptive';
       
     } catch (error) {
@@ -180,12 +188,14 @@ export class ComparisonAlgorithm {
 
   getNextComparison(reviewerId: string): ComparisonPair | null {
     const reviewer = this.reviewers.get(reviewerId);
-    if (!reviewer || reviewer.quota <= 0) {
+    if (!reviewer) {
       return null;
     }
 
     const candidates = this.generateCandidatePairs(reviewerId);
-    if (candidates.length === 0) {
+    
+    // 완료 조건: quota를 다 채웠거나 더 이상 비교할 페어가 없을 때
+    if (reviewer.quota <= 0 || candidates.length === 0) {
       return null;
     }
 
@@ -202,8 +212,9 @@ export class ComparisonAlgorithm {
     if (!reviewer) return [];
 
     const candidates: ComparisonPair[] = [];
+    const reviewerCompleted = this.reviewerCompletedPairs.get(reviewerId) || new Set();
     
-    console.log(`Generating candidate pairs for reviewer: ${reviewerId}`);
+    console.log(`Generating candidate pairs for reviewer: ${reviewerId}, already completed: ${reviewerCompleted.size} pairs`);
     
     for (let i = 0; i < this.responses.length; i++) {
       for (let j = i + 1; j < this.responses.length; j++) {
@@ -211,17 +222,8 @@ export class ComparisonAlgorithm {
         const responseB = this.responses[j];
         const pairKey = this.getPairKey(responseA.id, responseB.id);
         
-        // 제약 조건 확인
-        if (this.completedPairs.has(pairKey)) {
-          console.log(`Pair already completed: ${responseA.student_code} vs ${responseB.student_code}`);
-          continue;
-        }
-        
-        const isOwnA = this.isOwnResponse(reviewerId, responseA.id);
-        const isOwnB = this.isOwnResponse(reviewerId, responseB.id);
-        
-        if (isOwnA || isOwnB) {
-          console.log(`Skipping own response: ${responseA.student_code} vs ${responseB.student_code} (reviewer: ${reviewerId})`);
+        // 현재 채점자가 이미 비교한 페어만 제외 (다른 채점자가 비교한 페어는 포함 가능)
+        if (reviewerCompleted.has(pairKey)) {
           continue;
         }
         
@@ -234,19 +236,10 @@ export class ComparisonAlgorithm {
       }
     }
     
-    console.log(`Generated ${candidates.length} candidate pairs`);
+    console.log(`Generated ${candidates.length} candidate pairs (all responses included, no self-exclusion)`);
     return candidates;
   }
 
-  private isOwnResponse(reviewerId: string, responseId: string): boolean {
-    // Find the response by ID
-    const response = this.responses.find(r => r.id === responseId);
-    if (!response) return false;
-    
-    // reviewerId is now student_number as string (e.g., "1", "2", etc.)
-    // Compare with response.student_code
-    return response.student_code === reviewerId;
-  }
 
   private calculatePairPriority(responseAId: string, responseBId: string, reviewerId: string): number {
     const responseA = this.responseStates.get(responseAId);
@@ -285,9 +278,13 @@ export class ComparisonAlgorithm {
     
     if (!reviewer || !responseA || !responseB) return;
 
-    // 완료된 페어로 표시
     const pairKey = this.getPairKey(responseAId, responseBId);
-    this.completedPairs.add(pairKey);
+    
+    // 채점자별 완료 페어에 추가
+    if (!this.reviewerCompletedPairs.has(reviewerId)) {
+      this.reviewerCompletedPairs.set(reviewerId, new Set());
+    }
+    this.reviewerCompletedPairs.get(reviewerId)!.add(pairKey);
 
     // 리뷰어 상태 업데이트
     reviewer.quota--;
@@ -306,8 +303,11 @@ export class ComparisonAlgorithm {
     // 임시 점수 업데이트
     this.updateTempScores(responseAId, responseBId, decision);
 
-    // 단계 전환 확인
-    const totalCompleted = this.completedPairs.size;
+    // 단계 전환 확인 - 총 완료된 비교 횟수 계산
+    let totalCompleted = 0;
+    this.reviewerCompletedPairs.forEach(pairSet => {
+      totalCompleted += pairSet.size;
+    });
     if (this.currentPhase === 'balance' && totalCompleted >= this.phaseThreshold) {
       this.currentPhase = 'adaptive';
     }
@@ -316,7 +316,13 @@ export class ComparisonAlgorithm {
   getCompletionStats() {
     const totalReviewers = this.reviewers.size;
     const completedReviewers = Array.from(this.reviewers.values()).filter(r => r.quota === 0).length;
-    const totalComparisons = this.completedPairs.size;
+    
+    // 총 완료된 비교 횟수 (모든 채점자의 비교 합산)
+    let totalComparisons = 0;
+    this.reviewerCompletedPairs.forEach(pairSet => {
+      totalComparisons += pairSet.size;
+    });
+    
     const averageComparisonsPerResponse = totalComparisons > 0 ? 
       (totalComparisons * 2) / this.responses.length : 0;
 

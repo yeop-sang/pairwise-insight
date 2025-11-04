@@ -426,16 +426,15 @@ export const ComparisonSession = () => {
               <p>- 현재 문항: {currentQuestion}</p>
               <p>- 전체 응답 수: {allResponses.length}개</p>
               <p>- 현재 문항 응답 수: {responses.length}개</p>
-              <p>- 학생 UUID: {student?.id || '없음'}</p>
-              <p>- 학생 로그인 ID: {student?.student_id || '없음'}</p>
-              <p>- 학생 번호 (매칭용): {student?.student_number || '없음'}</p>
+              <p>- 학생 번호: {student?.student_number || '없음'}</p>
               <p>- 세션 메타데이터: {sessionMetadata ? '있음' : '없음'}</p>
               {sessionMetadata && (
-                <p>- 필요한 비교 횟수: {sessionMetadata.config.reviewerTargetPerPerson}개</p>
+                <p>- 목표 비교 횟수: {sessionMetadata.config.reviewerTargetPerPerson}개</p>
               )}
               {responses.length > 0 && (
-                <p>- 응답 코드 목록: {responses.map(r => r.student_code).join(', ')}</p>
+                <p>- 모든 응답 비교 가능 (자기 응답 포함)</p>
               )}
+              <p className="text-xs italic">동일 페어를 여러 학생이 평가하여 객관성 확보</p>
             </div>
           )}
           <Button onClick={() => navigate('/student-dashboard')}>
