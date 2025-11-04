@@ -75,15 +75,25 @@ export const useDataDownload = () => {
         description: "프로젝트 데이터를 수집하고 있습니다.",
       });
 
-      // Fetch comparisons data
+      // Fetch project info
+      const { data: project } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+
+      // Fetch comparisons data with student info
       const { data: comparisons, error: comparisonsError } = await supabase
         .from('comparisons')
         .select(`
           *,
-          student_responses_a:response_a_id(*),
-          student_responses_b:response_b_id(*)
+          students!comparisons_student_id_fkey(student_number, name, student_id),
+          response_a:student_responses!comparisons_response_a_id_fkey(id, student_code, response_text),
+          response_b:student_responses!comparisons_response_b_id_fkey(id, student_code, response_text)
         `)
-        .eq('project_id', projectId);
+        .eq('project_id', projectId)
+        .order('question_number', { ascending: true })
+        .order('created_at', { ascending: true });
 
       if (comparisonsError) throw comparisonsError;
 
@@ -103,24 +113,25 @@ export const useDataDownload = () => {
 
       if (sessionsError) throw sessionsError;
 
-      // Transform comparisons data
-      const comparisonsData: ComparisonRow[] = comparisons?.map(comp => ({
-        pairId: `${comp.response_a_id}-${comp.response_b_id}`,
-        reviewerId: comp.student_id,
-        decision: comp.decision === 'left' ? 'L' : comp.decision === 'right' ? 'R' : 'N',
+      // Transform comparisons data with detailed info
+      const comparisonsData = comparisons?.map((comp: any) => ({
+        questionNumber: comp.question_number,
+        reviewerStudentId: comp.students?.student_id || comp.student_id,
+        reviewerName: comp.students?.name || '',
+        responseACode: comp.response_a?.student_code || '',
+        responseBCode: comp.response_b?.student_code || '',
+        responseAId: comp.response_a_id,
+        responseBId: comp.response_b_id,
+        decision: comp.decision === 'left' ? 'A선택' : comp.decision === 'right' ? 'B선택' : '동점',
         decisionTimeMs: comp.comparison_time_ms || 0,
-        shownAt: comp.shown_at_server || comp.shown_at_client || comp.created_at,
-        submittedAt: comp.submitted_at_server || comp.submitted_at_client || comp.created_at,
-        uiOrderLeftId: comp.ui_order_left_id || comp.response_a_id,
-        uiOrderRightId: comp.ui_order_right_id || comp.response_b_id,
-        isMirrorReshow: comp.is_mirror || false,
-        isDuplicateReeval: comp.is_duplicate_reeval || false,
+        uiOrderLeft: comp.ui_order_left_id === comp.response_a_id ? 'A' : 'B',
+        uiOrderRight: comp.ui_order_right_id === comp.response_b_id ? 'B' : 'A',
+        isMirrorReshow: comp.is_mirror ? '예' : '아니오',
+        isDuplicateReeval: comp.is_duplicate_reeval ? '예' : '아니오',
         weightApplied: comp.weight_applied || 1.0,
-        mirrorGroupId: comp.mirror_group_id,
-        reevalGroupId: comp.reeval_group_id,
-        agreementSnapshot: comp.agreement_snapshot,
-        popupShown: comp.popup_shown || false,
-        popupReason: comp.popup_reason,
+        popupShown: comp.popup_shown ? '예' : '아니오',
+        popupReason: comp.popup_reason || '',
+        submittedAt: new Date(comp.submitted_at_server || comp.created_at).toLocaleString('ko-KR'),
       })) || [];
 
       // Transform reviewer stats data
@@ -153,10 +164,9 @@ export const useDataDownload = () => {
 
       // Generate CSV files
       const comparisonsCSV = generateCSV(comparisonsData, [
-        'pairId', 'reviewerId', 'decision', 'decisionTimeMs', 'shownAt', 'submittedAt',
-        'uiOrderLeftId', 'uiOrderRightId', 'isMirrorReshow', 'isDuplicateReeval',
-        'weightApplied', 'mirrorGroupId', 'reevalGroupId', 'agreementSnapshot',
-        'popupShown', 'popupReason'
+        'questionNumber', 'reviewerStudentId', 'reviewerName', 'responseACode', 'responseBCode',
+        'responseAId', 'responseBId', 'decision', 'decisionTimeMs', 'uiOrderLeft', 'uiOrderRight',
+        'isMirrorReshow', 'isDuplicateReeval', 'weightApplied', 'popupShown', 'popupReason', 'submittedAt'
       ]);
 
       const reviewerSummaryCSV = generateCSV(reviewerSummaryData, [
@@ -171,58 +181,89 @@ export const useDataDownload = () => {
       ]);
 
       // Create README content
-      const readmeContent = `# Comparative Judgment Data Export
+      const readmeContent = `# ${project?.title || '프로젝트'} - 비교 평가 데이터
 
-## 파일 설명
+## 📊 데이터 구조 (다중 평가 시스템)
+
+이 프로젝트는 **동일한 응답 쌍을 여러 학생이 평가**하는 시스템입니다.
+- 각 학생은 모든 응답(자신의 응답 포함)을 비교 대상으로 평가합니다
+- 같은 페어(A-B)를 여러 학생이 평가하여 객관성을 확보합니다
+- Bradley-Terry 모델을 통해 최종 순위를 산출합니다
+
+## 📁 파일 설명
 
 ### comparisons.csv
-모든 비교 판단 기록
-- pairId: 비교 쌍 식별자 (응답A-응답B)
-- reviewerId: 평가자 식별자
-- decision: 판단 결과 (L=왼쪽, R=오른쪽, N=중립)
-- decisionTimeMs: 결정 시간 (밀리초)
-- shownAt: 화면 표시 시각 (ISO 8601)
-- submittedAt: 제출 시각 (ISO 8601)
-- uiOrderLeftId: 화면 왼쪽에 표시된 응답 ID
-- uiOrderRightId: 화면 오른쪽에 표시된 응답 ID
-- isMirrorReshow: 미러 재제시 여부
-- isDuplicateReeval: 중복 재평가 여부
-- weightApplied: 적용된 가중치 (1.0=정상, 0.5=하향조정)
+**모든 비교 판단 기록** (각 행 = 1명의 학생이 1개 페어를 평가한 기록)
+- questionNumber: 문항 번호
+- reviewerStudentId: 평가자 학번
+- reviewerName: 평가자 이름
+- responseACode: 응답 A의 학생 코드
+- responseBCode: 응답 B의 학생 코드
+- responseAId/responseBId: 응답 UUID (내부 식별용)
+- decision: 판단 결과 (A선택/B선택/동점)
+- decisionTimeMs: 판단에 소요된 시간 (밀리초)
+- uiOrderLeft/uiOrderRight: 화면 좌/우측에 표시된 응답 (A 또는 B)
+- isMirrorReshow: 미러 비교 여부 (편향 감지용)
+- isDuplicateReeval: 재평가 여부 (일관성 검증용)
+- weightApplied: 적용된 가중치 (1.0=정상, 0.5=품질 저하)
+- popupShown: 경고 팝업 표시 여부
+- popupReason: 팝업 표시 사유
+- submittedAt: 제출 시각
 
 ### reviewer_summary.csv
-평가자별 요약 통계
-- reviewerId: 평가자 식별자
-- totalComparisons: 총 비교 횟수
-- shortDecisionStreaks: 초단시간 응답 연속 발생 횟수
+**평가자별 통계 요약**
+- reviewerId: 평가자 학번
+- totalComparisons: 해당 평가자가 수행한 총 비교 횟수
+- shortDecisionStreaks: 매우 빠른 응답 연속 발생 횟수
 - leftChoiceStreakMax: 최대 연속 좌측 선택 횟수
 - rightChoiceStreakMax: 최대 연속 우측 선택 횟수
-- lowAgreementFlag: 낮은 일치율 플래그
-- inconsistencyCount: 불일치 횟수
+- lowAgreementFlag: 다른 평가자와의 낮은 일치율 플래그
+- inconsistencyCount: 불일치 발생 횟수 (미러/재평가)
 - inconsistencyRate: 불일치 비율
 - finalWeightApplied: 최종 적용 가중치
-- agreementRate: 합의와의 일치율
+- agreementRate: 다른 평가자들과의 합의 일치율
 
 ### sessions.csv
-세션 메타데이터
-- sessionId: 세션 식별자
+**세션 메타데이터** (문항별 세션 정보)
+- sessionId: 세션 고유 ID
 - questionId: 문항 번호
 - startedAt: 세션 시작 시각
 - closedAt: 세션 종료 시각
-- randomSeed: 난수 시드 (재현성)
+- randomSeed: 난수 시드 (페어 순서 재현용)
 - appVersion: 앱 버전
 - targetPerResponse: 응답당 목표 비교 횟수
-- pairingStrategy: 페어링 전략
+- pairingStrategy: 페어링 전략 (balanced_adaptive 등)
 - kElo: Elo 업데이트 계수
-- allowTie: 무승부 허용 여부
+- allowTie: 동점 허용 여부
 
-## 시간 단위
-- 모든 시간은 밀리초(ms) 단위
-- 타임스탬프는 ISO 8601 형식 (Asia/Seoul 기준)
+## 📈 데이터 분석 예시
 
-## 데이터 활용 시 주의사항
-- 미러 재제시(isMirrorReshow=true) 데이터는 편향 진단용
-- 가중치가 적용된 데이터는 품질 관리 후 결과
-- 세션별 randomSeed를 통해 결과 재현 가능
+### 1. 특정 페어에 대한 다중 평가 확인
+동일한 responseACode + responseBCode 조합을 필터링하면,
+여러 학생이 해당 페어를 어떻게 평가했는지 확인할 수 있습니다.
+
+예: 학생1234와 학생5678의 응답을 비교한 모든 기록
+- 3명이 A선택, 2명이 B선택 → A가 우세
+
+### 2. 평가자 품질 분석
+reviewer_summary.csv에서:
+- inconsistencyRate가 높은 평가자 → 일관성 부족
+- lowAgreementFlag=true인 평가자 → 다른 사람들과 판단 기준이 다름
+- finalWeightApplied < 1.0인 평가자 → 시스템에서 가중치 하향 조정됨
+
+### 3. Bradley-Terry 순위 산출
+comparisons.csv의 decision 데이터를 기반으로
+Bradley-Terry 모델을 적용하면 최종 응답 순위를 계산할 수 있습니다.
+
+## ⚠️ 주의사항
+
+- **같은 페어의 중복 기록**: 정상입니다! 여러 학생이 평가한 것입니다.
+- **자신의 응답 평가**: 학생이 자신의 응답을 평가한 기록도 포함됩니다.
+- **미러/재평가 데이터**: 품질 관리용이므로 최종 분석 시 별도 처리 고려
+- **가중치가 적용된 데이터**: 시스템이 품질 저하를 감지하여 가중치를 조정한 기록
+
+## 📞 문의사항
+데이터 구조나 분석 방법에 대한 질문은 시스템 관리자에게 문의하세요.
 `;
 
       // Create ZIP file using JSZip
@@ -240,7 +281,8 @@ export const useDataDownload = () => {
       const url = URL.createObjectURL(zipBlob);
       const link = document.createElement('a');
       link.href = url;
-      link.download = `project_${projectId}_data_${new Date().toISOString().split('T')[0]}.zip`;
+      const sanitizedTitle = (project?.title || 'project').replace(/[^a-zA-Z0-9가-힣]/g, '_');
+      link.download = `${sanitizedTitle}_${new Date().toISOString().split('T')[0]}.zip`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);

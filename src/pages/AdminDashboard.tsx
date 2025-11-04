@@ -18,7 +18,7 @@ import {
   TrendingUp
 } from 'lucide-react';
 import { toast } from 'sonner';
-import * as XLSX from 'xlsx';
+import { useDataDownload } from '@/hooks/useDataDownload';
 
 interface SystemStats {
   totalTeachers: number;
@@ -42,6 +42,7 @@ export const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
+  const { downloadProjectData } = useDataDownload();
   const [stats, setStats] = useState<SystemStats>({
     totalTeachers: 0,
     totalStudents: 0,
@@ -160,132 +161,8 @@ export const AdminDashboard = () => {
     }
   };
 
-  const downloadAllComparisonsData = async () => {
-    try {
-      toast.info('데이터를 다운로드하는 중...');
-
-      // Fetch all comparisons with related data
-      const { data: comparisons, error } = await supabase
-        .from('comparisons')
-        .select(`
-          *,
-          projects (title),
-          student_responses!comparisons_response_a_id_fkey (student_id, response_text),
-          student_responses!comparisons_response_b_id_fkey (student_id, response_text)
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (!comparisons || comparisons.length === 0) {
-        toast.warning('다운로드할 데이터가 없습니다');
-        return;
-      }
-
-      // Format data for Excel
-      const formattedData = comparisons.map((comp: any) => ({
-        '프로젝트': comp.projects?.title || '',
-        '비교 ID': comp.decision_id,
-        '문항 번호': comp.question_number,
-        '학생 ID': comp.student_id,
-        '결정': comp.decision === 'left' ? 'A 선택' : comp.decision === 'right' ? 'B 선택' : '동점',
-        '비교 시간(ms)': comp.comparison_time_ms,
-        '가중치': comp.weight_applied || 1.0,
-        '미러 비교': comp.is_mirror ? '예' : '아니오',
-        '재평가': comp.is_duplicate_reeval ? '예' : '아니오',
-        '팝업 표시': comp.popup_shown ? '예' : '아니오',
-        '팝업 사유': comp.popup_reason || '',
-        '생성 시간': new Date(comp.created_at).toLocaleString('ko-KR')
-      }));
-
-      // Create workbook and worksheet
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(formattedData);
-
-      // Auto-size columns
-      const maxWidth = 50;
-      const colWidths = Object.keys(formattedData[0] || {}).map(key => ({
-        wch: Math.min(
-          Math.max(
-            key.length,
-            ...formattedData.map(row => String(row[key as keyof typeof row] || '').length)
-          ),
-          maxWidth
-        )
-      }));
-      ws['!cols'] = colWidths;
-
-      XLSX.utils.book_append_sheet(wb, ws, '전체 비교 데이터');
-
-      // Download file
-      const fileName = `PEER_전체비교데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(wb, fileName);
-
-      toast.success('데이터가 다운로드되었습니다');
-    } catch (error) {
-      console.error('Error downloading data:', error);
-      toast.error('데이터 다운로드에 실패했습니다');
-    }
-  };
-
-  const downloadProjectData = async (projectId: string, projectTitle: string) => {
-    try {
-      toast.info('프로젝트 데이터를 다운로드하는 중...');
-
-      const { data: comparisons, error } = await supabase
-        .from('comparisons')
-        .select(`
-          *,
-          student_responses!comparisons_response_a_id_fkey (student_id, response_text, student_code),
-          student_responses!comparisons_response_b_id_fkey (student_id, response_text, student_code)
-        `)
-        .eq('project_id', projectId)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-
-      if (!comparisons || comparisons.length === 0) {
-        toast.warning('다운로드할 데이터가 없습니다');
-        return;
-      }
-
-      const formattedData = comparisons.map((comp: any) => ({
-        '비교 ID': comp.decision_id,
-        '문항 번호': comp.question_number,
-        '학생 ID': comp.student_id,
-        '응답 A': comp.student_responses?.student_code || '',
-        '응답 B': comp.student_responses?.student_code || '',
-        '결정': comp.decision === 'left' ? 'A 선택' : comp.decision === 'right' ? 'B 선택' : '동점',
-        '비교 시간(ms)': comp.comparison_time_ms,
-        '가중치': comp.weight_applied || 1.0,
-        '생성 시간': new Date(comp.created_at).toLocaleString('ko-KR')
-      }));
-
-      const wb = XLSX.utils.book_new();
-      const ws = XLSX.utils.json_to_sheet(formattedData);
-
-      const maxWidth = 50;
-      const colWidths = Object.keys(formattedData[0] || {}).map(key => ({
-        wch: Math.min(
-          Math.max(
-            key.length,
-            ...formattedData.map(row => String(row[key as keyof typeof row] || '').length)
-          ),
-          maxWidth
-        )
-      }));
-      ws['!cols'] = colWidths;
-
-      XLSX.utils.book_append_sheet(wb, ws, projectTitle.substring(0, 31));
-
-      const fileName = `${projectTitle}_비교데이터_${new Date().toISOString().split('T')[0]}.xlsx`;
-      XLSX.writeFile(wb, fileName);
-
-      toast.success('데이터가 다운로드되었습니다');
-    } catch (error) {
-      console.error('Error downloading project data:', error);
-      toast.error('데이터 다운로드에 실패했습니다');
-    }
+  const handleDownloadProject = (projectId: string) => {
+    downloadProjectData(projectId);
   };
 
   if (roleLoading || loading) {
@@ -405,27 +282,10 @@ export const AdminDashboard = () => {
           <TabsContent value="data" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>전체 시스템 데이터 다운로드</CardTitle>
+                <CardTitle>프로젝트별 데이터 다운로드</CardTitle>
                 <CardDescription>
-                  모든 프로젝트의 비교 데이터를 한 번에 다운로드할 수 있습니다
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Button onClick={downloadAllComparisonsData} className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
-                  전체 비교 데이터 다운로드 (Excel)
-                </Button>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {/* Projects Tab */}
-          <TabsContent value="projects" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>전체 프로젝트 목록</CardTitle>
-                <CardDescription>
-                  시스템의 모든 프로젝트를 확인하고 관리할 수 있습니다
+                  각 프로젝트의 상세 비교 데이터를 ZIP 파일로 다운로드할 수 있습니다.
+                  다중 평가 시스템에 맞춘 구조화된 데이터를 제공합니다.
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -453,11 +313,52 @@ export const AdminDashboard = () => {
                           <Button
                             variant="outline"
                             size="sm"
-                            onClick={() => downloadProjectData(project.id, project.title)}
+                            onClick={() => handleDownloadProject(project.id)}
                           >
                             <Download className="h-4 w-4 mr-2" />
-                            다운로드
+                            ZIP 다운로드
                           </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Projects Tab */}
+          <TabsContent value="projects" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>전체 프로젝트 통계</CardTitle>
+                <CardDescription>
+                  시스템의 모든 프로젝트 현황을 확인할 수 있습니다
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {projects.map((project) => (
+                    <Card key={project.id}>
+                      <CardContent className="pt-6">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg">{project.title}</h3>
+                              <Badge variant={project.is_active ? 'default' : 'secondary'}>
+                                {project.is_active ? '활성' : '비활성'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span>담당: {project.teacher_name}</span>
+                              <span>학생: {project.student_count}명</span>
+                              <span>총 비교: {project.comparison_count}회</span>
+                              <span>평균 비교/학생: {project.student_count > 0 ? Math.round(project.comparison_count / project.student_count) : 0}회</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              생성일: {new Date(project.created_at).toLocaleDateString('ko-KR')}
+                            </p>
+                          </div>
                         </div>
                       </CardContent>
                     </Card>
