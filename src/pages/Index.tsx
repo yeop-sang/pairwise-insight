@@ -107,7 +107,7 @@ const Index = () => {
               </h1>
               <div className="space-y-2">
                 <h2 className="text-4xl lg:text-5xl font-display font-semibold text-metallic-dark">Peer Evaluation Encouraging Reflection</h2>
-                <p className="text-2xl text-primary font-medium">ai 기반 동료평가 시스템</p>
+                <p className="text-2xl text-primary font-medium">동료평가 시스템</p>
               </div>
             </div>
             
