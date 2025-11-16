@@ -54,13 +54,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "aggregated_scores_response_id_fkey"
-            columns: ["response_id"]
-            isOneToOne: false
-            referencedRelation: "student_responses"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "aggregated_scores_run_id_fkey"
             columns: ["run_id"]
             isOneToOne: false
@@ -349,20 +342,6 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comparisons_response_a_id_fkey"
-            columns: ["response_a_id"]
-            isOneToOne: false
-            referencedRelation: "student_responses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "comparisons_response_b_id_fkey"
-            columns: ["response_b_id"]
-            isOneToOne: false
-            referencedRelation: "student_responses"
             referencedColumns: ["id"]
           },
           {
