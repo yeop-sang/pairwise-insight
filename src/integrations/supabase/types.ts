@@ -14,6 +14,165 @@ export type Database = {
   }
   public: {
     Tables: {
+      aggregated_scores: {
+        Row: {
+          id: string
+          method: string
+          project_id: string
+          response_id: string
+          run_id: string | null
+          score: number
+          updated_at: string | null
+          weights: Json | null
+        }
+        Insert: {
+          id?: string
+          method: string
+          project_id: string
+          response_id: string
+          run_id?: string | null
+          score: number
+          updated_at?: string | null
+          weights?: Json | null
+        }
+        Update: {
+          id?: string
+          method?: string
+          project_id?: string
+          response_id?: string
+          run_id?: string | null
+          score?: number
+          updated_at?: string | null
+          weights?: Json | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "aggregated_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aggregated_scores_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "aggregated_scores_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "bt_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bt_runs: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          hyperparams: Json | null
+          id: string
+          metrics: Json | null
+          project_id: string
+          question_numbers: number[] | null
+          started_at: string | null
+          status: string
+          trainer_user_id: string | null
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          hyperparams?: Json | null
+          id?: string
+          metrics?: Json | null
+          project_id: string
+          question_numbers?: number[] | null
+          started_at?: string | null
+          status: string
+          trainer_user_id?: string | null
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          hyperparams?: Json | null
+          id?: string
+          metrics?: Json | null
+          project_id?: string
+          question_numbers?: number[] | null
+          started_at?: string | null
+          status?: string
+          trainer_user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bt_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bt_scores: {
+        Row: {
+          ci_high: number | null
+          ci_low: number | null
+          id: string
+          project_id: string
+          question_number: number
+          rank: number | null
+          response_id: string
+          run_id: string
+          score: number
+          se: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          ci_high?: number | null
+          ci_low?: number | null
+          id?: string
+          project_id: string
+          question_number: number
+          rank?: number | null
+          response_id: string
+          run_id: string
+          score: number
+          se?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          ci_high?: number | null
+          ci_low?: number | null
+          id?: string
+          project_id?: string
+          question_number?: number
+          rank?: number | null
+          response_id?: string
+          run_id?: string
+          score?: number
+          se?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bt_scores_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bt_scores_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "bt_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       comparisons: {
         Row: {
           agreement_snapshot: number | null
@@ -244,6 +403,54 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      response_embeddings: {
+        Row: {
+          created_at: string | null
+          dimension: number
+          embedding: number[]
+          id: string
+          model_id: string
+          project_id: string
+          question_number: number
+          response_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          dimension: number
+          embedding: number[]
+          id?: string
+          model_id: string
+          project_id: string
+          question_number: number
+          response_id: string
+        }
+        Update: {
+          created_at?: string | null
+          dimension?: number
+          embedding?: number[]
+          id?: string
+          model_id?: string
+          project_id?: string
+          question_number?: number
+          response_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "response_embeddings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "response_embeddings_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       reviewer_stats: {
         Row: {
