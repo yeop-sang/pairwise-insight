@@ -69,6 +69,94 @@ export type Database = {
           },
         ]
       }
+      autoscore_predictions: {
+        Row: {
+          created_at: string | null
+          embedding_vector: number[]
+          id: string
+          predicted_score: number
+          project_id: string
+          question_number: number
+          response_text: string
+          scaled_score: number
+        }
+        Insert: {
+          created_at?: string | null
+          embedding_vector: number[]
+          id?: string
+          predicted_score: number
+          project_id: string
+          question_number: number
+          response_text: string
+          scaled_score: number
+        }
+        Update: {
+          created_at?: string | null
+          embedding_vector?: number[]
+          id?: string
+          predicted_score?: number
+          project_id?: string
+          question_number?: number
+          response_text?: string
+          scaled_score?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autoscore_predictions_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      autoscore_runs: {
+        Row: {
+          error: string | null
+          finished_at: string | null
+          id: string
+          metrics: Json | null
+          model_type: string
+          params: Json | null
+          project_id: string
+          question_number: number
+          started_at: string | null
+          status: string
+        }
+        Insert: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          metrics?: Json | null
+          model_type: string
+          params?: Json | null
+          project_id: string
+          question_number: number
+          started_at?: string | null
+          status: string
+        }
+        Update: {
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          metrics?: Json | null
+          model_type?: string
+          params?: Json | null
+          project_id?: string
+          question_number?: number
+          started_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "autoscore_runs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bt_runs: {
         Row: {
           error: string | null
