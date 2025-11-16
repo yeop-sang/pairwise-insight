@@ -54,6 +54,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "aggregated_scores_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "aggregated_scores_run_id_fkey"
             columns: ["run_id"]
             isOneToOne: false
@@ -246,6 +253,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "bt_scores_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "bt_scores_run_id_fkey"
             columns: ["run_id"]
             isOneToOne: false
@@ -345,10 +359,38 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "comparisons_response_a_id_fkey"
+            columns: ["response_a_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparisons_response_b_id_fkey"
+            columns: ["response_b_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "comparisons_student_id_fkey"
             columns: ["student_id"]
             isOneToOne: false
             referencedRelation: "students"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparisons_ui_order_left_id_fkey"
+            columns: ["ui_order_left_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comparisons_ui_order_right_id_fkey"
+            columns: ["ui_order_right_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
             referencedColumns: ["id"]
           },
         ]
@@ -508,6 +550,13 @@ export type Database = {
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "response_embeddings_response_id_fkey"
+            columns: ["response_id"]
+            isOneToOne: false
+            referencedRelation: "student_responses"
             referencedColumns: ["id"]
           },
         ]
