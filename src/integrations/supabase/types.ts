@@ -531,13 +531,6 @@ export type Database = {
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "response_embeddings_response_id_fkey"
-            columns: ["response_id"]
-            isOneToOne: false
-            referencedRelation: "student_responses"
-            referencedColumns: ["id"]
-          },
         ]
       }
       reviewer_stats: {
