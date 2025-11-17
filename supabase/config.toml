@@ -2,3 +2,7 @@ project_id = "xmvyuzpnqxawlutfbbvs"
 
 [functions.get-service-key]
 verify_jwt = false
+
+[functions.import-csv-responses]
+verify_jwt = false
+

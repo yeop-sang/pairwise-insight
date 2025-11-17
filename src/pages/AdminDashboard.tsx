@@ -15,7 +15,8 @@ import {
   Shield,
   Database,
   Activity,
-  TrendingUp
+  TrendingUp,
+  Upload
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useDataDownload } from '@/hooks/useDataDownload';
@@ -52,6 +53,7 @@ export const AdminDashboard = () => {
   });
   const [projects, setProjects] = useState<ProjectData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (!roleLoading && !isAdmin) {
@@ -165,6 +167,40 @@ export const AdminDashboard = () => {
     downloadProjectData(projectId);
   };
 
+  const handleCSVImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      toast.info('CSV 파일을 읽는 중...');
+      
+      const csvText = await file.text();
+      
+      toast.info('데이터를 임포트하는 중...');
+      
+      const { data, error } = await supabase.functions.invoke('import-csv-responses', {
+        body: { csv_text: csvText }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success(`✅ ${data.imported_count}개 응답이 성공적으로 임포트되었습니다!`);
+        fetchSystemStats(); // Refresh stats
+      } else {
+        throw new Error(data?.error || 'Import failed');
+      }
+    } catch (error: any) {
+      console.error('CSV import error:', error);
+      toast.error(`임포트 실패: ${error.message}`);
+    } finally {
+      setImporting(false);
+      // Reset file input
+      event.target.value = '';
+    }
+  };
+
   if (roleLoading || loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -272,6 +308,10 @@ export const AdminDashboard = () => {
               <Database className="h-4 w-4 mr-2" />
               데이터 다운로드
             </TabsTrigger>
+            <TabsTrigger value="import">
+              <Upload className="h-4 w-4 mr-2" />
+              CSV 임포트
+            </TabsTrigger>
             <TabsTrigger value="projects">
               <BookOpen className="h-4 w-4 mr-2" />
               프로젝트 관리
@@ -322,6 +362,91 @@ export const AdminDashboard = () => {
                       </CardContent>
                     </Card>
                   ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* CSV Import Tab */}
+          <TabsContent value="import" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Student Responses CSV 임포트</CardTitle>
+                <CardDescription>
+                  student_responses 테이블에 CSV 파일을 업로드하여 대량의 응답 데이터를 임포트할 수 있습니다.
+                  <br />
+                  <span className="text-xs">
+                    필수 컬럼: id, project_id, question_number, response_text, student_code
+                  </span>
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="border-2 border-dashed border-border rounded-lg p-8">
+                  <div className="flex flex-col items-center justify-center space-y-4">
+                    <div className="p-4 bg-primary/10 rounded-full">
+                      <Upload className="h-8 w-8 text-primary" />
+                    </div>
+                    <div className="text-center space-y-2">
+                      <h3 className="font-semibold">CSV 파일 업로드</h3>
+                      <p className="text-sm text-muted-foreground max-w-md">
+                        student_responses_uuid.csv 파일을 선택하여 업로드하세요.
+                        <br />
+                        파일은 자동으로 파싱되어 데이터베이스에 저장됩니다.
+                      </p>
+                    </div>
+                    <label htmlFor="csv-upload">
+                      <input
+                        id="csv-upload"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleCSVImport}
+                        disabled={importing}
+                        className="hidden"
+                      />
+                      <Button 
+                        variant="default" 
+                        disabled={importing}
+                        onClick={() => document.getElementById('csv-upload')?.click()}
+                      >
+                        {importing ? (
+                          <>
+                            <Activity className="h-4 w-4 mr-2 animate-spin" />
+                            임포트 중...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="h-4 w-4 mr-2" />
+                            CSV 파일 선택
+                          </>
+                        )}
+                      </Button>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+                  <h4 className="font-semibold text-sm flex items-center gap-2">
+                    <Database className="h-4 w-4" />
+                    CSV 파일 형식 안내
+                  </h4>
+                  <div className="space-y-2 text-sm text-muted-foreground">
+                    <p>• <strong>필수 컬럼:</strong> id, project_id, question_number, response_text, student_code</p>
+                    <p>• <strong>선택 컬럼:</strong> student_id (비어있으면 null로 처리)</p>
+                    <p>• <strong>자동 생성:</strong> submitted_at, created_at, updated_at, elo_score, num_comparisons 등</p>
+                    <p>• <strong>중복 처리:</strong> 동일한 id가 있으면 업데이트됩니다</p>
+                  </div>
+                </div>
+
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-4">
+                  <div className="flex gap-3">
+                    <Activity className="h-5 w-5 text-blue-500 flex-shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <h4 className="font-semibold text-sm">임포트 후 작업</h4>
+                      <p className="text-xs text-muted-foreground">
+                        CSV 임포트 완료 후, BT 학습과 Embedding 생성을 진행할 수 있습니다.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
