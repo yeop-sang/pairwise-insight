@@ -21,38 +21,50 @@ serve(async (req) => {
 
     console.log('Parsing CSV data...');
     
-    // Parse CSV manually (simple implementation supporting quoted fields)
-    const lines = csv_text.trim().split('\n');
-    const headers = parseCSVLine(lines[0]);
+    // Parse CSV with proper handling of multiline fields
+    const rows = parseCSV(csv_text);
     
+    if (rows.length === 0) {
+      throw new Error('CSV file is empty');
+    }
+    
+    const headers = rows[0].map(h => h.trim());
     console.log('CSV headers:', headers);
-    console.log(`Total rows to process: ${lines.length - 1}`);
+    console.log(`Total rows to process: ${rows.length - 1}`);
     
     const responses = [];
     
-    for (let i = 1; i < lines.length; i++) {
-      if (!lines[i].trim()) continue; // Skip empty lines
+    for (let i = 1; i < rows.length; i++) {
+      const values = rows[i];
       
-      const values = parseCSVLine(lines[i]);
+      if (!values || values.length === 0) {
+        continue; // Skip empty rows
+      }
       
       if (values.length < headers.length) {
-        console.warn(`Row ${i} has fewer columns than headers, skipping`);
+        console.warn(`Row ${i} has ${values.length} columns but expected ${headers.length}, skipping`);
         continue;
       }
       
       const row: any = {};
       headers.forEach((header, idx) => {
-        row[header.trim()] = values[idx]?.trim() || null;
+        row[header] = values[idx] || null;
       });
+      
+      // Validate required fields
+      if (!row.id || !row.project_id || !row.question_number || !row.response_text) {
+        console.warn(`Row ${i} missing required fields, skipping`);
+        continue;
+      }
       
       // Map CSV columns to database columns
       const response = {
-        id: row.id,
-        project_id: row.project_id,
+        id: row.id.trim(),
+        project_id: row.project_id.trim(),
         question_number: parseInt(row.question_number),
-        response_text: row.response_text,
-        student_code: row.student_code || null,
-        student_id: row.student_id || null, // Empty string -> null
+        response_text: row.response_text, // Keep multiline text as is
+        student_code: row.student_code?.trim() || null,
+        student_id: row.student_id?.trim() || null,
         submitted_at: new Date().toISOString(),
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
@@ -126,35 +138,54 @@ serve(async (req) => {
   }
 });
 
-// Helper function to parse CSV line with quoted fields support
-function parseCSVLine(line: string): string[] {
-  const result = [];
-  let current = '';
+// RFC 4180 compliant CSV parser supporting multiline fields
+function parseCSV(csvText: string): string[][] {
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentField = '';
   let inQuotes = false;
   
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
+  for (let i = 0; i < csvText.length; i++) {
+    const char = csvText[i];
+    const nextChar = csvText[i + 1];
     
     if (char === '"') {
-      if (inQuotes && line[i + 1] === '"') {
-        // Escaped quote
-        current += '"';
-        i++;
+      if (inQuotes && nextChar === '"') {
+        // Escaped quote inside quoted field
+        currentField += '"';
+        i++; // Skip next quote
       } else {
         // Toggle quote mode
         inQuotes = !inQuotes;
       }
     } else if (char === ',' && !inQuotes) {
       // End of field
-      result.push(current);
-      current = '';
+      currentRow.push(currentField);
+      currentField = '';
+    } else if ((char === '\n' || char === '\r') && !inQuotes) {
+      // End of row (handle both \n and \r\n)
+      if (char === '\r' && nextChar === '\n') {
+        i++; // Skip \n in \r\n
+      }
+      
+      // Add field and row if not empty
+      if (currentField || currentRow.length > 0) {
+        currentRow.push(currentField);
+        rows.push(currentRow);
+        currentRow = [];
+        currentField = '';
+      }
     } else {
-      current += char;
+      // Regular character (including newlines inside quotes)
+      currentField += char;
     }
   }
   
-  // Add last field
-  result.push(current);
+  // Add last field and row if exists
+  if (currentField || currentRow.length > 0) {
+    currentRow.push(currentField);
+    rows.push(currentRow);
+  }
   
-  return result;
+  return rows;
 }
