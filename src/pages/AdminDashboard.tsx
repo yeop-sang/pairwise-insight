@@ -173,40 +173,6 @@ export const AdminDashboard = () => {
     }
   };
 
-      // For each project, get student count and comparison count
-      const projectsWithStats = await Promise.all(
-        (projectsData || []).map(async (project) => {
-          const { count: studentCount } = await supabase
-            .from('project_assignments')
-            .select('*', { count: 'exact', head: true })
-            .eq('project_id', project.id);
-
-          const { count: comparisonCount } = await supabase
-            .from('comparisons')
-            .select('*', { count: 'exact', head: true })
-            .eq('project_id', project.id);
-
-          return {
-            id: project.id,
-            title: project.title,
-            teacher_name: (project.profiles as any)?.name || 'Unknown',
-            student_count: studentCount || 0,
-            comparison_count: comparisonCount || 0,
-            created_at: project.created_at,
-            is_active: project.is_active
-          };
-        })
-      );
-
-      setProjects(projectsWithStats);
-    } catch (error) {
-      console.error('Error fetching projects:', error);
-      toast.error('프로젝트 목록을 불러오는데 실패했습니다');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleDownloadProject = (projectId: string) => {
     downloadProjectData(projectId);
   };
