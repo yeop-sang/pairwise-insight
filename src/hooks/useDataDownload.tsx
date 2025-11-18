@@ -303,7 +303,63 @@ Bradley-Terry 모델을 적용하면 최종 응답 순위를 계산할 수 있�
     }
   }, [generateCSV, toast]);
 
+  const downloadStudentResponsesCSV = useCallback(async (projectId: string) => {
+    try {
+      toast({
+        title: "학생 응답 데이터 준비 중...",
+        description: "CSV 파일을 생성하고 있습니다.",
+      });
+
+      // Fetch student responses
+      const { data: responses, error } = await supabase
+        .from('student_responses')
+        .select('id, project_id, question_number, response_text, student_code, student_id')
+        .eq('project_id', projectId)
+        .order('question_number');
+
+      if (error) throw error;
+
+      if (!responses || responses.length === 0) {
+        toast({
+          title: "데이터 없음",
+          description: "다운로드할 응답 데이터가 없습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // CSV headers
+      const headers = ['id', 'project_id', 'question_number', 'response_text', 'student_code', 'student_id'];
+
+      // Generate CSV
+      const csvBlob = generateCSV(responses, headers);
+
+      // Download CSV file
+      const url = URL.createObjectURL(csvBlob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `student_responses_${projectId}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "다운로드 완료",
+        description: `${responses.length}개의 응답이 CSV로 다운로드되었습니다.`,
+      });
+    } catch (error) {
+      console.error('Error downloading student responses:', error);
+      toast({
+        title: "다운로드 실패",
+        description: "CSV 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  }, [generateCSV, toast]);
+
   return {
     downloadProjectData,
+    downloadStudentResponsesCSV,
   };
 };
