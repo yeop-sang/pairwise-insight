@@ -8,18 +8,24 @@ interface DataDownloadButtonProps {
   variant?: 'default' | 'outline' | 'secondary';
   size?: 'default' | 'sm' | 'lg';
   className?: string;
+  mode?: 'full' | 'csv'; // 'full' = ZIP with all data, 'csv' = CSV only
 }
 
 export const DataDownloadButton: React.FC<DataDownloadButtonProps> = ({
   projectId,
   variant = 'outline',
   size = 'default',
-  className
+  className,
+  mode = 'full'
 }) => {
-  const { downloadProjectData } = useDataDownload();
+  const { downloadProjectData, downloadStudentResponsesCSV } = useDataDownload();
 
   const handleDownload = () => {
-    downloadProjectData(projectId);
+    if (mode === 'csv') {
+      downloadStudentResponsesCSV(projectId);
+    } else {
+      downloadProjectData(projectId);
+    }
   };
 
   return (
@@ -30,7 +36,7 @@ export const DataDownloadButton: React.FC<DataDownloadButtonProps> = ({
       className={className}
     >
       <Download className="w-4 h-4 mr-2" />
-      데이터 다운로드
+      {mode === 'csv' ? '응답 CSV 다운로드' : '데이터 다운로드'}
     </Button>
   );
 };
