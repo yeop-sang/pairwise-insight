@@ -42,6 +42,40 @@ export const CreateProject = () => {
     }
   };
 
+  // RFC 4180 표준 CSV 파싱 함수
+  const parseCSVLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      const nextChar = line[i + 1];
+      
+      if (char === '"') {
+        if (inQuotes && nextChar === '"') {
+          // 이스케이프된 따옴표 ("" -> ")
+          current += '"';
+          i++; // 다음 따옴표 건너뛰기
+        } else {
+          // 따옴표 모드 토글
+          inQuotes = !inQuotes;
+        }
+      } else if (char === ',' && !inQuotes) {
+        // 필드 끝
+        result.push(current);
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+    
+    // 마지막 필드 추가
+    result.push(current);
+    
+    return result;
+  };
+
   const parseFile = async (file: File): Promise<{
     responses: Array<{code: string, answer: string, questionIndex: number}>,
     questions: Record<number, string>
@@ -65,7 +99,8 @@ export const CreateProject = () => {
             return;
           }
           
-          const headerCells = lines[0].split(',').map(cell => cell.trim().replace(/"/g, ''));
+          // RFC 4180 표준 파싱 사용
+          const headerCells = parseCSVLine(lines[0]).map(cell => cell.trim());
           const numColumns = headerCells.length;
           console.log("헤더:", headerCells);
           console.log("총 컬럼 수:", numColumns);
@@ -86,7 +121,8 @@ export const CreateProject = () => {
           const data: Array<{code: string, answer: string, questionIndex: number}> = [];
           
           for (let i = 1; i < lines.length; i++) {
-            const cells = lines[i].split(',').map(cell => cell.trim().replace(/"/g, ''));
+            // RFC 4180 표준 파싱 사용
+            const cells = parseCSVLine(lines[i]).map(cell => cell.trim());
             const rawStudentCode = cells[0];
             
             // 숫자 학생번호 처리 강화
