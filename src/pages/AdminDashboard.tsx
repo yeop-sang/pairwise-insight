@@ -122,12 +122,56 @@ export const AdminDashboard = () => {
           title,
           created_at,
           is_active,
-          teacher_id,
-          profiles!projects_teacher_id_fkey (name)
+          teacher_id
         `)
         .order('created_at', { ascending: false });
 
       if (projectsError) throw projectsError;
+
+      // Fetch teacher names separately
+      const teacherIds = [...new Set(projectsData?.map(p => p.teacher_id) || [])];
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('user_id, name')
+        .in('user_id', teacherIds);
+
+      const teacherMap = new Map(profiles?.map(p => [p.user_id, p.name]) || []);
+
+      // Fetch student counts for each project
+      const projectsWithCounts = await Promise.all(
+        (projectsData || []).map(async (project) => {
+          // Count students
+          const { count: studentCount } = await supabase
+            .from('student_responses')
+            .select('student_id', { count: 'exact', head: true })
+            .eq('project_id', project.id);
+
+          // Count comparisons
+          const { count: comparisonCount } = await supabase
+            .from('comparisons')
+            .select('*', { count: 'exact', head: true })
+            .eq('project_id', project.id);
+
+          return {
+            id: project.id,
+            title: project.title,
+            teacher_name: teacherMap.get(project.teacher_id) || '알 수 없음',
+            student_count: studentCount || 0,
+            comparison_count: comparisonCount || 0,
+            created_at: project.created_at,
+            is_active: project.is_active
+          };
+        })
+      );
+
+      setProjects(projectsWithCounts);
+    } catch (error) {
+      console.error('Error fetching projects:', error);
+      toast.error('프로젝트 목록을 불러오는데 실패했습니다');
+    } finally {
+      setLoading(false);
+    }
+  };
 
       // For each project, get student count and comparison count
       const projectsWithStats = await Promise.all(
