@@ -311,14 +311,32 @@ Bradley-Terry 모델을 적용하면 최종 응답 순위를 계산할 수 있�
         description: "CSV 파일을 생성하고 있습니다.",
       });
 
-      // Fetch student responses
-      const { data: responses, error } = await supabase
-        .from('student_responses')
-        .select('id, project_id, question_number, response_text, student_code, student_id')
-        .eq('project_id', projectId)
-        .order('question_number');
+      // Fetch ALL student responses (페이지네이션으로 모든 데이터 가져오기)
+      let allResponses: any[] = [];
+      let from = 0;
+      const batchSize = 1000;
+      let hasMore = true;
 
-      if (error) throw error;
+      while (hasMore) {
+        const { data: responses, error } = await supabase
+          .from('student_responses')
+          .select('id, project_id, question_number, response_text, student_code, student_id')
+          .eq('project_id', projectId)
+          .order('question_number')
+          .range(from, from + batchSize - 1);
+
+        if (error) throw error;
+
+        if (responses && responses.length > 0) {
+          allResponses = [...allResponses, ...responses];
+          from += batchSize;
+          hasMore = responses.length === batchSize;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      const responses = allResponses;
 
       if (!responses || responses.length === 0) {
         toast({
