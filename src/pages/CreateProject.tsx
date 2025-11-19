@@ -42,20 +42,21 @@ export const CreateProject = () => {
     }
   };
 
-  // RFC 4180 표준 CSV 파싱 함수
-  const parseCSVLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = '';
+  // RFC 4180 표준 CSV 파싱 함수 - 전체 CSV 텍스트를 행으로 분리
+  const parseCSVToRows = (text: string): string[][] => {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentField = '';
     let inQuotes = false;
     
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      const nextChar = line[i + 1];
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
       
       if (char === '"') {
         if (inQuotes && nextChar === '"') {
           // 이스케이프된 따옴표 ("" -> ")
-          current += '"';
+          currentField += '"';
           i++; // 다음 따옴표 건너뛰기
         } else {
           // 따옴표 모드 토글
@@ -63,17 +64,37 @@ export const CreateProject = () => {
         }
       } else if (char === ',' && !inQuotes) {
         // 필드 끝
-        result.push(current);
-        current = '';
+        currentRow.push(currentField.trim());
+        currentField = '';
+      } else if ((char === '\n' || char === '\r') && !inQuotes) {
+        // 줄 끝 (따옴표 밖에서만)
+        if (char === '\r' && nextChar === '\n') {
+          i++; // \r\n 처리
+        }
+        // 현재 필드 추가
+        if (currentField || currentRow.length > 0) {
+          currentRow.push(currentField.trim());
+          currentField = '';
+        }
+        // 행이 비어있지 않으면 추가
+        if (currentRow.length > 0) {
+          rows.push(currentRow);
+          currentRow = [];
+        }
       } else {
-        current += char;
+        currentField += char;
       }
     }
     
-    // 마지막 필드 추가
-    result.push(current);
+    // 마지막 필드와 행 처리
+    if (currentField || currentRow.length > 0) {
+      currentRow.push(currentField.trim());
+    }
+    if (currentRow.length > 0) {
+      rows.push(currentRow);
+    }
     
-    return result;
+    return rows;
   };
 
   const parseFile = async (file: File): Promise<{
@@ -91,16 +112,17 @@ export const CreateProject = () => {
         reader.onload = (e) => {
           console.log("CSV 파일 읽기 완료");
           const text = e.target?.result as string;
-          const lines = text.split('\n').filter(line => line.trim());
-          console.log("CSV 총 줄 수:", lines.length);
           
-          if (lines.length < 2) {
+          // RFC 4180 표준으로 전체 CSV 파싱 (개행 문자 포함 필드 처리)
+          const rows = parseCSVToRows(text);
+          console.log("CSV 총 줄 수:", rows.length);
+          
+          if (rows.length < 2) {
             reject(new Error("파일에는 최소 2줄(헤더 + 데이터)이 필요합니다."));
             return;
           }
           
-          // RFC 4180 표준 파싱 사용
-          const headerCells = parseCSVLine(lines[0]).map(cell => cell.trim());
+          const headerCells = rows[0];
           const numColumns = headerCells.length;
           console.log("헤더:", headerCells);
           console.log("총 컬럼 수:", numColumns);
@@ -120,16 +142,15 @@ export const CreateProject = () => {
           
           const data: Array<{code: string, answer: string, questionIndex: number}> = [];
           
-          for (let i = 1; i < lines.length; i++) {
-            // RFC 4180 표준 파싱 사용
-            const cells = parseCSVLine(lines[i]).map(cell => cell.trim());
+          for (let i = 1; i < rows.length; i++) {
+            const cells = rows[i];
             const rawStudentCode = cells[0];
             
             // 숫자 학생번호 처리 강화
             const studentCode = rawStudentCode?.toString()?.trim();
             
             if (!studentCode) {
-              console.log(`줄 ${i + 1}: 학생번호가 비어있음`);
+              console.log(`행 ${i + 1}: 학생번호가 비어있음`);
               continue;
             }
             
