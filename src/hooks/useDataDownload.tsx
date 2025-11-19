@@ -57,7 +57,8 @@ export const useDataDownload = () => {
         headers.map(header => {
           const value = row[header];
           if (value === null || value === undefined) return '';
-          if (typeof value === 'string' && value.includes(',')) {
+          // RFC 4180: 따옴표, 쉼표, 개행 문자가 있으면 따옴표로 감싸기
+          if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n') || value.includes('\r'))) {
             return `"${value.replace(/"/g, '""')}"`;
           }
           return value;
