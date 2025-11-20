@@ -49,7 +49,9 @@ export const AdminDashboard = () => {
     downloadExplainFeatures,
     downloadFeatureWords,
     downloadBTScores,
-    downloadAggregatedScores
+    downloadAggregatedScores,
+    downloadAutoscoreRuns,
+    downloadAutoscorePredictions
   } = useDataDownload();
   const [stats, setStats] = useState<SystemStats>({
     totalTeachers: 0,
@@ -325,6 +327,10 @@ export const AdminDashboard = () => {
               <Database className="h-4 w-4 mr-2" />
               데이터 다운로드
             </TabsTrigger>
+            <TabsTrigger value="research">
+              <BarChart3 className="h-4 w-4 mr-2" />
+              연구용 데이터
+            </TabsTrigger>
             <TabsTrigger value="import">
               <Upload className="h-4 w-4 mr-2" />
               CSV 임포트
@@ -415,6 +421,83 @@ export const AdminDashboard = () => {
                             >
                               <Download className="h-4 w-4 mr-1" />
                               통합 점수
+                            </Button>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Research Data Tab */}
+          <TabsContent value="research" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>연구용 데이터 다운로드</CardTitle>
+                <CardDescription>
+                  BT 점수, 통합 점수, Autoscore 실행 기록 및 예측 결과를 다운로드할 수 있습니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {projects.map((project) => (
+                    <Card key={project.id}>
+                      <CardContent className="pt-6">
+                        <div className="flex items-start justify-between">
+                          <div className="space-y-2 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-semibold text-lg">{project.title}</h3>
+                              <Badge variant={project.is_active ? 'default' : 'secondary'}>
+                                {project.is_active ? '활성' : '비활성'}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <span>담당: {project.teacher_name}</span>
+                            </div>
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadBTScores(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              BT Scores
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => downloadAggregatedScores(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Aggregated Scores
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => downloadAutoscoreRuns(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Autoscore Runs
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => downloadAutoscorePredictions(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Autoscore Predictions
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => downloadExplainFeatures(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              Explain Features
                             </Button>
                           </div>
                         </div>

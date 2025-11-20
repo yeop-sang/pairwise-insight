@@ -5,8 +5,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Users, Plus, BookOpen, Power, Trophy } from 'lucide-react';
+import { ScoreAggregation } from '@/components/ScoreAggregation';
+import { ScoreVisualization } from '@/components/ScoreVisualization';
+import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
+import { BTStatusPanel } from '@/components/BTStatusPanel';
+import { useScoreAggregation } from '@/hooks/useScoreAggregation';
 
 interface Project {
   id: string;
@@ -15,6 +21,7 @@ interface Project {
   question: string;
   is_active: boolean;
   created_at: string;
+  num_questions: number;
 }
 
 interface ClassInfo {
@@ -29,6 +36,7 @@ export const ProjectDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
+  const { scores } = useScoreAggregation();
 
   const [project, setProject] = useState<Project | null>(null);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
@@ -383,74 +391,109 @@ export const ProjectDetail: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* 학급 할당 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>학급별 할당 관리</CardTitle>
-          <CardDescription>
-            학년과 반을 선택하여 프로젝트에 할당하거나 할당을 취소할 수 있습니다.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {classes.length === 0 ? (
-            <div className="text-center py-8">
-              <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-semibold mb-2">등록된 학생이 없습니다</h3>
-              <p className="text-muted-foreground mb-4">
-                먼저 학생 관리에서 학생을 등록해주세요.
-              </p>
-              <Button onClick={() => navigate('/student-management')}>
-                <Plus className="w-4 h-4 mr-2" />
-                학생 관리로 이동
-              </Button>
-            </div>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {classes.map((cls) => (
-                <Card key={`${cls.grade}-${cls.class_number}`} className="p-4">
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="font-semibold">
-                      {cls.grade}학년 {cls.class_number}반
-                    </h3>
-                    <Badge variant="outline">
-                      {cls.assigned_count}/{cls.student_count}
-                    </Badge>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <div className="text-sm text-muted-foreground">
-                      전체: {cls.student_count}명, 할당: {cls.assigned_count}명
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      {cls.assigned_count < cls.student_count && (
-                        <Button
-                          size="sm"
-                          onClick={() => assignClassToProject(cls.grade, cls.class_number)}
-                          className="flex-1"
-                        >
-                          할당
-                        </Button>
-                      )}
+      {/* BT 학습 상태 */}
+      <BTStatusPanel projectId={id!} />
+
+      {/* 탭 */}
+      <Tabs defaultValue="assignment" className="w-full mt-8">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="assignment">학생 할당</TabsTrigger>
+          <TabsTrigger value="scores">점수 집계</TabsTrigger>
+          <TabsTrigger value="visualization">점수 시각화</TabsTrigger>
+          <TabsTrigger value="explainability">Explainability</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="assignment" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>학급별 할당 관리</CardTitle>
+              <CardDescription>
+                학년과 반을 선택하여 프로젝트에 할당하거나 할당을 취소할 수 있습니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {classes.length === 0 ? (
+                <div className="text-center py-8">
+                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <h3 className="text-lg font-semibold mb-2">등록된 학생이 없습니다</h3>
+                  <p className="text-muted-foreground mb-4">
+                    먼저 학생 관리에서 학생을 등록해주세요.
+                  </p>
+                  <Button onClick={() => navigate('/student-management')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    학생 관리로 이동
+                  </Button>
+                </div>
+              ) : (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {classes.map((cls) => (
+                    <Card key={`${cls.grade}-${cls.class_number}`} className="p-4">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold">
+                          {cls.grade}학년 {cls.class_number}반
+                        </h3>
+                        <Badge variant="outline">
+                          {cls.assigned_count}/{cls.student_count}
+                        </Badge>
+                      </div>
                       
-                      {cls.assigned_count > 0 && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => removeClassFromProject(cls.grade, cls.class_number)}
-                          className="flex-1"
-                        >
-                          할당 취소
-                        </Button>
-                      )}
-                    </div>
-                  </div>
-                </Card>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      <div className="space-y-2">
+                        <div className="text-sm text-muted-foreground">
+                          전체: {cls.student_count}명, 할당: {cls.assigned_count}명
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          {cls.assigned_count < cls.student_count && (
+                            <Button
+                              size="sm"
+                              onClick={() => assignClassToProject(cls.grade, cls.class_number)}
+                              className="flex-1"
+                            >
+                              할당
+                            </Button>
+                          )}
+                          
+                          {cls.assigned_count > 0 && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => removeClassFromProject(cls.grade, cls.class_number)}
+                              className="flex-1"
+                            >
+                              할당 취소
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="scores" className="mt-6">
+          <ScoreAggregation
+            projectId={id!}
+            maxQuestions={project?.num_questions || 5}
+          />
+        </TabsContent>
+
+        <TabsContent value="visualization" className="mt-6">
+          <ScoreVisualization
+            scores={scores}
+            selectedQuestions={Array.from({ length: project?.num_questions || 5 }, (_, i) => i + 1)}
+          />
+        </TabsContent>
+
+        <TabsContent value="explainability" className="mt-6">
+          <ExplainabilityPanel
+            projectId={id!}
+            maxQuestions={project?.num_questions || 5}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };
