@@ -395,56 +395,89 @@ export type Database = {
           },
         ]
       }
-      explain_features: {
+      feature_summary: {
         Row: {
           bad_words: Json
           created_at: string
           good_words: Json
           id: string
-          model_type: string
           project_id: string
-          question_number: number
           run_id: string | null
-          top_k: number
-          updated_at: string
         }
         Insert: {
           bad_words?: Json
           created_at?: string
           good_words?: Json
           id?: string
-          model_type: string
           project_id: string
-          question_number: number
           run_id?: string | null
-          top_k?: number
-          updated_at?: string
         }
         Update: {
           bad_words?: Json
           created_at?: string
           good_words?: Json
           id?: string
-          model_type?: string
           project_id?: string
-          question_number?: number
           run_id?: string | null
-          top_k?: number
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "explain_features_project_id_fkey"
+            foreignKeyName: "feature_summary_project_id_fkey"
             columns: ["project_id"]
             isOneToOne: false
             referencedRelation: "projects"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "explain_features_run_id_fkey"
+            foreignKeyName: "feature_summary_run_id_fkey"
             columns: ["run_id"]
             isOneToOne: false
-            referencedRelation: "autoscore_runs"
+            referencedRelation: "bt_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      feature_words: {
+        Row: {
+          created_at: string
+          id: string
+          polarity: string
+          project_id: string
+          run_id: string
+          score: number
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          polarity: string
+          project_id: string
+          run_id: string
+          score: number
+          word: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          polarity?: string
+          project_id?: string
+          run_id?: string
+          score?: number
+          word?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_words_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_words_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "bt_runs"
             referencedColumns: ["id"]
           },
         ]
