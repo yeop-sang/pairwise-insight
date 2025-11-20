@@ -408,20 +408,43 @@ Bradley-Terry 모델을 적용하면 최종 응답 순위를 계산할 수 있�
         return;
       }
 
-      const formattedData = data.map(row => ({
-        id: row.id,
-        project_id: row.project_id,
-        question_number: row.question_number,
-        run_id: row.run_id || '',
-        good_words: JSON.stringify(row.good_words),
-        bad_words: JSON.stringify(row.bad_words),
-        top_k: row.top_k,
-        model_type: row.model_type,
-        created_at: row.created_at,
-      }));
+      // Parse good_words and bad_words to include word, score, and type
+      const detailedData: any[] = [];
+      data.forEach(row => {
+        const goodWords = (row.good_words as any[]) || [];
+        const badWords = (row.bad_words as any[]) || [];
+        
+        goodWords.forEach(item => {
+          detailedData.push({
+            project_id: row.project_id,
+            question_number: row.question_number,
+            run_id: row.run_id || '',
+            word: item.word || '',
+            score: item.score || 0,
+            type: 'good',
+            top_k: row.top_k,
+            model_type: row.model_type,
+            created_at: row.created_at,
+          });
+        });
+        
+        badWords.forEach(item => {
+          detailedData.push({
+            project_id: row.project_id,
+            question_number: row.question_number,
+            run_id: row.run_id || '',
+            word: item.word || '',
+            score: item.score || 0,
+            type: 'bad',
+            top_k: row.top_k,
+            model_type: row.model_type,
+            created_at: row.created_at,
+          });
+        });
+      });
 
-      const headers = ['id', 'project_id', 'question_number', 'run_id', 'good_words', 'bad_words', 'top_k', 'model_type', 'created_at'];
-      const blob = generateCSV(formattedData, headers);
+      const headers = ['project_id', 'question_number', 'run_id', 'word', 'score', 'type', 'top_k', 'model_type', 'created_at'];
+      const blob = generateCSV(detailedData, headers);
 
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
