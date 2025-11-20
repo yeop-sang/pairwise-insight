@@ -43,7 +43,14 @@ export const AdminDashboard = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isAdmin, isLoading: roleLoading } = useUserRole();
-  const { downloadProjectData, downloadStudentResponsesCSV } = useDataDownload();
+  const { 
+    downloadProjectData, 
+    downloadStudentResponsesCSV,
+    downloadExplainFeatures,
+    downloadFeatureWords,
+    downloadBTScores,
+    downloadAggregatedScores
+  } = useDataDownload();
   const [stats, setStats] = useState<SystemStats>({
     totalTeachers: 0,
     totalStudents: 0,
@@ -360,13 +367,13 @@ export const AdminDashboard = () => {
                               생성일: {new Date(project.created_at).toLocaleDateString('ko-KR')}
                             </p>
                           </div>
-                          <div className="flex gap-2">
+                          <div className="flex flex-wrap gap-2">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => downloadStudentResponsesCSV(project.id)}
                             >
-                              <Download className="h-4 w-4 mr-2" />
+                              <Download className="h-4 w-4 mr-1" />
                               응답 CSV
                             </Button>
                             <Button
@@ -374,8 +381,40 @@ export const AdminDashboard = () => {
                               size="sm"
                               onClick={() => handleDownloadProject(project.id)}
                             >
-                              <Download className="h-4 w-4 mr-2" />
+                              <Download className="h-4 w-4 mr-1" />
                               전체 ZIP
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => downloadExplainFeatures(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              좋은/나쁜 단어
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => downloadFeatureWords(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              단어 중요도
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => downloadBTScores(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              BT 점수
+                            </Button>
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => downloadAggregatedScores(project.id)}
+                            >
+                              <Download className="h-4 w-4 mr-1" />
+                              통합 점수
                             </Button>
                           </div>
                         </div>
