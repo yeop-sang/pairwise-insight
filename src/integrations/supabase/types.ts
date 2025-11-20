@@ -395,6 +395,60 @@ export type Database = {
           },
         ]
       }
+      explain_features: {
+        Row: {
+          bad_words: Json
+          created_at: string
+          good_words: Json
+          id: string
+          model_type: string
+          project_id: string
+          question_number: number
+          run_id: string | null
+          top_k: number
+          updated_at: string
+        }
+        Insert: {
+          bad_words?: Json
+          created_at?: string
+          good_words?: Json
+          id?: string
+          model_type: string
+          project_id: string
+          question_number: number
+          run_id?: string | null
+          top_k?: number
+          updated_at?: string
+        }
+        Update: {
+          bad_words?: Json
+          created_at?: string
+          good_words?: Json
+          id?: string
+          model_type?: string
+          project_id?: string
+          question_number?: number
+          run_id?: string | null
+          top_k?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "explain_features_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "explain_features_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "autoscore_runs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -854,6 +908,30 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vocab_embeddings: {
+        Row: {
+          created_at: string
+          dimension: number
+          embedding: number[]
+          model_id: string
+          word: string
+        }
+        Insert: {
+          created_at?: string
+          dimension: number
+          embedding: number[]
+          model_id: string
+          word: string
+        }
+        Update: {
+          created_at?: string
+          dimension?: number
+          embedding?: number[]
+          model_id?: string
+          word?: string
         }
         Relationships: []
       }
