@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { apiFetch } from '@/lib/api-client';
 import { useToast } from '@/hooks/use-toast';
 
 interface ComparisonRow {
@@ -653,6 +654,82 @@ Bradley-Terry 모델을 적용하면 최종 응답 순위를 계산할 수 있�
     }
   }, [toast, generateCSV]);
 
+  const downloadAutoscoreRuns = useCallback(async (projectId: string) => {
+    try {
+      toast({
+        title: "데이터 다운로드 중...",
+        description: "Autoscore Runs 데이터를 가져오는 중입니다.",
+      });
+
+      const data = await apiFetch<any[]>(
+        `/api/admin/export/autoscore-runs?project_id=${projectId}`,
+        { method: 'GET' }
+      );
+
+      const headers = ['id', 'project_id', 'question_number', 'model_type', 'status', 'started_at', 'finished_at', 'metrics', 'params', 'error'];
+      const blob = generateCSV(data, headers);
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `autoscore_runs_${projectId}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "다운로드 완료",
+        description: "Autoscore Runs 데이터가 다운로드되었습니다.",
+      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: "다운로드 실패",
+        description: error.message || "데이터 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, generateCSV]);
+
+  const downloadAutoscorePredictions = useCallback(async (projectId: string) => {
+    try {
+      toast({
+        title: "데이터 다운로드 중...",
+        description: "Autoscore Predictions 데이터를 가져오는 중입니다.",
+      });
+
+      const data = await apiFetch<any[]>(
+        `/api/admin/export/autoscore-predictions?project_id=${projectId}`,
+        { method: 'GET' }
+      );
+
+      const headers = ['id', 'project_id', 'question_number', 'response_text', 'embedding_vector', 'predicted_score', 'scaled_score', 'created_at'];
+      const blob = generateCSV(data, headers);
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `autoscore_predictions_${projectId}_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "다운로드 완료",
+        description: "Autoscore Predictions 데이터가 다운로드되었습니다.",
+      });
+    } catch (error: any) {
+      console.error('Download error:', error);
+      toast({
+        title: "다운로드 실패",
+        description: error.message || "데이터 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, generateCSV]);
+
   return {
     downloadProjectData,
     downloadStudentResponsesCSV,
@@ -660,5 +737,7 @@ Bradley-Terry 모델을 적용하면 최종 응답 순위를 계산할 수 있�
     downloadFeatureWords,
     downloadBTScores,
     downloadAggregatedScores,
+    downloadAutoscoreRuns,
+    downloadAutoscorePredictions,
   };
 };
