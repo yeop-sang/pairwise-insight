@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
-import { Plus, Users, BarChart3, Clock, FileText, Trash2 } from "lucide-react";
+import { Plus, Users, BarChart3, Clock, FileText, Trash2, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useDataDownload } from "@/hooks/useDataDownload";
 
 interface Project {
   id: string;
@@ -25,6 +26,7 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
+  const { downloadExplainFeatures, downloadFeatureWords } = useDataDownload();
 
   useEffect(() => {
     if (!authLoading) {
@@ -243,7 +245,7 @@ export const Dashboard = () => {
                       </div>
                     </div>
                     
-                    <div className="flex items-center gap-6 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
                       <div className="text-center">
                         <Badge variant={project.is_active ? "default" : "secondary"}>
                           {project.is_active ? "활성" : "비활성"}
@@ -252,6 +254,28 @@ export const Dashboard = () => {
                       <div className="text-center min-w-20">
                         <p className="text-xs">{new Date(project.created_at).toLocaleDateString()}</p>
                       </div>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadExplainFeatures(project.id);
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        좋은/나쁜 단어
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          downloadFeatureWords(project.id);
+                        }}
+                      >
+                        <Download className="h-4 w-4 mr-1" />
+                        단어 중요도
+                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"

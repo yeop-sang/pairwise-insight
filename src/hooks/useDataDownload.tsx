@@ -377,8 +377,265 @@ Bradley-Terry 모델을 적용하면 최종 응답 순위를 계산할 수 있�
     }
   }, [generateCSV, toast]);
 
+  const downloadExplainFeatures = useCallback(async (projectId: string) => {
+    try {
+      toast({
+        title: "데이터 다운로드 중...",
+        description: "Explainability 데이터를 다운로드하고 있습니다.",
+      });
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+
+      const { data, error } = await supabase
+        .from('explain_features')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('question_number')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast({
+          title: "데이터 없음",
+          description: "다운로드할 Explainability 데이터가 없습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formattedData = data.map(row => ({
+        id: row.id,
+        project_id: row.project_id,
+        question_number: row.question_number,
+        run_id: row.run_id || '',
+        good_words: JSON.stringify(row.good_words),
+        bad_words: JSON.stringify(row.bad_words),
+        top_k: row.top_k,
+        model_type: row.model_type,
+        created_at: row.created_at,
+      }));
+
+      const headers = ['id', 'project_id', 'question_number', 'run_id', 'good_words', 'bad_words', 'top_k', 'model_type', 'created_at'];
+      const blob = generateCSV(formattedData, headers);
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const sanitizedTitle = (project?.title || 'project').replace(/[^a-zA-Z0-9가-힣]/g, '_');
+      link.download = `${sanitizedTitle}_explain_features_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "다운로드 완료",
+        description: "Explainability 데이터가 다운로드되었습니다.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "다운로드 실패",
+        description: "데이터 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, generateCSV]);
+
+  const downloadFeatureWords = useCallback(async (projectId: string) => {
+    try {
+      toast({
+        title: "데이터 다운로드 중...",
+        description: "단어 중요도 데이터를 다운로드하고 있습니다.",
+      });
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+
+      const { data, error } = await supabase
+        .from('feature_words')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('score', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast({
+          title: "데이터 없음",
+          description: "다운로드할 단어 중요도 데이터가 없습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const headers = ['id', 'project_id', 'run_id', 'word', 'score', 'polarity', 'created_at'];
+      const blob = generateCSV(data, headers);
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const sanitizedTitle = (project?.title || 'project').replace(/[^a-zA-Z0-9가-힣]/g, '_');
+      link.download = `${sanitizedTitle}_feature_words_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "다운로드 완료",
+        description: "단어 중요도 데이터가 다운로드되었습니다.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "다운로드 실패",
+        description: "데이터 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, generateCSV]);
+
+  const downloadBTScores = useCallback(async (projectId: string) => {
+    try {
+      toast({
+        title: "데이터 다운로드 중...",
+        description: "Bradley-Terry 점수 데이터를 다운로드하고 있습니다.",
+      });
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+
+      const { data, error } = await supabase
+        .from('bt_scores')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('question_number')
+        .order('rank');
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast({
+          title: "데이터 없음",
+          description: "다운로드할 BT 점수 데이터가 없습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const headers = ['id', 'project_id', 'run_id', 'response_id', 'question_number', 'score', 'rank', 'se', 'ci_low', 'ci_high', 'updated_at'];
+      const blob = generateCSV(data, headers);
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const sanitizedTitle = (project?.title || 'project').replace(/[^a-zA-Z0-9가-힣]/g, '_');
+      link.download = `${sanitizedTitle}_bt_scores_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "다운로드 완료",
+        description: "BT 점수 데이터가 다운로드되었습니다.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "다운로드 실패",
+        description: "데이터 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, generateCSV]);
+
+  const downloadAggregatedScores = useCallback(async (projectId: string) => {
+    try {
+      toast({
+        title: "데이터 다운로드 중...",
+        description: "통합 점수 데이터를 다운로드하고 있습니다.",
+      });
+
+      const { data: project } = await supabase
+        .from('projects')
+        .select('title')
+        .eq('id', projectId)
+        .single();
+
+      const { data, error } = await supabase
+        .from('aggregated_scores')
+        .select('*')
+        .eq('project_id', projectId)
+        .order('score', { ascending: false });
+
+      if (error) throw error;
+
+      if (!data || data.length === 0) {
+        toast({
+          title: "데이터 없음",
+          description: "다운로드할 통합 점수 데이터가 없습니다.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const formattedData = data.map(row => ({
+        id: row.id,
+        project_id: row.project_id,
+        response_id: row.response_id,
+        run_id: row.run_id || '',
+        method: row.method,
+        score: row.score,
+        weights: JSON.stringify(row.weights),
+        updated_at: row.updated_at,
+      }));
+
+      const headers = ['id', 'project_id', 'response_id', 'run_id', 'method', 'score', 'weights', 'updated_at'];
+      const blob = generateCSV(formattedData, headers);
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const sanitizedTitle = (project?.title || 'project').replace(/[^a-zA-Z0-9가-힣]/g, '_');
+      link.download = `${sanitizedTitle}_aggregated_scores_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "다운로드 완료",
+        description: "통합 점수 데이터가 다운로드되었습니다.",
+      });
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({
+        title: "다운로드 실패",
+        description: "데이터 다운로드 중 오류가 발생했습니다.",
+        variant: "destructive",
+      });
+    }
+  }, [toast, generateCSV]);
+
   return {
     downloadProjectData,
     downloadStudentResponsesCSV,
+    downloadExplainFeatures,
+    downloadFeatureWords,
+    downloadBTScores,
+    downloadAggregatedScores,
   };
 };
