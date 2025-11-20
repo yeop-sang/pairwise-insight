@@ -19,9 +19,16 @@ export type Database = {
           id: string
           method: string
           project_id: string
+          q1_score: number | null
+          q2_score: number | null
+          q3_score: number | null
+          q4_score: number | null
+          q5_score: number | null
+          rank: number | null
           response_id: string
           run_id: string | null
           score: number
+          total_score: number | null
           updated_at: string | null
           weights: Json | null
         }
@@ -29,9 +36,16 @@ export type Database = {
           id?: string
           method: string
           project_id: string
+          q1_score?: number | null
+          q2_score?: number | null
+          q3_score?: number | null
+          q4_score?: number | null
+          q5_score?: number | null
+          rank?: number | null
           response_id: string
           run_id?: string | null
           score: number
+          total_score?: number | null
           updated_at?: string | null
           weights?: Json | null
         }
@@ -39,9 +53,16 @@ export type Database = {
           id?: string
           method?: string
           project_id?: string
+          q1_score?: number | null
+          q2_score?: number | null
+          q3_score?: number | null
+          q4_score?: number | null
+          q5_score?: number | null
+          rank?: number | null
           response_id?: string
           run_id?: string | null
           score?: number
+          total_score?: number | null
           updated_at?: string | null
           weights?: Json | null
         }
