@@ -395,30 +395,39 @@ export type Database = {
           },
         ]
       }
-      feature_summary: {
+      explain_features: {
         Row: {
           bad_words: Json
           created_at: string
           good_words: Json
           id: string
+          model_type: string
           project_id: string
+          question_number: number
           run_id: string | null
+          top_k: number
         }
         Insert: {
           bad_words?: Json
           created_at?: string
           good_words?: Json
           id?: string
+          model_type?: string
           project_id: string
+          question_number: number
           run_id?: string | null
+          top_k?: number
         }
         Update: {
           bad_words?: Json
           created_at?: string
           good_words?: Json
           id?: string
+          model_type?: string
           project_id?: string
+          question_number?: number
           run_id?: string | null
+          top_k?: number
         }
         Relationships: [
           {
