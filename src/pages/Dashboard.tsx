@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Plus, Users, BarChart3, Clock, FileText, Trash2, Download } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDataDownload } from "@/hooks/useDataDownload";
+import { FastAPIStatusPanel } from "@/components/FastAPIStatusPanel";
 
 interface Project {
   id: string;
@@ -205,6 +206,11 @@ export const Dashboard = () => {
               </div>
             </CardContent>
           </Card>
+        </div>
+
+        {/* FastAPI Status */}
+        <div className="mb-8">
+          <FastAPIStatusPanel />
         </div>
 
         {/* Recent Projects */}
