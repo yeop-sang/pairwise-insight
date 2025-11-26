@@ -14,7 +14,8 @@ const Index = () => {
     user,
     profile,
     signIn,
-    signUp
+    signUp,
+    resetPassword
   } = useAuth();
   const {
     student,
@@ -87,6 +88,10 @@ const Index = () => {
       console.error('Signup error:', error);
     }
   };
+
+  const handleResetPassword = async (email: string) => {
+    await resetPassword(email);
+  };
   return <div className="min-h-screen bg-gradient-subtle flex flex-col overflow-hidden relative">
       {/* Metallic decorative background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -139,7 +144,11 @@ const Index = () => {
                 <h2 className="text-3xl font-display font-bold text-metallic-dark mb-6 text-center">
                   교사 계정으로 시작하기
                 </h2>
-                <AuthForm onLogin={handleLogin} onSignup={handleSignup} />
+                <AuthForm 
+                  onLogin={handleLogin} 
+                  onSignup={handleSignup}
+                  onResetPassword={handleResetPassword}
+                />
               </div>
             </div>
           </div>

@@ -20,6 +20,7 @@ interface AuthContextType {
   signUp: (email: string, password: string, name: string, role: 'teacher' | 'student') => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<{ error: any }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -175,6 +176,38 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
+  const resetPassword = async (email: string) => {
+    try {
+      const redirectUrl = `${window.location.origin}/`;
+      
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: redirectUrl
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "비밀번호 재설정 실패",
+          description: error.message
+        });
+      } else {
+        toast({
+          title: "이메일 전송 완료",
+          description: "비밀번호 재설정 링크가 이메일로 전송되었습니다."
+        });
+      }
+
+      return { error };
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "오류 발생",
+        description: error.message
+      });
+      return { error };
+    }
+  };
+
   const value = {
     user,
     session,
@@ -182,7 +215,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     loading,
     signUp,
     signIn,
-    signOut
+    signOut,
+    resetPassword
   };
 
   return (
