@@ -155,8 +155,11 @@ export const StudentDashboard = () => {
                         <CardDescription>{project.description}</CardDescription>
                       )}
                     </div>
-                    <Badge variant={project.has_completed ? "outline" : project.is_active ? "default" : "secondary"}>
-                      {project.has_completed ? "평가 완료" : project.is_active ? "진행중" : "종료됨"}
+                    <Badge 
+                      variant={project.has_completed ? "default" : project.is_active ? "secondary" : "outline"}
+                      className={project.has_completed ? "bg-green-500 hover:bg-green-600" : ""}
+                    >
+                      {project.has_completed ? "완료" : project.is_active ? "진행중" : "종료됨"}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -182,10 +185,19 @@ export const StudentDashboard = () => {
                     <Button 
                       className="w-full" 
                       onClick={() => navigate(`/compare/${project.id}`)}
-                      disabled={!project.is_active}
+                      disabled={project.has_completed || !project.is_active}
                     >
-                      <BookOpen className="w-4 h-4 mr-2" />
-                      {project.is_active ? "비교 평가 시작" : "평가 종료됨"}
+                      {project.has_completed ? (
+                        <>
+                          <CheckCircle className="w-4 h-4 mr-2" />
+                          평가 완료됨
+                        </>
+                      ) : (
+                        <>
+                          <BookOpen className="w-4 h-4 mr-2" />
+                          {project.is_active ? "비교 평가 시작" : "평가 종료됨"}
+                        </>
+                      )}
                     </Button>
                   </div>
                 </CardContent>
