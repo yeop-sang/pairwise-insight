@@ -212,13 +212,26 @@ export const StudentManagement: React.FC = () => {
     if (!user) return;
 
     try {
-      const { error } = await supabase
+      const { data, error, count } = await supabase
         .from('students')
         .delete()
         .eq('id', studentId)
-        .eq('teacher_id', user.id);
+        .eq('teacher_id', user.id)
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
+
+      if (!data || data.length === 0) {
+        toast({
+          title: '오류',
+          description: '해당 학생을 찾을 수 없거나 삭제 권한이 없습니다.',
+          variant: 'destructive',
+        });
+        return;
+      }
 
       toast({
         title: '성공',
