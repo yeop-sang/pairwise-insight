@@ -109,14 +109,31 @@ export const useSessionMetadata = (
         const randomSeed = generateRandomSeed();
         const appVersion = getAppVersion();
         
-        // 응답 개수에 따른 비교 횟수 계산 (등수 결정에 필요한 비교 횟수의 3배)
+        // 할당된 학생 수 조회
+        const { data: assignedStudents, error: assignmentError } = await supabase
+          .from('project_assignments')
+          .select('student_id')
+          .eq('project_id', projectId);
+        
+        if (assignmentError) {
+          console.error('Error fetching assigned students:', assignmentError);
+        }
+        
+        const numAssignedStudents = assignedStudents?.length || 1; // 최소 1명
+        
+        // 응답 개수에 따른 기본 비교 횟수 계산
         const baseComparisons = numResponses 
           ? calculateRequiredComparisons(numResponses)
           : DEFAULT_CONFIG.reviewerTargetPerPerson;
         
-        const requiredComparisons = baseComparisons * 3; // 3배로 설정
+        // 전체 필요 횟수 = 기본 횟수 * 3
+        const totalRequiredComparisons = baseComparisons * 3;
         
-        console.log(`Creating session with ${numResponses} responses, base comparisons: ${baseComparisons}, requiring ${requiredComparisons} comparisons per reviewer (3x multiplier)`);
+        // 각 학생당 필요 횟수 = 전체 필요 횟수 / 할당된 학생 수
+        const requiredComparisonsPerStudent = Math.ceil(totalRequiredComparisons / numAssignedStudents);
+        
+        console.log(`Creating session: ${numResponses} responses, ${numAssignedStudents} students assigned`);
+        console.log(`Base comparisons: ${baseComparisons}, Total required (3x): ${totalRequiredComparisons}, Per student: ${requiredComparisonsPerStudent}`);
         
         const { error } = await supabase
           .from('session_metadata')
@@ -127,7 +144,7 @@ export const useSessionMetadata = (
             random_seed: randomSeed,
             app_version: appVersion,
             target_per_response: DEFAULT_CONFIG.targetPerResponse,
-            reviewer_target_per_person: requiredComparisons,
+            reviewer_target_per_person: requiredComparisonsPerStudent,
             pairing_strategy: DEFAULT_CONFIG.pairingStrategy,
             k_elo: DEFAULT_CONFIG.kElo,
             allow_tie: DEFAULT_CONFIG.allowTie,
@@ -156,7 +173,7 @@ export const useSessionMetadata = (
           startedAt: new Date(),
           config: {
             ...DEFAULT_CONFIG,
-            reviewerTargetPerPerson: requiredComparisons
+            reviewerTargetPerPerson: requiredComparisonsPerStudent
           }
         });
       }
