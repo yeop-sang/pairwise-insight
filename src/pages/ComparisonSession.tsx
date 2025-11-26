@@ -415,34 +415,45 @@ export const ComparisonSession = () => {
     );
   }
 
+  // 비교 쌍이 없고 초기화 중이 아니면 완료로 처리
+  if (!currentPair && !isInitializing) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-8 text-center max-w-2xl mx-auto">
+          <div className="h-20 w-20 text-green-500 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center text-3xl">
+            ✓
+          </div>
+          <h2 className="text-3xl font-bold mb-4 text-foreground">평가를 완료했습니다!</h2>
+          <p className="text-lg text-muted-foreground mb-6">
+            {currentQuestion}번 문항의 비교를 모두 완료했습니다.<br/>
+            동료 평가에 참여해주셔서 감사합니다.
+          </p>
+          <div className="bg-muted/50 p-6 rounded-lg mb-6">
+            <p className="text-sm text-muted-foreground mb-2">
+              총 <span className="font-semibold text-foreground">{reviewerStats?.completed || 0}개</span>의 비교를 완료했습니다
+            </p>
+            <p className="text-sm text-muted-foreground">
+              여러분의 소중한 피드백이 동료들의 학습에 큰 도움이 됩니다
+            </p>
+          </div>
+          <Button 
+            size="lg" 
+            onClick={() => navigate('/student-dashboard')}
+            className="min-w-48"
+          >
+            학생 대시보드로 돌아가기
+          </Button>
+        </Card>
+      </div>
+    );
+  }
+
+  // 초기화 중일 때
   if (!currentPair) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col items-center justify-center h-64 space-y-4">
-          <p className="text-muted-foreground text-lg">
-            {isInitializing ? "비교 쌍을 준비하고 있습니다..." : "비교할 응답을 찾을 수 없습니다."}
-          </p>
-          {!isInitializing && (
-            <div className="text-sm text-muted-foreground space-y-2 text-center">
-              <p>디버그 정보:</p>
-              <p>- 프로젝트 ID: {projectId}</p>
-              <p>- 현재 문항: {currentQuestion}</p>
-              <p>- 전체 응답 수: {allResponses.length}개</p>
-              <p>- 현재 문항 응답 수: {responses.length}개</p>
-              <p>- 학생 번호: {student?.student_number || '없음'}</p>
-              <p>- 세션 메타데이터: {sessionMetadata ? '있음' : '없음'}</p>
-              {sessionMetadata && (
-                <p>- 목표 비교 횟수: {sessionMetadata.config.reviewerTargetPerPerson}개</p>
-              )}
-              {responses.length > 0 && (
-                <p>- 모든 응답 비교 가능 (자기 응답 포함)</p>
-              )}
-              <p className="text-xs italic">동일 페어를 여러 학생이 평가하여 객관성 확보</p>
-            </div>
-          )}
-          <Button onClick={() => navigate('/student-dashboard')}>
-            대시보드로 돌아가기
-          </Button>
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">비교 쌍을 준비하고 있습니다...</p>
         </div>
       </div>
     );

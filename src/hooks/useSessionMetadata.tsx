@@ -109,12 +109,14 @@ export const useSessionMetadata = (
         const randomSeed = generateRandomSeed();
         const appVersion = getAppVersion();
         
-        // 응답 개수에 따른 비교 횟수 계산
-        const requiredComparisons = numResponses 
+        // 응답 개수에 따른 비교 횟수 계산 (등수 결정에 필요한 비교 횟수의 3배)
+        const baseComparisons = numResponses 
           ? calculateRequiredComparisons(numResponses)
           : DEFAULT_CONFIG.reviewerTargetPerPerson;
         
-        console.log(`Creating session with ${numResponses} responses, requiring ${requiredComparisons} comparisons per reviewer`);
+        const requiredComparisons = baseComparisons * 3; // 3배로 설정
+        
+        console.log(`Creating session with ${numResponses} responses, base comparisons: ${baseComparisons}, requiring ${requiredComparisons} comparisons per reviewer (3x multiplier)`);
         
         const { error } = await supabase
           .from('session_metadata')
