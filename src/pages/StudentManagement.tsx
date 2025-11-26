@@ -55,10 +55,13 @@ export const StudentManagement: React.FC = () => {
   }, [students, searchTerm, selectedGrade, selectedClass]);
 
   const fetchStudents = async () => {
+    if (!user) return;
+    
     try {
       const { data, error } = await supabase
         .from('students')
         .select('*')
+        .eq('teacher_id', user.id)
         .order('grade', { ascending: true })
         .order('class_number', { ascending: true })
         .order('student_number', { ascending: true });
@@ -232,10 +235,13 @@ export const StudentManagement: React.FC = () => {
   };
 
   const deleteByGrade = async (grade: number) => {
+    if (!user) return;
+    
     try {
       const { data: studentsToDelete, error: fetchError } = await supabase
         .from('students')
         .select('id')
+        .eq('teacher_id', user.id)
         .eq('grade', grade);
 
       if (fetchError) throw fetchError;
@@ -251,6 +257,7 @@ export const StudentManagement: React.FC = () => {
       const { error } = await supabase
         .from('students')
         .delete()
+        .eq('teacher_id', user.id)
         .eq('grade', grade);
 
       if (error) throw error;
@@ -272,10 +279,13 @@ export const StudentManagement: React.FC = () => {
   };
 
   const deleteByClass = async (grade: number, classNumber: number) => {
+    if (!user) return;
+    
     try {
       const { data: studentsToDelete, error: fetchError } = await supabase
         .from('students')
         .select('id')
+        .eq('teacher_id', user.id)
         .eq('grade', grade)
         .eq('class_number', classNumber);
 
@@ -292,6 +302,7 @@ export const StudentManagement: React.FC = () => {
       const { error } = await supabase
         .from('students')
         .delete()
+        .eq('teacher_id', user.id)
         .eq('grade', grade)
         .eq('class_number', classNumber);
 
