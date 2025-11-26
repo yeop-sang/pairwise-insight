@@ -9,10 +9,12 @@ import { Mail, Lock, User, GraduationCap, BookOpen } from "lucide-react";
 interface AuthFormProps {
   onLogin: (email: string, password: string) => void;
   onSignup: (email: string, password: string, name: string) => void;
+  onResetPassword: (email: string) => void;
 }
 export const AuthForm = ({
   onLogin,
-  onSignup
+  onSignup,
+  onResetPassword
 }: AuthFormProps) => {
   const [teacherLoginData, setTeacherLoginData] = useState({
     email: "",
@@ -23,6 +25,8 @@ export const AuthForm = ({
     password: "",
     name: ""
   });
+  const [resetEmail, setResetEmail] = useState("");
+  const [showResetForm, setShowResetForm] = useState(false);
   const normalizeEmail = (email: string): string => {
     // @가 없으면 기본 도메인 추가
     if (email && !email.includes('@')) {
@@ -40,6 +44,14 @@ export const AuthForm = ({
     e.preventDefault();
     const normalizedEmail = normalizeEmail(signupData.email);
     onSignup(normalizedEmail, signupData.password, signupData.name);
+  };
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    const normalizedEmail = normalizeEmail(resetEmail);
+    onResetPassword(normalizedEmail);
+    setShowResetForm(false);
+    setResetEmail("");
   };
   return <div className="w-full max-w-md space-y-6">
       {/* Teacher Login */}
@@ -60,33 +72,90 @@ export const AuthForm = ({
             </TabsList>
             
             <TabsContent value="login" className="space-y-4">
-              <form onSubmit={handleTeacherLogin} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="teacher-login-email">이메일 또는 ID</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="teacher-login-email" type="text" placeholder="이메일 또는 ID를 입력하세요" className="pl-10" value={teacherLoginData.email} onChange={e => setTeacherLoginData({
-                    ...teacherLoginData,
-                    email: e.target.value
-                  })} required />
+              {!showResetForm ? (
+                <>
+                  <form onSubmit={handleTeacherLogin} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="teacher-login-email">이메일 또는 ID</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input id="teacher-login-email" type="text" placeholder="이메일 또는 ID를 입력하세요" className="pl-10" value={teacherLoginData.email} onChange={e => setTeacherLoginData({
+                        ...teacherLoginData,
+                        email: e.target.value
+                      })} required />
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="teacher-login-password">비밀번호</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input id="teacher-login-password" type="password" placeholder="비밀번호를 입력하세요" className="pl-10" value={teacherLoginData.password} onChange={e => setTeacherLoginData({
+                        ...teacherLoginData,
+                        password: e.target.value
+                      })} required />
+                      </div>
+                    </div>
+                    
+                    <Button type="submit" className="w-full shadow-medium hover:shadow-strong transition-all" variant="default">
+                      교사로 로그인
+                    </Button>
+                  </form>
+                  
+                  <div className="text-center">
+                    <Button 
+                      type="button" 
+                      variant="link" 
+                      className="text-sm text-muted-foreground hover:text-primary"
+                      onClick={() => setShowResetForm(true)}
+                    >
+                      비밀번호를 잊으셨나요?
+                    </Button>
                   </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="teacher-login-password">비밀번호</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input id="teacher-login-password" type="password" placeholder="비밀번호를 입력하세요" className="pl-10" value={teacherLoginData.password} onChange={e => setTeacherLoginData({
-                    ...teacherLoginData,
-                    password: e.target.value
-                  })} required />
+                </>
+              ) : (
+                <>
+                  <form onSubmit={handleResetPassword} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">이메일</Label>
+                      <div className="relative">
+                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input 
+                          id="reset-email" 
+                          type="email" 
+                          placeholder="가입시 사용한 이메일을 입력하세요" 
+                          className="pl-10" 
+                          value={resetEmail} 
+                          onChange={e => setResetEmail(e.target.value)} 
+                          required 
+                        />
+                      </div>
+                    </div>
+                    
+                    <div className="text-sm text-muted-foreground">
+                      입력하신 이메일로 비밀번호 재설정 링크가 전송됩니다.
+                    </div>
+                    
+                    <Button type="submit" className="w-full shadow-medium hover:shadow-strong transition-all" variant="default">
+                      재설정 링크 보내기
+                    </Button>
+                  </form>
+                  
+                  <div className="text-center">
+                    <Button 
+                      type="button" 
+                      variant="link" 
+                      className="text-sm text-muted-foreground hover:text-primary"
+                      onClick={() => {
+                        setShowResetForm(false);
+                        setResetEmail("");
+                      }}
+                    >
+                      로그인으로 돌아가기
+                    </Button>
                   </div>
-                </div>
-                
-                <Button type="submit" className="w-full shadow-medium hover:shadow-strong transition-all" variant="default">
-                  교사로 로그인
-                </Button>
-              </form>
+                </>
+              )}
             </TabsContent>
             
             <TabsContent value="signup" className="space-y-4">
