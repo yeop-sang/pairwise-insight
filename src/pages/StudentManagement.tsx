@@ -209,12 +209,14 @@ export const StudentManagement: React.FC = () => {
 
   const deleteStudent = async (studentId: string) => {
     if (!confirm('이 학생을 삭제하시겠습니까?')) return;
+    if (!user) return;
 
     try {
       const { error } = await supabase
         .from('students')
         .delete()
-        .eq('id', studentId);
+        .eq('id', studentId)
+        .eq('teacher_id', user.id);
 
       if (error) throw error;
 
