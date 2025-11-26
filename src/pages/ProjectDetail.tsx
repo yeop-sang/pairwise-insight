@@ -11,7 +11,6 @@ import { ArrowLeft, Users, Plus, BookOpen, Power, Trophy } from 'lucide-react';
 import { ScoreAggregation } from '@/components/ScoreAggregation';
 import { ScoreVisualization } from '@/components/ScoreVisualization';
 import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
-import { BTStatusPanel } from '@/components/BTStatusPanel';
 import { useScoreAggregation } from '@/hooks/useScoreAggregation';
 
 interface Project {
@@ -390,9 +389,6 @@ export const ProjectDetail: React.FC = () => {
           <p className="text-lg">{project.question}</p>
         </CardContent>
       </Card>
-
-      {/* BT 학습 상태 */}
-      <BTStatusPanel projectId={id!} />
 
       {/* 탭 */}
       <Tabs defaultValue="assignment" className="w-full mt-8">
