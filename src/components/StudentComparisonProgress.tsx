@@ -49,7 +49,7 @@ export const StudentComparisonProgress = ({ projectId, maxQuestions }: StudentCo
           student_id,
           has_completed,
           completed_at,
-          students!fk_project_assignments_student_id (
+          students (
             student_id,
             name
           )

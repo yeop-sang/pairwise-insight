@@ -92,7 +92,7 @@ export const ProjectAssignment: React.FC = () => {
         .from('project_assignments')
         .select(`
           *,
-          students!fk_project_assignments_student_id (
+          students (
             student_id,
             name,
             grade,
@@ -105,17 +105,19 @@ export const ProjectAssignment: React.FC = () => {
 
       if (error) throw error;
 
-      const formattedData = (data || []).map(assignment => ({
-        id: assignment.id,
-        student_id: assignment.students.student_id,
-        name: assignment.students.name,
-        grade: assignment.students.grade,
-        class_number: assignment.students.class_number,
-        student_number: assignment.students.student_number,
-        has_completed: assignment.has_completed,
-        completed_at: assignment.completed_at,
-        assigned_at: assignment.assigned_at,
-      }));
+      const formattedData = (data || [])
+        .filter(assignment => assignment.students) // 학생 정보가 있는 것만 필터링
+        .map(assignment => ({
+          id: assignment.id,
+          student_id: assignment.students!.student_id,
+          name: assignment.students!.name,
+          grade: assignment.students!.grade,
+          class_number: assignment.students!.class_number,
+          student_number: assignment.students!.student_number,
+          has_completed: assignment.has_completed,
+          completed_at: assignment.completed_at,
+          assigned_at: assignment.assigned_at,
+        }));
 
       setAssignedStudents(formattedData);
     } catch (error) {
