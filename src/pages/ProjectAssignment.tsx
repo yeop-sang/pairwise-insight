@@ -226,7 +226,7 @@ export const ProjectAssignment: React.FC = () => {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalCount}</div>
+            <div className="text-2xl font-bold">{totalCount}명</div>
           </CardContent>
         </Card>
 
@@ -236,7 +236,10 @@ export const ProjectAssignment: React.FC = () => {
             <CheckCircle className="h-4 w-4 text-green-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{completedCount}</div>
+            <div className="text-2xl font-bold text-green-600">{completedCount}명</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              전체의 {completionRate}% 완료
+            </p>
           </CardContent>
         </Card>
 
@@ -246,16 +249,25 @@ export const ProjectAssignment: React.FC = () => {
             <XCircle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-red-600">{totalCount - completedCount}</div>
+            <div className="text-2xl font-bold text-red-600">{totalCount - completedCount}명</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              {totalCount > 0 ? `전체의 ${100 - completionRate}%` : ''}
+            </p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">완료율</CardTitle>
+            <CardTitle className="text-sm font-medium">전체 진행률</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{completionRate}%</div>
+            <div className="text-2xl font-bold mb-2">{completionRate}%</div>
+            <div className="w-full bg-muted rounded-full h-2">
+              <div 
+                className="bg-primary h-2 rounded-full transition-all duration-300"
+                style={{ width: `${completionRate}%` }}
+              />
+            </div>
           </CardContent>
         </Card>
       </div>
