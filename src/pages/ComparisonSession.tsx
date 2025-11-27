@@ -132,12 +132,37 @@ export const ComparisonSession = () => {
     }
   }, [currentQuestion, allResponses]);
 
+  // 실제 완료된 비교 횟수를 확인하기 위한 state
+  const [actualCompletedCount, setActualCompletedCount] = useState<number>(0);
+
+  // 데이터베이스에서 실제 완료된 비교 횟수 조회
+  useEffect(() => {
+    const fetchActualCompletedCount = async () => {
+      if (!student?.id || !projectId) return;
+
+      const { data, error } = await supabase
+        .from('comparisons')
+        .select('id', { count: 'exact' })
+        .eq('project_id', projectId)
+        .eq('student_id', student.id)
+        .eq('question_number', currentQuestion);
+
+      if (!error && data) {
+        const count = data.length;
+        setActualCompletedCount(count);
+        console.log(`Question ${currentQuestion}: ${count} comparisons completed in DB`);
+      }
+    };
+
+    fetchActualCompletedCount();
+  }, [student?.id, projectId, currentQuestion, reviewerStats?.completed]); // reviewerStats가 변경될 때마다 재조회
+
   // Check if current question is complete (dynamic based on session metadata)
   const requiredComparisonsForQuestion = sessionMetadata?.config.reviewerTargetPerPerson || 15;
   // Complete if target reached OR no more pairs available
   const isCurrentQuestionComplete = 
-    reviewerStats?.completed >= requiredComparisonsForQuestion || 
-    (!currentPair && !isInitializing && reviewerStats?.completed > 0);
+    actualCompletedCount >= requiredComparisonsForQuestion || 
+    (!currentPair && !isInitializing && actualCompletedCount > 0);
   
   // Auto-advance to next question when current is complete (but not on the last question)
   useEffect(() => {
@@ -156,7 +181,7 @@ export const ComparisonSession = () => {
 
   // Check if all questions are completed - with safety checks
   const allQuestionsComplete = currentQuestion > maxQuestions || 
-    (currentQuestion === maxQuestions && reviewerStats?.completed >= requiredComparisonsForQuestion);
+    (currentQuestion === maxQuestions && actualCompletedCount >= requiredComparisonsForQuestion);
   
   // Debug logging with render conditions
   console.log('Debug - Render conditions check:', {
@@ -165,6 +190,8 @@ export const ComparisonSession = () => {
     allQuestionsComplete,
     isCurrentQuestionComplete,
     reviewerStatsCompleted: reviewerStats?.completed,
+    actualCompletedCount,
+    requiredComparisonsForQuestion,
     currentPair: !!currentPair,
     isInitializing,
     loading,
