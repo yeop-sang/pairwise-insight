@@ -296,6 +296,20 @@ export const ProjectDetail: React.FC = () => {
   const totalStudents = classes.reduce((sum, cls) => sum + cls.student_count, 0);
   const totalAssigned = classes.reduce((sum, cls) => sum + cls.assigned_count, 0);
 
+  // Calculate actual number of questions from the question JSON
+  const getActualQuestionCount = () => {
+    if (!project?.question) return 1;
+    try {
+      const questions = JSON.parse(project.question);
+      return Object.keys(questions).length;
+    } catch (error) {
+      console.error('Failed to parse questions:', error);
+      return project.num_questions || 1;
+    }
+  };
+
+  const actualQuestionCount = getActualQuestionCount();
+
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="mb-6">
@@ -460,14 +474,14 @@ export const ProjectDetail: React.FC = () => {
         <TabsContent value="scores" className="mt-6">
           <ScoreAggregation
             projectId={id!}
-            maxQuestions={project?.num_questions || 5}
+            maxQuestions={actualQuestionCount}
           />
         </TabsContent>
 
         <TabsContent value="keywords" className="mt-6">
           <ExplainabilityPanel
             projectId={id!}
-            maxQuestions={project?.num_questions || 5}
+            maxQuestions={actualQuestionCount}
           />
         </TabsContent>
       </Tabs>

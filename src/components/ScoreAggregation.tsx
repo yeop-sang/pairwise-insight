@@ -93,16 +93,61 @@ export const ScoreAggregation = ({
       }
       setResults(allResults);
 
-      try {
-        const { data: overallData, error: overallError } = await supabase.rpc(
-          'calculate_overall_student_rankings',
-          { project_uuid: projectId }
-        );
-        if (overallError) throw overallError;
-        setOverallResults(overallData || []);
-      } catch (err) {
-        console.error('Error calculating overall results:', err);
-      }
+      // Calculate overall results by aggregating wins/losses across all questions
+      const studentMap = new Map<string, {
+        total_win_count: number;
+        total_loss_count: number;
+        total_tie_count: number;
+        total_comparisons: number;
+        questions_participated: Set<number>;
+      }>();
+
+      allResults.forEach(result => {
+        const existing = studentMap.get(result.student_code) || {
+          total_win_count: 0,
+          total_loss_count: 0,
+          total_tie_count: 0,
+          total_comparisons: 0,
+          questions_participated: new Set<number>()
+        };
+
+        existing.total_win_count += result.win_count;
+        existing.total_loss_count += result.loss_count;
+        existing.total_tie_count += result.tie_count;
+        existing.total_comparisons += result.total_comparisons;
+        existing.questions_participated.add(result.question_number);
+
+        studentMap.set(result.student_code, existing);
+      });
+
+      // Convert to array and calculate overall win rate
+      const calculatedOverallResults: OverallResult[] = Array.from(studentMap.entries()).map(([student_code, data]) => ({
+        student_code,
+        total_win_count: data.total_win_count,
+        total_loss_count: data.total_loss_count,
+        total_tie_count: data.total_tie_count,
+        total_comparisons: data.total_comparisons,
+        overall_win_rate: data.total_comparisons > 0 
+          ? (data.total_win_count / data.total_comparisons) * 100 
+          : 0,
+        questions_participated: data.questions_participated.size,
+        rank: 0 // Will be assigned after sorting
+      }));
+
+      // Sort by win rate (descending) and assign ranks
+      calculatedOverallResults.sort((a, b) => {
+        if (b.overall_win_rate !== a.overall_win_rate) {
+          return b.overall_win_rate - a.overall_win_rate;
+        }
+        // If win rates are equal, sort by total wins
+        return b.total_win_count - a.total_win_count;
+      });
+
+      calculatedOverallResults.forEach((result, index) => {
+        result.rank = index + 1;
+      });
+
+      setOverallResults(calculatedOverallResults);
     } catch (error) {
       console.error('Error fetching results:', error);
       toast.error('점수를 불러오는데 실패했습니다.');
