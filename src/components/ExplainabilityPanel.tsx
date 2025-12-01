@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useExplainability } from '@/hooks/useExplainability';
 import { Download, Sparkles } from 'lucide-react';
 import {
@@ -29,7 +35,7 @@ export const ExplainabilityPanel = ({
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>(
     Array.from({ length: maxQuestions }, (_, i) => i + 1)
   );
-  const [topK, setTopK] = useState<number>(30);
+  const [topK, setTopK] = useState<number>(5);
 
   const handleQuestionToggle = (questionNum: number) => {
     setSelectedQuestions(prev =>
@@ -76,7 +82,7 @@ export const ExplainabilityPanel = ({
     <div className="space-y-6">
       <Card>
         <CardHeader>
-          <CardTitle>Explainability 설정</CardTitle>
+          <CardTitle>키워드 설정</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
@@ -98,16 +104,20 @@ export const ExplainabilityPanel = ({
           </div>
 
           <div>
-            <Label htmlFor="topk">추출할 단어 개수 (Top-K)</Label>
-            <Input
-              id="topk"
-              type="number"
-              value={topK}
-              onChange={(e) => setTopK(Number(e.target.value))}
-              min={10}
-              max={100}
-              className="w-32"
-            />
+            <Label htmlFor="topk">추출할 키워드 개수</Label>
+            <Select value={topK.toString()} onValueChange={(val) => setTopK(Number(val))}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="5">5개</SelectItem>
+                <SelectItem value="10">10개</SelectItem>
+                <SelectItem value="15">15개</SelectItem>
+                <SelectItem value="20">20개</SelectItem>
+                <SelectItem value="25">25개</SelectItem>
+                <SelectItem value="30">30개</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
           <Button
@@ -116,7 +126,7 @@ export const ExplainabilityPanel = ({
             className="w-full"
           >
             <Sparkles className="w-4 h-4 mr-2" />
-            {loading ? '추출 중...' : '단어 추출 실행'}
+            {loading ? '추출 중...' : '키워드 추출 실행'}
           </Button>
         </CardContent>
       </Card>
@@ -124,7 +134,7 @@ export const ExplainabilityPanel = ({
       {goodWords.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-green-600">Good Words ({goodWords.length})</CardTitle>
+            <CardTitle className="text-green-600">좋은 키워드 ({goodWords.length})</CardTitle>
             <Button onClick={handleDownloadGoodWords} variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
               CSV 다운로드
@@ -135,7 +145,7 @@ export const ExplainabilityPanel = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>순위</TableHead>
-                  <TableHead>단어</TableHead>
+                  <TableHead>키워드</TableHead>
                   <TableHead>가중치</TableHead>
                 </TableRow>
               </TableHeader>
@@ -158,7 +168,7 @@ export const ExplainabilityPanel = ({
       {badWords.length > 0 && (
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-red-600">Bad Words ({badWords.length})</CardTitle>
+            <CardTitle className="text-red-600">나쁜 키워드 ({badWords.length})</CardTitle>
             <Button onClick={handleDownloadBadWords} variant="outline" size="sm">
               <Download className="w-4 h-4 mr-2" />
               CSV 다운로드
@@ -169,7 +179,7 @@ export const ExplainabilityPanel = ({
               <TableHeader>
                 <TableRow>
                   <TableHead>순위</TableHead>
-                  <TableHead>단어</TableHead>
+                  <TableHead>키워드</TableHead>
                   <TableHead>가중치</TableHead>
                 </TableRow>
               </TableHeader>

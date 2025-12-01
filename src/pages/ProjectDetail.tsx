@@ -7,11 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Users, Plus, BookOpen, Power, Trophy } from 'lucide-react';
+import { ArrowLeft, Users, Plus, BookOpen, Power } from 'lucide-react';
 import { ScoreAggregation } from '@/components/ScoreAggregation';
-import { ScoreVisualization } from '@/components/ScoreVisualization';
 import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
-import { useScoreAggregation } from '@/hooks/useScoreAggregation';
 
 interface Project {
   id: string;
@@ -35,7 +33,6 @@ export const ProjectDetail: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { toast } = useToast();
-  const { scores } = useScoreAggregation();
 
   const [project, setProject] = useState<Project | null>(null);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
@@ -329,14 +326,6 @@ export const ProjectDetail: React.FC = () => {
               {project.is_active ? '비활성화' : '활성화'}
             </Button>
             <Button
-              onClick={() => navigate(`/results/${id}`)}
-              variant="outline"
-              size="sm"
-            >
-              <Trophy className="w-4 h-4 mr-2" />
-              비교 결과 보기
-            </Button>
-            <Button
               onClick={() => navigate(`/project/${id}/assignments`)}
               variant="outline"
             >
@@ -392,11 +381,10 @@ export const ProjectDetail: React.FC = () => {
 
       {/* 탭 */}
       <Tabs defaultValue="assignment" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="assignment">학생 할당</TabsTrigger>
           <TabsTrigger value="scores">점수 집계</TabsTrigger>
-          <TabsTrigger value="visualization">점수 시각화</TabsTrigger>
-          <TabsTrigger value="explainability">Explainability</TabsTrigger>
+          <TabsTrigger value="keywords">키워드</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assignment" className="mt-6">
@@ -476,14 +464,7 @@ export const ProjectDetail: React.FC = () => {
           />
         </TabsContent>
 
-        <TabsContent value="visualization" className="mt-6">
-          <ScoreVisualization
-            scores={scores}
-            selectedQuestions={Array.from({ length: project?.num_questions || 5 }, (_, i) => i + 1)}
-          />
-        </TabsContent>
-
-        <TabsContent value="explainability" className="mt-6">
+        <TabsContent value="keywords" className="mt-6">
           <ExplainabilityPanel
             projectId={id!}
             maxQuestions={project?.num_questions || 5}
