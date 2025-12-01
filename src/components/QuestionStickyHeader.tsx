@@ -1,12 +1,13 @@
-import { HelpCircle } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Badge } from "@/components/ui/badge";
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { RubricDisplay } from './RubricDisplay';
+import { RubricData } from './RubricEditor';
 
 interface QuestionStickyHeaderProps {
   title: string;
   promptMarkdown: string;
-  rubricMarkdown?: string;
+  rubricData?: RubricData | null;
+  questionNumber?: number;
   allowTie?: boolean;
   allowSkip?: boolean;
 }
@@ -14,51 +15,41 @@ interface QuestionStickyHeaderProps {
 export const QuestionStickyHeader = ({
   title,
   promptMarkdown,
-  rubricMarkdown,
+  rubricData,
+  questionNumber,
   allowTie = true,
   allowSkip = false,
 }: QuestionStickyHeaderProps) => {
   return (
-    <div className="sticky top-0 z-50 bg-background/95 backdrop-blur-sm border-b border-border shadow-soft">
-      <div className="container mx-auto px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex-1">
-            <h1 className="text-xl font-bold text-foreground mb-1">{title}</h1>
-            <p className="text-sm text-muted-foreground">{promptMarkdown}</p>
+    <div className="sticky top-0 z-10 bg-background border-b mb-4">
+      <Card className="border-0 rounded-none shadow-md">
+        <div className="p-4">
+          <div className="flex items-start justify-between mb-2">
+            <h2 className="text-xl font-bold flex-1">{title}</h2>
+            <div className="flex gap-2">
+              {allowTie && (
+                <Badge variant="secondary" className="text-xs">
+                  동점 허용
+                </Badge>
+              )}
+              {allowSkip && (
+                <Badge variant="outline" className="text-xs">
+                  건너뛰기 허용
+                </Badge>
+              )}
+            </div>
           </div>
-          
-          <div className="flex items-center gap-2 ml-4">
-            {allowTie && (
-              <Badge variant="secondary" className="text-xs">
-                동점 허용
-              </Badge>
-            )}
-            {allowSkip && (
-              <Badge variant="outline" className="text-xs">
-                건너뛰기 허용
-              </Badge>
-            )}
-            
-            {rubricMarkdown && (
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                    <HelpCircle className="h-4 w-4" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-80">
-                  <div className="space-y-2">
-                    <h4 className="font-medium">평가 루브릭</h4>
-                    <div className="text-sm text-muted-foreground whitespace-pre-wrap">
-                      {rubricMarkdown}
-                    </div>
-                  </div>
-                </PopoverContent>
-              </Popover>
-            )}
-          </div>
+          <p className="text-muted-foreground text-sm whitespace-pre-wrap mb-3">
+            {promptMarkdown}
+          </p>
+          {rubricData && questionNumber && (
+            <RubricDisplay 
+              questionNumber={questionNumber} 
+              rubric={rubricData} 
+            />
+          )}
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

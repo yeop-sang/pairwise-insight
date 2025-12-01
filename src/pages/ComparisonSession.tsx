@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useAdvancedComparisonLogic } from "@/hooks/useAdvancedComparisonLogic";
 import { Progress } from "@/components/ui/progress";
+import { RubricDisplay } from "@/components/RubricDisplay";
 
 interface StudentResponse {
   id: string;
@@ -535,12 +536,23 @@ export const ComparisonSession = () => {
           <p className="text-foreground mb-4">
             {getQuestionByNumber(currentQuestion)}
           </p>
-          {project.rubric && (
-            <div className="bg-muted p-4 rounded-lg">
-              <h4 className="font-medium mb-2">평가 기준:</h4>
-              <p className="text-sm text-muted-foreground">{project.rubric}</p>
-            </div>
-          )}
+          {project.rubric && (() => {
+            try {
+              const rubrics = JSON.parse(project.rubric);
+              const currentRubric = rubrics[currentQuestion];
+              if (currentRubric) {
+                return (
+                  <RubricDisplay 
+                    questionNumber={currentQuestion} 
+                    rubric={currentRubric} 
+                  />
+                );
+              }
+            } catch (error) {
+              console.error('Failed to parse rubric:', error);
+            }
+            return null;
+          })()}
           
           {/* 진행 상황 표시 */}
           <div className="mt-4 space-y-3">
