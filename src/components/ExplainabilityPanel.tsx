@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useExplainability } from '@/hooks/useExplainability';
-import { Download, Sparkles } from 'lucide-react';
+import { Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -37,21 +37,21 @@ export const ExplainabilityPanel = ({
   );
   const [topK, setTopK] = useState<number>(5);
 
+  useEffect(() => {
+    extractFeatures({
+      project_id: projectId,
+      question_numbers: selectedQuestions,
+      top_k: topK,
+      persist: true
+    });
+  }, [projectId, topK, selectedQuestions]);
+
   const handleQuestionToggle = (questionNum: number) => {
     setSelectedQuestions(prev =>
       prev.includes(questionNum)
         ? prev.filter(q => q !== questionNum)
         : [...prev, questionNum].sort()
     );
-  };
-
-  const handleExtract = async () => {
-    await extractFeatures({
-      project_id: projectId,
-      question_numbers: selectedQuestions,
-      top_k: topK,
-      persist: true
-    });
   };
 
   const handleDownloadGoodWords = () => {
@@ -120,14 +120,9 @@ export const ExplainabilityPanel = ({
             </Select>
           </div>
 
-          <Button
-            onClick={handleExtract}
-            disabled={loading || selectedQuestions.length === 0}
-            className="w-full"
-          >
-            <Sparkles className="w-4 h-4 mr-2" />
-            {loading ? '추출 중...' : '키워드 추출 실행'}
-          </Button>
+          {loading && (
+            <div className="text-sm text-muted-foreground">키워드 추출 중...</div>
+          )}
         </CardContent>
       </Card>
 
