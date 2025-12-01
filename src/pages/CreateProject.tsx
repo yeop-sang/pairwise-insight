@@ -3,26 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Upload, FileSpreadsheet, ArrowLeft } from "lucide-react";
 import * as XLSX from 'xlsx';
+import { ProjectReviewStep } from "@/components/ProjectReviewStep";
 
 export const CreateProject = () => {
   const { user, profile } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [projectData, setProjectData] = useState({
-    title: "",
-    description: "",
-    question: "",
-    rubric: ""
-  });
+  const [step, setStep] = useState<'upload' | 'review'>('upload');
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [parsedData, setParsedData] = useState<{
+    responses: Array<{code: string, answer: string, questionIndex: number}>,
+    questions: Record<number, string>
+  } | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -294,9 +293,7 @@ export const CreateProject = () => {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  const handleFileUpload = async () => {
     if (!user || profile?.role !== 'teacher') {
       toast({
         variant: "destructive",
@@ -375,39 +372,57 @@ export const CreateProject = () => {
       
       console.log(`검증 완료: 학생 ${studentCodes.size}명, 원본 응답 ${responses.length}개, 중복 제거 후 ${deduplicatedResponses.length}개`);
 
-      // Create project
-      console.log("프로젝트 생성 중...");
+      // Store parsed data and move to review step
+      setParsedData({
+        responses: deduplicatedResponses,
+        questions
+      });
+      setStep('review');
+
+      toast({
+        title: "파일 업로드 완료",
+        description: "다음 단계에서 루브릭을 설정해주세요."
+      });
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "파일 업로드 실패",
+        description: error.message
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleProjectComplete = async (rubrics: Record<number, any>) => {
+    if (!user || !parsedData) return;
+
+    setLoading(true);
+    try {
+      // Create project with rubrics
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
-          title: projectData.title,
-          description: projectData.description,
-          question: JSON.stringify(questions), // Store questions as JSON
-          rubric: projectData.rubric || null,
+          title: `프로젝트 ${new Date().toLocaleDateString()}`,
+          description: null,
+          question: JSON.stringify(parsedData.questions),
+          rubric: JSON.stringify(rubrics),
           teacher_id: user.id
         })
         .select()
         .single();
 
       if (projectError) {
-        console.error("프로젝트 생성 오류:", projectError);
         throw new Error(`프로젝트 생성 실패: ${projectError.message}`);
       }
-      
-      console.log("프로젝트 생성 완료:", project.id);
-
-      // Prepare student codes from responses
-      console.log("학생 응답 데이터 준비 중...");
-      const uniqueStudentCodes = Array.from(new Set(deduplicatedResponses.map(r => r.code)));
-      console.log(`CSV 파일에서 ${uniqueStudentCodes.length}명의 학생 코드 발견`);
 
       // Insert student responses in batches
-      console.log("학생 응답 삽입 중...");
       const batchSize = 100;
       const responseBatches = [];
       
-      for (let i = 0; i < deduplicatedResponses.length; i += batchSize) {
-        responseBatches.push(deduplicatedResponses.slice(i, i + batchSize));
+      for (let i = 0; i < parsedData.responses.length; i += batchSize) {
+        responseBatches.push(parsedData.responses.slice(i, i + batchSize));
       }
       
       for (let i = 0; i < responseBatches.length; i++) {
@@ -417,24 +432,21 @@ export const CreateProject = () => {
           .insert(
             batch.map(response => ({
               project_id: project.id,
-              student_id: null, // Not linked to students table
+              student_id: null,
               student_code: response.code,
               response_text: response.answer,
-              question_number: response.questionIndex + 1 // 1-based indexing
+              question_number: response.questionIndex + 1
             }))
           );
 
         if (responsesError) {
-          console.error(`응답 삽입 오류 (배치 ${i + 1}/${responseBatches.length}):`, responsesError);
           throw new Error(`학생 응답 삽입 실패 (배치 ${i + 1}): ${responsesError.message}`);
         }
-        
-        console.log(`응답 배치 ${i + 1}/${responseBatches.length} 삽입 완료`);
       }
 
       toast({
         title: "프로젝트 생성 완료",
-        description: `${responses.length}개의 학생 응답이 업로드되었습니다.`
+        description: `${parsedData.responses.length}개의 학생 응답이 업로드되었습니다.`
       });
 
       navigate("/dashboard");
@@ -465,6 +477,19 @@ export const CreateProject = () => {
     );
   }
 
+  if (step === 'review' && parsedData) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <ProjectReviewStep
+          questions={parsedData.questions}
+          responses={parsedData.responses}
+          onBack={() => setStep('upload')}
+          onComplete={handleProjectComplete}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-8">
@@ -476,139 +501,82 @@ export const CreateProject = () => {
           <ArrowLeft className="h-4 w-4 mr-2" />
           대시보드로 돌아가기
         </Button>
-        <h1 className="text-3xl font-bold text-foreground">새 프로젝트 생성</h1>
-        <p className="text-muted-foreground mt-2">동료평가 프로젝트를 생성하고 학생 응답을 업로드하세요.</p>
+        <h1 className="text-4xl font-bold mb-2">새 프로젝트 생성</h1>
+        <p className="text-muted-foreground">
+          학생 응답 파일을 업로드하세요
+        </p>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-6">
         <Card>
           <CardHeader>
-            <CardTitle>프로젝트 정보</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="title">프로젝트 제목</Label>
-              <Input
-                id="title"
-                value={projectData.title}
-                onChange={(e) => setProjectData({...projectData, title: e.target.value})}
-                placeholder="예: 영어 에세이 동료평가"
-                required
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="description">프로젝트 설명</Label>
-              <Textarea
-                id="description"
-                value={projectData.description}
-                onChange={(e) => setProjectData({...projectData, description: e.target.value})}
-                placeholder="프로젝트에 대한 간단한 설명을 입력하세요"
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="question">평가 질문 (선택사항)</Label>
-              <Textarea
-                id="question"
-                value={projectData.question}
-                onChange={(e) => setProjectData({...projectData, question: e.target.value})}
-                placeholder="학생들이 비교할 때 참고할 질문을 입력하세요"
-                rows={3}
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="rubric">평가 기준 (선택사항)</Label>
-              <Textarea
-                id="rubric"
-                value={projectData.rubric}
-                onChange={(e) => setProjectData({...projectData, rubric: e.target.value})}
-                placeholder="평가 기준이나 루브릭을 입력하세요"
-                rows={4}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileSpreadsheet className="h-5 w-5" />
-              학생 응답 업로드
+            <CardTitle className="flex items-center">
+              <Upload className="h-5 w-5 mr-2" />
+              학생 응답 파일 업로드
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="file">파일 업로드</Label>
-              <div className="border-2 border-dashed border-border rounded-lg p-6 text-center">
-                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                <p className="text-sm text-muted-foreground mb-2">
-                  CSV 또는 엑셀 파일을 선택하거나 드래그하여 업로드하세요
-                </p>
-                <p className="text-xs text-muted-foreground mb-4">
-                  지원 형식: .csv, .xlsx, .xls | 형식: A열(학생번호), B열부터(학생 응답)
-                </p>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="border-2 border-dashed rounded-lg p-8 text-center">
+                <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <Label htmlFor="csv-upload" className="cursor-pointer">
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">
+                      CSV 또는 엑셀 파일을 선택하세요
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      첫 번째 열: 학생번호 | 나머지 열: 각 문항 응답
+                    </p>
+                    {csvFile && (
+                      <p className="text-sm text-primary font-medium mt-2">
+                        선택된 파일: {csvFile.name}
+                      </p>
+                    )}
+                  </div>
+                </Label>
                 <Input
-                  id="file"
+                  id="csv-upload"
                   type="file"
                   accept=".csv,.xlsx,.xls"
                   onChange={handleFileChange}
-                  className="max-w-sm mx-auto"
+                  className="hidden"
                 />
+                {!csvFile && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="mt-4"
+                    onClick={() => document.getElementById('csv-upload')?.click()}
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    파일 선택
+                  </Button>
+                )}
               </div>
-              {csvFile && (
-                <p className="text-sm text-success">
-                  선택된 파일: {csvFile.name}
-                </p>
-              )}
-            </div>
 
-            <div className="bg-muted p-4 rounded-lg">
-              <h4 className="font-medium mb-2">파일 형식 예시:</h4>
-              <div className="space-y-3">
-                <div>
-                  <p className="text-sm font-medium mb-1">CSV 또는 엑셀 형식:</p>
-                  <div className="text-xs text-muted-foreground bg-background p-2 rounded border">
-                    <div className="grid grid-cols-4 gap-1 font-mono">
-                      <div className="font-bold">A1: 학생번호</div>
-                      <div className="font-bold">B1~: (문항 또는 빈칸)</div>
-                      <div></div>
-                      <div></div>
-                      <div>A2: 1</div>
-                      <div>B2: 응답1</div>
-                      <div>C2: 응답2</div>
-                      <div>D2: 응답3</div>
-                      <div>A3: 2</div>
-                      <div>B3: 응답1</div>
-                      <div>C3: 응답2</div>
-                      <div>D3: 응답3</div>
-                    </div>
-                  </div>
-                </div>
+              <div className="bg-muted/50 p-4 rounded-lg">
+                <p className="text-sm font-medium mb-2">파일 형식 안내:</p>
+                <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                  <li>첫 번째 행은 헤더 (학생번호, 문항1, 문항2, ...)</li>
+                  <li>첫 번째 열에는 각 학생의 고유 번호</li>
+                  <li>나머지 열에는 각 문항에 대한 학생의 응답</li>
+                  <li>CSV 또는 엑셀 파일 형식 (.csv, .xlsx, .xls)</li>
+                </ul>
               </div>
-              <p className="text-xs text-muted-foreground mt-3">
-                * A열: 학생 식별번호 (필수)<br/>
-                * B열부터: 각 문항에 대한 학생 응답 (첫 번째 행은 문항명이거나 비워둘 수 있음)
-              </p>
             </div>
           </CardContent>
         </Card>
 
-        <div className="flex justify-end gap-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => navigate("/dashboard")}
+        <div className="flex justify-end">
+          <Button 
+            onClick={handleFileUpload} 
+            disabled={loading || !csvFile} 
+            size="lg"
           >
-            취소
-          </Button>
-          <Button type="submit" disabled={loading}>
-            {loading ? "생성 중..." : "프로젝트 생성"}
+            {loading ? "업로드 중..." : "다음: 루브릭 설정"}
           </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 };

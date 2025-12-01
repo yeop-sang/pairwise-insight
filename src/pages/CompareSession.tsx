@@ -177,7 +177,6 @@ export const CompareSession = () => {
       <QuestionStickyHeader
         title={mockQuestion.title}
         promptMarkdown={mockQuestion.promptMarkdown}
-        rubricMarkdown={mockQuestion.rubricMarkdown}
         allowTie={mockQuestion.allowTie}
         allowSkip={mockQuestion.allowSkip}
       />
