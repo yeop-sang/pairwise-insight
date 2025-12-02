@@ -36,7 +36,33 @@ export const ProjectReviewStep = ({
       toast({
         variant: 'destructive',
         title: '루브릭 미입력',
-        description: `문항 ${missingRubrics.join(', ')}의 루브릭을 입력해주세요.`
+        description: `문항 ${missingRubrics.join(', ')}의 루브릭을 저장해주세요.`
+      });
+      return;
+    }
+
+    // 루브릭이 제대로 저장되었는지 확인
+    const invalidRubrics = questionNumbers.filter(qNum => {
+      const rubric = rubrics[qNum];
+      if (!rubric) return true;
+      
+      if (rubric.type === 'table') {
+        return !rubric.criteria || rubric.criteria.length === 0 || 
+               rubric.criteria.some(c => !c.score || !c.description);
+      }
+      
+      if (rubric.type === 'image') {
+        return !rubric.imageUrl;
+      }
+      
+      return false;
+    });
+
+    if (invalidRubrics.length > 0) {
+      toast({
+        variant: 'destructive',
+        title: '루브릭 저장 필요',
+        description: `문항 ${invalidRubrics.join(', ')}의 루브릭 저장 버튼을 눌러주세요.`
       });
       return;
     }
