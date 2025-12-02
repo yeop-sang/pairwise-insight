@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -180,15 +180,59 @@ export const ComparisonSession = () => {
     }
   }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed]);
 
-  // Check if all questions are completed - with safety checks
-  const allQuestionsComplete = currentQuestion > maxQuestions || 
-    (currentQuestion === maxQuestions && actualCompletedCount >= requiredComparisonsForQuestion);
+  // 완료 여부 추적
+  const [hasUpdatedCompletion, setHasUpdatedCompletion] = useState(false);
+
+  // 모든 문항별로 실제 완료된 비교 횟수 확인
+  const [allQuestionsCompletedCounts, setAllQuestionsCompletedCounts] = useState<Record<number, number>>({});
+
+  // 모든 문항의 완료 상태 확인
+  useEffect(() => {
+    const fetchAllQuestionsCounts = async () => {
+      if (!student?.id || !projectId || maxQuestions === 0) return;
+
+      const counts: Record<number, number> = {};
+      
+      for (let q = 1; q <= maxQuestions; q++) {
+        const { data, error } = await supabase
+          .from('comparisons')
+          .select('id', { count: 'exact' })
+          .eq('project_id', projectId)
+          .eq('student_id', student.id)
+          .eq('question_number', q);
+
+        if (!error && data) {
+          counts[q] = data.length;
+        }
+      }
+      
+      setAllQuestionsCompletedCounts(counts);
+    };
+
+    fetchAllQuestionsCounts();
+  }, [student?.id, projectId, maxQuestions, reviewerStats?.completed]);
+
+  // 모든 문항이 완료되었는지 확인
+  const allQuestionsComplete = useMemo(() => {
+    if (maxQuestions === 0) return false;
+    
+    // 각 문항별로 필요한 비교 횟수가 완료되었는지 확인
+    for (let q = 1; q <= maxQuestions; q++) {
+      const count = allQuestionsCompletedCounts[q] || 0;
+      if (count < requiredComparisonsForQuestion) {
+        return false;
+      }
+    }
+    
+    return true;
+  }, [maxQuestions, allQuestionsCompletedCounts, requiredComparisonsForQuestion]);
   
   // Debug logging with render conditions
   console.log('Debug - Render conditions check:', {
     currentQuestion,
     maxQuestions,
     allQuestionsComplete,
+    allQuestionsCompletedCounts,
     isCurrentQuestionComplete,
     reviewerStatsCompleted: reviewerStats?.completed,
     actualCompletedCount,
@@ -196,26 +240,51 @@ export const ComparisonSession = () => {
     currentPair: !!currentPair,
     isInitializing,
     loading,
-    project: !!project
+    project: !!project,
+    hasUpdatedCompletion
   });
 
-  // Complete project assignment when all questions are done (but don't auto-navigate)
-  useEffect(() => {
-    if (allQuestionsComplete && !isInitializing && isStudent) {
-      console.log('Triggering project completion update:', { allQuestionsComplete, isInitializing, isStudent });
-      updateProjectAssignmentCompletion();
-    }
-  }, [allQuestionsComplete, isInitializing, isStudent]);
-
   // 프로젝트 할당 완료 상태 업데이트
-  const updateProjectAssignmentCompletion = async () => {
+  const updateProjectAssignmentCompletion = useCallback(async () => {
     if (!student?.id || !projectId) {
       console.log('Missing required data for completion update:', { studentId: student?.id, projectId });
       return;
     }
 
+    // 이미 업데이트했으면 중복 실행 방지
+    if (hasUpdatedCompletion) {
+      console.log('Completion already updated, skipping...');
+      return;
+    }
+
     try {
-      console.log('Updating project assignment completion for:', { studentId: student.id, projectId });
+      console.log('Checking current assignment status before update...');
+      
+      // 먼저 현재 상태 확인
+      const { data: currentAssignment, error: checkError } = await supabase
+        .from('project_assignments')
+        .select('has_completed, completed_at')
+        .eq('project_id', projectId)
+        .eq('student_id', student.id)
+        .single();
+
+      if (checkError) {
+        console.error('Error checking assignment status:', checkError);
+        return;
+      }
+
+      // 이미 완료 상태라면 업데이트하지 않음
+      if (currentAssignment?.has_completed) {
+        console.log('Assignment already completed, skipping update');
+        setHasUpdatedCompletion(true);
+        return;
+      }
+
+      console.log('Updating project assignment completion for:', { 
+        studentId: student.id, 
+        projectId,
+        allQuestionsCompletedCounts 
+      });
       
       const { error } = await supabase
         .from('project_assignments')
@@ -235,9 +304,10 @@ export const ComparisonSession = () => {
         });
       } else {
         console.log('Project assignment completion updated successfully');
+        setHasUpdatedCompletion(true);
         toast({
           title: "완료",
-          description: "모든 문항이 완료되었습니다!",
+          description: "모든 문항의 비교를 완료했습니다!",
           variant: "default",
         });
       }
@@ -249,7 +319,21 @@ export const ComparisonSession = () => {
         variant: "destructive",
       });
     }
-  };
+  }, [student?.id, projectId, hasUpdatedCompletion, allQuestionsCompletedCounts, toast]);
+
+  // Complete project assignment when all questions are done
+  useEffect(() => {
+    if (allQuestionsComplete && !isInitializing && isStudent && !hasUpdatedCompletion) {
+      console.log('All questions completed, triggering completion update:', { 
+        allQuestionsComplete, 
+        isInitializing, 
+        isStudent,
+        hasUpdatedCompletion,
+        allQuestionsCompletedCounts
+      });
+      updateProjectAssignmentCompletion();
+    }
+  }, [allQuestionsComplete, isInitializing, isStudent, hasUpdatedCompletion, updateProjectAssignmentCompletion]);
 
   const fetchProjectAndResponses = async () => {
     try {
