@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Zap, Clock, ChevronLeft, ChevronRight, Minus, Target, TrendingUp } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
-import { supabase } from "@/integrations/supabase/client";
+import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useAdvancedComparisonLogic } from "@/hooks/useAdvancedComparisonLogic";
 import { Progress } from "@/components/ui/progress";
