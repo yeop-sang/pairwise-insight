@@ -71,13 +71,14 @@ export const ProjectDetail: React.FC = () => {
   };
 
   const fetchClassInfo = async () => {
-    if (!id) return;
+    if (!id || !user) return;
 
     try {
-      // 전체 학생 수 (학년/반별)
+      // 현재 교사의 학생 수만 가져오기 (학년/반별)
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('grade, class_number')
+        .eq('teacher_id', user.id)
         .order('grade')
         .order('class_number');
 
@@ -136,10 +137,11 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !user) return;
 
     try {
-      // 먼저 해당 학년/반의 학생들이 존재하는지 확인
+      // 현재 교사의 해당 학년/반 학생들만 가져오기
       const { data: allStudents, error: allStudentsError } = await supabase
         .from('students')
         .select('id, student_id, name, grade, class_number')
+        .eq('teacher_id', user.id)
         .eq('grade', grade)
         .eq('class_number', classNumber);
 
@@ -214,10 +216,11 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !confirm(`${grade}학년 ${classNumber}반의 모든 할당을 취소하시겠습니까?`)) return;
 
     try {
-      // 해당 학년/반 학생들의 할당 취소
+      // 현재 교사의 해당 학년/반 학생들만 선택
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('id')
+        .eq('teacher_id', user.id)
         .eq('grade', grade)
         .eq('class_number', classNumber);
 
