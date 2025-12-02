@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { ComparisonAlgorithm } from '@/utils/comparisonAlgorithm';
 import { useTimeTracking } from './useTimeTracking';
 import { useSessionMetadata } from './useSessionMetadata';
