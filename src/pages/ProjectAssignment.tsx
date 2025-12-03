@@ -125,8 +125,8 @@ export const ProjectAssignment: React.FC = () => {
         comparisonCounts.set(c.student_id, count + 1);
       });
 
-      // reviewer_stats 테이블에서 목표 비교 횟수 확인 (기본값 15)
-      const targetComparisons = 15;
+      // 목표 비교 횟수 (최대 25회)
+      const targetComparisons = 25;
 
       const formattedData = (data || [])
         .filter(assignment => assignment.students)
