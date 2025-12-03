@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/supabase';
 import { 
   calculateComparisonsPerStudent, 
@@ -51,6 +51,9 @@ export const useSessionMetadata = (
 ) => {
   const [sessionMetadata, setSessionMetadata] = useState<SessionMetadata | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  
+  // Track if we've already updated for the current numResponses
+  const lastUpdatedNumResponses = useRef<number | undefined>(undefined);
 
   const generateSessionId = useCallback(() => {
     return crypto.randomUUID();
@@ -62,13 +65,44 @@ export const useSessionMetadata = (
   }, []);
 
   const getAppVersion = useCallback(() => {
-    // You can replace this with actual version from package.json or build process
     return process.env.NODE_ENV === 'development' ? 'dev-1.0.0' : '1.0.0';
   }, []);
+
+  // Calculate reviewer target based on responses and assigned students
+  const calculateReviewerTarget = useCallback(async (responseCount: number): Promise<number> => {
+    // 할당된 학생 수 조회
+    const { data: assignedStudents, error: assignmentError } = await supabase
+      .from('project_assignments')
+      .select('student_id')
+      .eq('project_id', projectId);
+    
+    if (assignmentError) {
+      console.error('Error fetching assigned students:', assignmentError);
+    }
+    
+    // 할당 학생이 없으면 응답자 수로 대체 (자기 평가 시나리오)
+    const numReviewers = assignedStudents?.length || responseCount || 1;
+    
+    const target = calculateComparisonsPerStudent(responseCount, numReviewers);
+    
+    console.log(`Calculating reviewer target:`);
+    console.log(`  - Responses: ${responseCount}`);
+    console.log(`  - Reviewers: ${numReviewers}`);
+    console.log(`  - Target: ${target} (min: ${MIN_COMPARISONS_PER_STUDENT}, max: ${MAX_COMPARISONS_PER_STUDENT})`);
+    
+    return target;
+  }, [projectId]);
 
   const initializeSession = useCallback(async () => {
     try {
       setIsLoading(true);
+      
+      // 응답 수가 유효하지 않으면 세션 생성 보류
+      if (!numResponses || numResponses <= 0) {
+        console.log(`Waiting for valid numResponses (current: ${numResponses})...`);
+        setIsLoading(false);
+        return;
+      }
       
       // Check if session already exists for this project/question
       const { data: existingSession, error: selectError } = await supabase
@@ -86,6 +120,7 @@ export const useSessionMetadata = (
 
       if (existingSession) {
         // Use existing session
+        console.log(`Using existing session for question ${questionNumber}, target: ${existingSession.reviewer_target_per_person}`);
         setSessionMetadata({
           sessionId: existingSession.session_id,
           projectId: existingSession.project_id,
@@ -108,33 +143,16 @@ export const useSessionMetadata = (
           }
         });
       } else {
-        // Create new session
+        // Create new session with accurate numResponses
         const newSessionId = generateSessionId();
         const randomSeed = generateRandomSeed();
         const appVersion = getAppVersion();
         
-        // 할당된 학생 수 조회
-        const { data: assignedStudents, error: assignmentError } = await supabase
-          .from('project_assignments')
-          .select('student_id')
-          .eq('project_id', projectId);
+        const requiredComparisonsPerStudent = await calculateReviewerTarget(numResponses);
         
-        if (assignmentError) {
-          console.error('Error fetching assigned students:', assignmentError);
-        }
-        
-        const numAssignedStudents = assignedStudents?.length || 1; // 최소 1명
-        
-        // 새로운 공식: 각 쌍이 최소 3회 비교되도록 학생당 비교 횟수 계산
-        // 최소 5회, 최대 30회로 제한
-        const requiredComparisonsPerStudent = numResponses 
-          ? calculateComparisonsPerStudent(numResponses, numAssignedStudents)
-          : DEFAULT_CONFIG.reviewerTargetPerPerson;
-        
-        console.log(`Creating session for question ${questionNumber}:`);
+        console.log(`Creating new session for question ${questionNumber}:`);
         console.log(`  - Responses: ${numResponses}`);
-        console.log(`  - Assigned students: ${numAssignedStudents}`);
-        console.log(`  - Comparisons per student: ${requiredComparisonsPerStudent} (min: ${MIN_COMPARISONS_PER_STUDENT}, max: ${MAX_COMPARISONS_PER_STUDENT})`);
+        console.log(`  - Comparisons per student: ${requiredComparisonsPerStudent}`);
         
         const { error } = await supabase
           .from('session_metadata')
@@ -178,14 +196,50 @@ export const useSessionMetadata = (
           }
         });
       }
+      
+      lastUpdatedNumResponses.current = numResponses;
     } catch (error) {
       console.error('Error initializing session:', error);
-      // Re-throw error so calling components can handle it
       throw error;
     } finally {
       setIsLoading(false);
     }
-  }, [projectId, questionNumber, generateSessionId, generateRandomSeed, getAppVersion]);
+  }, [projectId, questionNumber, numResponses, generateSessionId, generateRandomSeed, getAppVersion, calculateReviewerTarget]);
+
+  // 기존 세션의 동적 업데이트: numResponses가 변경되면 기존 세션도 업데이트
+  const updateSessionIfNeeded = useCallback(async () => {
+    if (!sessionMetadata || !numResponses || numResponses <= 0) return;
+    
+    // 이미 같은 numResponses로 업데이트했으면 스킵
+    if (lastUpdatedNumResponses.current === numResponses) return;
+    
+    const newTarget = await calculateReviewerTarget(numResponses);
+    
+    // 기존 값과 다르면 업데이트
+    if (newTarget !== sessionMetadata.config.reviewerTargetPerPerson) {
+      console.log(`Updating session target: ${sessionMetadata.config.reviewerTargetPerPerson} -> ${newTarget}`);
+      
+      const { error } = await supabase
+        .from('session_metadata')
+        .update({ reviewer_target_per_person: newTarget })
+        .eq('session_id', sessionMetadata.sessionId);
+      
+      if (error) {
+        console.error('Error updating session:', error);
+        return;
+      }
+      
+      setSessionMetadata(prev => prev ? {
+        ...prev,
+        config: {
+          ...prev.config,
+          reviewerTargetPerPerson: newTarget
+        }
+      } : null);
+      
+      lastUpdatedNumResponses.current = numResponses;
+    }
+  }, [sessionMetadata, numResponses, calculateReviewerTarget]);
 
   const closeSession = useCallback(async () => {
     if (!sessionMetadata) return;
@@ -232,11 +286,19 @@ export const useSessionMetadata = (
     }
   }, [sessionMetadata]);
 
+  // 세션 초기화
   useEffect(() => {
-    if (projectId && questionNumber) {
+    if (projectId && questionNumber && numResponses && numResponses > 0) {
       initializeSession();
     }
-  }, [projectId, questionNumber, initializeSession]);
+  }, [projectId, questionNumber, numResponses, initializeSession]);
+
+  // 기존 세션 업데이트 (numResponses 변경 시)
+  useEffect(() => {
+    if (sessionMetadata && numResponses && numResponses > 0) {
+      updateSessionIfNeeded();
+    }
+  }, [sessionMetadata, numResponses, updateSessionIfNeeded]);
 
   return {
     sessionMetadata,
