@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
@@ -11,7 +10,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useExplainability } from '@/hooks/useExplainability';
-import { Download } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -52,30 +50,6 @@ export const ExplainabilityPanel = ({
         ? prev.filter(q => q !== questionNum)
         : [...prev, questionNum].sort()
     );
-  };
-
-  const handleDownloadGoodWords = () => {
-    if (goodWords.length === 0) return;
-    const csvContent = ['word,score', ...goodWords.map(w => `${w.word},${w.score}`)].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `good_words_${projectId}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const handleDownloadBadWords = () => {
-    if (badWords.length === 0) return;
-    const csvContent = ['word,score', ...badWords.map(w => `${w.word},${w.score}`)].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `bad_words_${projectId}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -128,12 +102,8 @@ export const ExplainabilityPanel = ({
 
       {goodWords.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="text-green-600">좋은 키워드 ({goodWords.length})</CardTitle>
-            <Button onClick={handleDownloadGoodWords} variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              CSV 다운로드
-            </Button>
           </CardHeader>
           <CardContent>
             <Table>
@@ -162,12 +132,8 @@ export const ExplainabilityPanel = ({
 
       {badWords.length > 0 && (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle className="text-red-600">나쁜 키워드 ({badWords.length})</CardTitle>
-            <Button onClick={handleDownloadBadWords} variant="outline" size="sm">
-              <Download className="w-4 h-4 mr-2" />
-              CSV 다운로드
-            </Button>
           </CardHeader>
           <CardContent>
             <Table>

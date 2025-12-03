@@ -16,8 +16,10 @@ export const CreateProject = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [step, setStep] = useState<'upload' | 'review'>('upload');
+  const [step, setStep] = useState<'info' | 'upload' | 'review'>('info');
   const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [projectTitle, setProjectTitle] = useState('');
+  const [projectDescription, setProjectDescription] = useState('');
   const [parsedData, setParsedData] = useState<{
     responses: Array<{code: string, answer: string, questionIndex: number}>,
     questions: Record<number, string>
@@ -404,8 +406,8 @@ export const CreateProject = () => {
       const { data: project, error: projectError } = await supabase
         .from('projects')
         .insert({
-          title: `프로젝트 ${new Date().toLocaleDateString()}`,
-          description: null,
+          title: projectTitle || `프로젝트 ${new Date().toLocaleDateString()}`,
+          description: projectDescription || null,
           question: JSON.stringify(parsedData.questions),
           rubric: JSON.stringify(rubrics),
           teacher_id: user.id
@@ -470,6 +472,69 @@ export const CreateProject = () => {
             <p className="text-muted-foreground">교사만 프로젝트를 생성할 수 있습니다.</p>
             <Button onClick={() => navigate("/dashboard")} className="mt-4">
               대시보드로 돌아가기
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (step === 'info') {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          대시보드로 돌아가기
+        </Button>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileSpreadsheet className="w-6 h-6" />
+              프로젝트 정보 입력
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="project-title">프로젝트 이름 *</Label>
+              <Input
+                id="project-title"
+                placeholder="예: 2024년 1학기 논술 평가"
+                value={projectTitle}
+                onChange={(e) => setProjectTitle(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="project-description">프로젝트 설명</Label>
+              <textarea
+                id="project-description"
+                className="w-full min-h-[100px] p-3 border rounded-md resize-none bg-background text-foreground"
+                placeholder="프로젝트에 대한 설명을 입력하세요 (선택사항)"
+                value={projectDescription}
+                onChange={(e) => setProjectDescription(e.target.value)}
+              />
+            </div>
+
+            <Button 
+              onClick={() => {
+                if (!projectTitle.trim()) {
+                  toast({
+                    variant: "destructive",
+                    title: "입력 오류",
+                    description: "프로젝트 이름을 입력해주세요."
+                  });
+                  return;
+                }
+                setStep('upload');
+              }}
+              className="w-full"
+            >
+              다음 단계로
             </Button>
           </CardContent>
         </Card>
