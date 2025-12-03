@@ -68,17 +68,32 @@ export const StudentDashboard = () => {
       
       if (comparisonsError) throw comparisonsError;
       
+      // Get session_metadata to get actual target comparisons per question
+      const { data: sessionData, error: sessionError } = await supabase
+        .from('session_metadata')
+        .select('project_id, question_number, reviewer_target_per_person')
+        .in('project_id', projectIds);
+      
+      if (sessionError) throw sessionError;
+      
       // Count comparisons per project
       const comparisonCounts: Record<string, number> = {};
       comparisonsData?.forEach(c => {
         comparisonCounts[c.project_id] = (comparisonCounts[c.project_id] || 0) + 1;
       });
       
+      // Calculate actual target per project from session_metadata
+      const targetPerProject: Record<string, number> = {};
+      sessionData?.forEach(s => {
+        targetPerProject[s.project_id] = (targetPerProject[s.project_id] || 0) + s.reviewer_target_per_person;
+      });
+      
       // Merge completion status with project data
       const projectsWithCompletion = projectsData?.map(project => {
         const assignment = assignedProjects.find(a => a.project_id === project.id);
         const comparisonCount = comparisonCounts[project.id] || 0;
-        const targetComparisons = 25 * (project.num_questions || 1);
+        // Use actual target from session_metadata, fallback to 25 * num_questions
+        const targetComparisons = targetPerProject[project.id] || (25 * (project.num_questions || 1));
         
         return {
           ...project,
