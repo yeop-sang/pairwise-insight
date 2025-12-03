@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { Plus, Users, BarChart3, Clock, FileText, Trash2, ArrowRight, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
