@@ -599,11 +599,11 @@ export const ComparisonSession = () => {
               {reviewerStats.completed}/{requiredComparisonsForQuestion} 완료
             </Badge>
             <Badge 
-              variant={phaseInfo?.phase === 'balance' ? 'default' : 'destructive'} 
+              variant={phaseInfo?.phase === 'random' ? 'default' : 'destructive'} 
               className="flex items-center gap-1"
             >
               <TrendingUp className="h-3 w-3" />
-              {phaseInfo?.phase === 'balance' ? '균형 단계' : '적응 단계'}
+              {phaseInfo?.phase === 'random' ? '랜덤 단계' : '적응 단계'}
             </Badge>
           </div>
         </div>
@@ -655,7 +655,7 @@ export const ComparisonSession = () => {
             
             {phaseInfo && (
               <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-sm font-medium mb-1">현재 단계: {phaseInfo.phase === 'balance' ? '균형 단계' : '적응 단계'}</p>
+                <p className="text-sm font-medium mb-1">현재 단계: {phaseInfo.phase === 'random' ? '랜덤 단계' : '적응 단계'}</p>
                 <p className="text-xs text-muted-foreground">{phaseInfo.description}</p>
               </div>
             )}
