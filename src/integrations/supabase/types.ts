@@ -841,53 +841,6 @@ export type Database = {
           },
         ]
       }
-      student_feedback: {
-        Row: {
-          created_at: string | null
-          custom_direction: string | null
-          feedback_text: string
-          id: string
-          original_response: string
-          project_id: string
-          question_number: number
-          response_id: string
-          student_code: string
-          updated_at: string | null
-        }
-        Insert: {
-          created_at?: string | null
-          custom_direction?: string | null
-          feedback_text: string
-          id?: string
-          original_response: string
-          project_id: string
-          question_number: number
-          response_id: string
-          student_code: string
-          updated_at?: string | null
-        }
-        Update: {
-          created_at?: string | null
-          custom_direction?: string | null
-          feedback_text?: string
-          id?: string
-          original_response?: string
-          project_id?: string
-          question_number?: number
-          response_id?: string
-          student_code?: string
-          updated_at?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "student_feedback_response_id_fkey"
-            columns: ["response_id"]
-            isOneToOne: false
-            referencedRelation: "student_responses"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       student_responses: {
         Row: {
           created_at: string

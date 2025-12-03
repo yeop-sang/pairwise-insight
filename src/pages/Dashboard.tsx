@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { Plus, Users, BarChart3, Clock, FileText, Trash2, ArrowRight, Sparkles } from "lucide-react";
+import { Plus, Users, BarChart3, Clock, FileText, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface Project {
@@ -87,12 +87,9 @@ export const Dashboard = () => {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="relative">
-            <div className="w-12 h-12 border-4 border-primary/20 rounded-full animate-spin border-t-primary"></div>
-          </div>
-          <p className="text-muted-foreground animate-pulse">로딩 중...</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">로딩 중...</p>
         </div>
       </div>
     );
@@ -101,8 +98,10 @@ export const Dashboard = () => {
   // Show message if not authenticated
   if (!user) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
-        <p className="text-muted-foreground">로그인이 필요합니다.</p>
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-muted-foreground">로그인이 필요합니다.</p>
+        </div>
       </div>
     );
   }
@@ -112,193 +111,155 @@ export const Dashboard = () => {
     (acc, project) => ({
       totalProjects: acc.totalProjects + 1,
       activeComparisons: acc.activeComparisons + (project.is_active ? 1 : 0),
-      totalResponses: acc.totalResponses + 0,
-      totalComparisons: acc.totalComparisons + 0,
+      totalResponses: acc.totalResponses + 0, // TODO: Get actual counts
+      totalComparisons: acc.totalComparisons + 0, // TODO: Get actual counts
     }),
     { totalProjects: 0, activeComparisons: 0, totalResponses: 0, totalComparisons: 0 }
   );
 
-  const statCards = [
-    { 
-      icon: FileText, 
-      value: totalStats.totalProjects, 
-      label: "전체 프로젝트",
-      gradient: "from-blue-500/10 to-cyan-500/10",
-      iconColor: "text-blue-500"
-    },
-    { 
-      icon: Clock, 
-      value: totalStats.activeComparisons, 
-      label: "활성 세션",
-      gradient: "from-amber-500/10 to-orange-500/10",
-      iconColor: "text-amber-500"
-    },
-    { 
-      icon: Users, 
-      value: totalStats.totalResponses, 
-      label: "전체 응답",
-      gradient: "from-emerald-500/10 to-green-500/10",
-      iconColor: "text-emerald-500"
-    },
-    { 
-      icon: BarChart3, 
-      value: totalStats.totalComparisons, 
-      label: "완료된 비교",
-      gradient: "from-violet-500/10 to-purple-500/10",
-      iconColor: "text-violet-500"
-    },
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      {/* Decorative background elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute top-1/2 -left-40 w-60 h-60 bg-primary/5 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="relative container mx-auto px-4 py-8">
+    <div className="min-h-screen bg-gradient-subtle">
+      <div className="container mx-auto px-4 py-8">
         {/* Header */}
-        <header className="flex justify-between items-start mb-12 animate-fade-in">
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg shadow-primary/25">
-                <Sparkles className="h-6 w-6 text-primary-foreground" />
-              </div>
-              <h1 className="text-4xl font-bold bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
-                교사 대시보드
-              </h1>
-            </div>
-            <p className="text-muted-foreground text-lg pl-14">
-              안녕하세요, <span className="font-medium text-foreground">{profile?.name}</span>님!
+        <div className="flex justify-between items-start mb-8">
+          <div>
+            <h1 className="text-3xl font-bold text-foreground">교사 대시보드</h1>
+            <p className="text-muted-foreground mt-2">
+              안녕하세요, {profile?.name}님! 프로젝트를 관리하고 비교 평가 결과를 확인하세요.
             </p>
           </div>
-          <div className="flex gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => navigate('/student-management')}
-              className="backdrop-blur-sm bg-card/50 border-border/50 hover:bg-card/80 transition-all"
-            >
+          <div className="flex gap-2">
+            <Button onClick={() => navigate('/student-management')}>
               <Users className="h-4 w-4 mr-2" />
               학생 관리
             </Button>
             <Button 
               onClick={() => navigate("/create-project")} 
-              className="bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 transition-all hover:shadow-primary/40"
+              className="flex items-center gap-2"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4" />
               새 프로젝트
             </Button>
-            <Button 
-              variant="ghost" 
-              onClick={signOut}
-              className="text-muted-foreground hover:text-foreground"
-            >
+            <Button variant="outline" onClick={signOut}>
               로그아웃
             </Button>
           </div>
-        </header>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {statCards.map((stat, index) => (
-            <Card 
-              key={stat.label}
-              className="group relative overflow-hidden border-border/50 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 animate-slide-up"
-              style={{ animationDelay: `${index * 100}ms` }}
-            >
-              <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300`}></div>
-              <CardContent className="relative p-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-3xl font-bold tracking-tight">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
-                  </div>
-                  <div className={`p-3 rounded-2xl bg-gradient-to-br ${stat.gradient} group-hover:scale-110 transition-transform duration-300`}>
-                    <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
         </div>
 
-        {/* Projects Section */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm shadow-xl animate-slide-up" style={{ animationDelay: '400ms' }}>
-          <CardHeader className="border-b border-border/50">
-            <div className="flex items-center justify-between">
-              <CardTitle className="flex items-center gap-3 text-xl">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-card shadow-soft">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
                 <div className="p-2 bg-primary/10 rounded-lg">
-                  <FileText className="h-5 w-5 text-primary" />
+                  <FileText className="h-6 w-6 text-primary" />
                 </div>
-                내 프로젝트
-              </CardTitle>
-              {projects.length > 0 && (
-                <Badge variant="secondary" className="text-xs">
-                  {projects.length}개
-                </Badge>
-              )}
-            </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalStats.totalProjects}</p>
+                  <p className="text-sm text-muted-foreground">전체 프로젝트</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card shadow-soft">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-warning/10 rounded-lg">
+                  <Clock className="h-6 w-6 text-warning" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalStats.activeComparisons}</p>
+                  <p className="text-sm text-muted-foreground">활성 세션</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card shadow-soft">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-success/10 rounded-lg">
+                  <Users className="h-6 w-6 text-success" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalStats.totalResponses}</p>
+                  <p className="text-sm text-muted-foreground">전체 응답</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-card shadow-soft">
+            <CardContent className="p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <BarChart3 className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{totalStats.totalComparisons}</p>
+                  <p className="text-sm text-muted-foreground">완료된 비교</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Projects */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              내 프로젝트
+            </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent>
             {projects.length === 0 ? (
-              <div className="text-center py-16">
-                <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
-                  <FileText className="h-10 w-10 text-primary/50" />
-                </div>
-                <h3 className="text-xl font-semibold mb-2">프로젝트가 없습니다</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  첫 번째 동료평가 프로젝트를 생성하여 학생들의 평가를 시작해보세요.
+              <div className="text-center py-8">
+                <FileText className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">프로젝트가 없습니다</h3>
+                <p className="text-muted-foreground mb-4">
+                  첫 번째 동료평가 프로젝트를 생성해보세요.
                 </p>
-                <Button 
-                  onClick={() => navigate("/create-project")}
-                  className="bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25"
-                >
+                <Button onClick={() => navigate("/create-project")}>
                   <Plus className="h-4 w-4 mr-2" />
                   새 프로젝트 생성
                 </Button>
               </div>
             ) : (
-              <div className="space-y-3">
-                {projects.map((project, index) => (
+              <div className="space-y-4">
+                {projects.map((project) => (
                   <div
                     key={project.id}
-                    className="group relative flex items-center justify-between p-5 rounded-xl border border-border/50 bg-gradient-to-r from-transparent to-transparent hover:from-primary/5 hover:to-transparent hover:border-primary/30 cursor-pointer transition-all duration-300 animate-slide-up"
-                    style={{ animationDelay: `${(index + 5) * 50}ms` }}
+                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-accent cursor-pointer transition-colors"
                     onClick={() => navigate(`/project/${project.id}`)}
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h3 className="font-semibold text-lg truncate group-hover:text-primary transition-colors">
-                          {project.title}
-                        </h3>
-                        <Badge 
-                          variant={project.is_active ? "default" : "secondary"}
-                          className={project.is_active ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" : ""}
-                        >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <div>
+                          <h3 className="font-medium">{project.title}</h3>
+                          <p className="text-sm text-muted-foreground">{project.description || "설명 없음"}</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                      <div className="text-center">
+                        <Badge variant={project.is_active ? "default" : "secondary"}>
                           {project.is_active ? "활성" : "비활성"}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground truncate">
-                        {project.description || "설명 없음"}
-                      </p>
-                    </div>
-                    
-                    <div className="flex items-center gap-4 ml-4">
-                      <span className="text-xs text-muted-foreground whitespace-nowrap">
-                        {new Date(project.created_at).toLocaleDateString('ko-KR')}
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={(e) => deleteProject(project.id, e)}
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100 transition-all"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
+                      <div className="text-center min-w-20">
+                        <p className="text-xs">{new Date(project.created_at).toLocaleDateString()}</p>
                       </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={(e) => deleteProject(project.id, e)}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
                   </div>
                 ))}

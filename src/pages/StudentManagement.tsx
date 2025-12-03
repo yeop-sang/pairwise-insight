@@ -7,9 +7,9 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Users, Plus, Upload, Trash2, Search, ArrowLeft, UserX, GraduationCap, Sparkles, FileSpreadsheet } from 'lucide-react';
+import { Users, Plus, Upload, Trash2, Search, ArrowLeft, UserX, GraduationCap } from 'lucide-react';
 import * as XLSX from 'xlsx';
 
 interface Student {
@@ -86,7 +86,11 @@ export const StudentManagement: React.FC = () => {
     const stats = studentsData.reduce((acc, student) => {
       const key = `${student.grade}-${student.class_number}`;
       if (!acc[key]) {
-        acc[key] = { grade: student.grade, class_number: student.class_number, count: 0 };
+        acc[key] = {
+          grade: student.grade,
+          class_number: student.class_number,
+          count: 0
+        };
       }
       acc[key].count++;
       return acc;
@@ -174,7 +178,10 @@ export const StudentManagement: React.FC = () => {
         });
       }
 
-      const { error } = await supabase.from('students').insert(studentsData);
+      // students 테이블에 학생 정보 추가
+      const { error } = await supabase
+        .from('students')
+        .insert(studentsData);
 
       if (error) throw error;
 
@@ -194,7 +201,9 @@ export const StudentManagement: React.FC = () => {
       });
     } finally {
       setUploading(false);
-      if (event.target) event.target.value = '';
+      if (event.target) {
+        event.target.value = '';
+      }
     }
   };
 
@@ -203,14 +212,17 @@ export const StudentManagement: React.FC = () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from('students')
         .delete()
         .eq('id', studentId)
         .eq('teacher_id', user.id)
         .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Delete error:', error);
+        throw error;
+      }
 
       if (!data || data.length === 0) {
         toast({
@@ -221,7 +233,11 @@ export const StudentManagement: React.FC = () => {
         return;
       }
 
-      toast({ title: '성공', description: '학생이 삭제되었습니다.' });
+      toast({
+        title: '성공',
+        description: '학생이 삭제되었습니다.',
+      });
+
       fetchStudents();
     } catch (error) {
       console.error('Error deleting student:', error);
@@ -237,14 +253,19 @@ export const StudentManagement: React.FC = () => {
     if (!user) return;
     
     try {
-      const { data: studentsToDelete } = await supabase
+      const { data: studentsToDelete, error: fetchError } = await supabase
         .from('students')
         .select('id')
         .eq('teacher_id', user.id)
         .eq('grade', grade);
 
+      if (fetchError) throw fetchError;
+
       if (!studentsToDelete || studentsToDelete.length === 0) {
-        toast({ title: '알림', description: `${grade}학년에 삭제할 학생이 없습니다.` });
+        toast({
+          title: '알림',
+          description: `${grade}학년에 삭제할 학생이 없습니다.`,
+        });
         return;
       }
 
@@ -260,6 +281,7 @@ export const StudentManagement: React.FC = () => {
         title: '성공',
         description: `${grade}학년 학생 ${studentsToDelete.length}명이 삭제되었습니다.`,
       });
+
       fetchStudents();
     } catch (error) {
       console.error('Error deleting students by grade:', error);
@@ -275,15 +297,20 @@ export const StudentManagement: React.FC = () => {
     if (!user) return;
     
     try {
-      const { data: studentsToDelete } = await supabase
+      const { data: studentsToDelete, error: fetchError } = await supabase
         .from('students')
         .select('id')
         .eq('teacher_id', user.id)
         .eq('grade', grade)
         .eq('class_number', classNumber);
 
+      if (fetchError) throw fetchError;
+
       if (!studentsToDelete || studentsToDelete.length === 0) {
-        toast({ title: '알림', description: `${grade}학년 ${classNumber}반에 삭제할 학생이 없습니다.` });
+        toast({
+          title: '알림',
+          description: `${grade}학년 ${classNumber}반에 삭제할 학생이 없습니다.`,
+        });
         return;
       }
 
@@ -300,6 +327,7 @@ export const StudentManagement: React.FC = () => {
         title: '성공',
         description: `${grade}학년 ${classNumber}반 학생 ${studentsToDelete.length}명이 삭제되었습니다.`,
       });
+
       fetchStudents();
     } catch (error) {
       console.error('Error deleting students by class:', error);
@@ -332,11 +360,8 @@ export const StudentManagement: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <div className="w-12 h-12 border-4 border-primary/20 rounded-full animate-spin border-t-primary"></div>
-          <p className="text-muted-foreground">로딩 중...</p>
-        </div>
+      <div className="container mx-auto px-4 py-8">
+        <div className="text-center">로딩 중...</div>
       </div>
     );
   }
@@ -347,330 +372,231 @@ export const StudentManagement: React.FC = () => {
     ? [...new Set(students.filter(s => s.grade === selectedGrade).map(s => s.class_number))].sort()
     : [];
 
-  const statCards = [
-    { label: '총 학생 수', value: totalStudents, gradient: 'from-blue-500/10 to-cyan-500/10', iconColor: 'text-blue-500' },
-    { label: '학년 수', value: uniqueGrades.length, gradient: 'from-emerald-500/10 to-green-500/10', iconColor: 'text-emerald-500' },
-    { label: '반 수', value: classStats.length, gradient: 'from-amber-500/10 to-orange-500/10', iconColor: 'text-amber-500' },
-    { label: '필터된 학생', value: filteredStudents.length, gradient: 'from-violet-500/10 to-purple-500/10', iconColor: 'text-violet-500' },
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 -left-40 w-60 h-60 bg-primary/5 rounded-full blur-3xl"></div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mb-6">
+        <Button
+          variant="ghost"
+          onClick={() => navigate('/dashboard')}
+          className="mb-4"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" />
+          대시보드로 돌아가기
+        </Button>
+        <h1 className="text-3xl font-bold mb-2">학생 관리</h1>
+        <p className="text-muted-foreground">전체 학생을 관리하고 프로젝트에 할당할 수 있습니다.</p>
       </div>
 
-      <div className="relative container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8 animate-fade-in">
-          <Button
-            variant="ghost"
-            onClick={() => navigate('/dashboard')}
-            className="mb-4 text-muted-foreground hover:text-foreground"
-          >
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            대시보드로 돌아가기
-          </Button>
+      {/* 통계 카드 */}
+      <div className="grid gap-6 md:grid-cols-4 mb-8">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">총 학생 수</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{totalStudents}</div>
+          </CardContent>
+        </Card>
 
-          <div className="flex items-start justify-between">
-            <div className="space-y-2">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg shadow-primary/25">
-                  <Users className="h-6 w-6 text-primary-foreground" />
-                </div>
-                <h1 className="text-3xl font-bold">학생 관리</h1>
-              </div>
-              <p className="text-muted-foreground pl-14">전체 학생을 관리하고 프로젝트에 할당할 수 있습니다.</p>
-            </div>
-            <Button
-              onClick={() => setIsDialogOpen(true)}
-              className="bg-gradient-to-r from-primary to-primary/90 shadow-lg shadow-primary/25"
-            >
-              <Upload className="w-4 h-4 mr-2" />
-              학생 업로드
-            </Button>
-          </div>
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">학년 수</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{uniqueGrades.length}</div>
+          </CardContent>
+        </Card>
 
-        {/* Stats */}
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          {statCards.map((stat, index) => (
-            <Card 
-              key={stat.label}
-              className="group border-border/50 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all animate-slide-up"
-              style={{ animationDelay: `${index * 50}ms` }}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-2xl font-bold">{stat.value}</p>
-                    <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  </div>
-                  <div className={`p-2.5 rounded-xl bg-gradient-to-br ${stat.gradient}`}>
-                    <Users className={`h-5 w-5 ${stat.iconColor}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">반 수</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{classStats.length}</div>
+          </CardContent>
+        </Card>
 
-        {/* Class stats */}
-        {classStats.length > 0 && (
-          <Card className="mb-6 border-border/50 bg-card/50 backdrop-blur-sm animate-slide-up" style={{ animationDelay: '200ms' }}>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <GraduationCap className="h-5 w-5 text-primary" />
-                  </div>
-                  <CardTitle>반별 학생 현황</CardTitle>
-                </div>
-                <div className="flex gap-2">
-                  {uniqueGrades.map((grade) => (
-                    <Button
-                      key={grade}
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setDeleteTarget({ type: 'grade', grade });
-                        setIsDeleteDialogOpen(true);
-                      }}
-                      className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      <Trash2 className="w-3 h-3 mr-1" />
-                      {grade}학년 삭제
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex flex-wrap gap-2">
-                {classStats.map((stat) => (
-                  <div key={`${stat.grade}-${stat.class_number}`} className="flex items-center gap-1">
-                    <Badge 
-                      variant="outline"
-                      className="cursor-pointer hover:bg-primary/10 hover:border-primary transition-colors py-1.5"
-                      onClick={() => {
-                        setSelectedGrade(stat.grade);
-                        setSelectedClass(stat.class_number);
-                      }}
-                    >
-                      {stat.grade}학년 {stat.class_number}반 ({stat.count}명)
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        setDeleteTarget({ type: 'class', grade: stat.grade, class: stat.class_number });
-                        setIsDeleteDialogOpen(true);
-                      }}
-                    >
-                      <UserX className="w-3.5 h-3.5" />
-                    </Button>
-                  </div>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">필터된 학생</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{filteredStudents.length}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* 반별 통계 */}
+      {classStats.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <CardTitle>반별 학생 현황</CardTitle>
+              <div className="flex gap-2">
+                {uniqueGrades.map((grade) => (
+                  <Button
+                    key={grade}
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      setDeleteTarget({ type: 'grade', grade });
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <GraduationCap className="w-4 h-4 mr-2" />
+                    {grade}학년 삭제
+                  </Button>
                 ))}
               </div>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Filters */}
-        <Card className="mb-6 border-border/50 bg-card/50 backdrop-blur-sm animate-slide-up" style={{ animationDelay: '300ms' }}>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Search className="h-5 w-5 text-primary" />
-              </div>
-              <CardTitle>필터 및 검색</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-wrap gap-4 items-end">
-              <div className="flex-1 min-w-64">
-                <label className="text-sm font-medium mb-2 block">검색</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="이름 또는 학생 ID로 검색..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-11 bg-background/50"
-                  />
+            <div className="flex flex-wrap gap-2">
+              {classStats.map((stat) => (
+                <div key={`${stat.grade}-${stat.class_number}`} className="flex items-center gap-1">
+                  <Badge 
+                    variant="outline"
+                    className="cursor-pointer hover:bg-accent"
+                    onClick={() => {
+                      setSelectedGrade(stat.grade);
+                      setSelectedClass(stat.class_number);
+                    }}
+                  >
+                    {stat.grade}학년 {stat.class_number}반 ({stat.count}명)
+                  </Badge>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => {
+                      setDeleteTarget({ type: 'class', grade: stat.grade, class: stat.class_number });
+                      setIsDeleteDialogOpen(true);
+                    }}
+                  >
+                    <UserX className="w-3 h-3" />
+                  </Button>
                 </div>
-              </div>
-
-              <div className="min-w-32">
-                <label className="text-sm font-medium mb-2 block">학년</label>
-                <select
-                  value={selectedGrade ?? ''}
-                  onChange={(e) => {
-                    const value = e.target.value ? parseInt(e.target.value) : null;
-                    setSelectedGrade(value);
-                    setSelectedClass(null);
-                  }}
-                  className="w-full h-11 px-3 rounded-md border border-border bg-background/50"
-                >
-                  <option value="">전체</option>
-                  {uniqueGrades.map((grade) => (
-                    <option key={grade} value={grade}>{grade}학년</option>
-                  ))}
-                </select>
-              </div>
-
-              <div className="min-w-32">
-                <label className="text-sm font-medium mb-2 block">반</label>
-                <select
-                  value={selectedClass ?? ''}
-                  onChange={(e) => setSelectedClass(e.target.value ? parseInt(e.target.value) : null)}
-                  disabled={!selectedGrade}
-                  className="w-full h-11 px-3 rounded-md border border-border bg-background/50 disabled:opacity-50"
-                >
-                  <option value="">전체</option>
-                  {uniqueClasses.map((cls) => (
-                    <option key={cls} value={cls}>{cls}반</option>
-                  ))}
-                </select>
-              </div>
-
-              <Button variant="outline" onClick={resetFilters} className="h-11">
-                초기화
-              </Button>
+              ))}
             </div>
           </CardContent>
         </Card>
+      )}
 
-        {/* Student table */}
-        <Card className="border-border/50 bg-card/50 backdrop-blur-sm animate-slide-up" style={{ animationDelay: '400ms' }}>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-lg">
-                <Sparkles className="h-5 w-5 text-primary" />
-              </div>
-              <div>
-                <CardTitle>학생 목록</CardTitle>
-                <CardDescription>{filteredStudents.length}명의 학생</CardDescription>
+      {/* 필터 및 검색 */}
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>필터 및 검색</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4 items-end">
+            <div className="flex-1 min-w-64">
+              <label className="text-sm font-medium mb-2 block">검색</label>
+              <div className="relative">
+                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="이름 또는 학생 ID로 검색..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-8"
+                />
               </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            {filteredStudents.length === 0 ? (
-              <div className="text-center py-12">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
-                  <Users className="h-8 w-8 text-primary/50" />
-                </div>
-                <h3 className="text-lg font-semibold mb-2">학생이 없습니다</h3>
-                <p className="text-muted-foreground mb-4">학생 목록을 업로드하거나 검색 조건을 변경해보세요.</p>
-                <Button onClick={() => setIsDialogOpen(true)}>
-                  <Upload className="w-4 h-4 mr-2" />
-                  학생 업로드
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">학년</label>
+              <select
+                value={selectedGrade || ''}
+                onChange={(e) => {
+                  const grade = e.target.value ? parseInt(e.target.value) : null;
+                  setSelectedGrade(grade);
+                  setSelectedClass(null);
+                }}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              >
+                <option value="">전체</option>
+                {uniqueGrades.map(grade => (
+                  <option key={grade} value={grade}>{grade}학년</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-sm font-medium mb-2 block">반</label>
+              <select
+                value={selectedClass || ''}
+                onChange={(e) => setSelectedClass(e.target.value ? parseInt(e.target.value) : null)}
+                disabled={!selectedGrade}
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm disabled:opacity-50"
+              >
+                <option value="">전체</option>
+                {uniqueClasses.map(classNum => (
+                  <option key={classNum} value={classNum}>{classNum}반</option>
+                ))}
+              </select>
+            </div>
+
+            <Button variant="outline" onClick={resetFilters}>
+              필터 초기화
+            </Button>
+
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <Plus className="w-4 h-4 mr-2" />
+                  학생 추가
                 </Button>
-              </div>
-            ) : (
-              <div className="rounded-lg border border-border/50 overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/30">
-                      <TableHead>학생 ID</TableHead>
-                      <TableHead>이름</TableHead>
-                      <TableHead>학년</TableHead>
-                      <TableHead>반</TableHead>
-                      <TableHead>번호</TableHead>
-                      <TableHead className="text-right">관리</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredStudents.slice(0, 50).map((student) => (
-                      <TableRow key={student.id} className="hover:bg-muted/20">
-                        <TableCell className="font-mono text-sm">{student.student_id}</TableCell>
-                        <TableCell className="font-medium">{student.name}</TableCell>
-                        <TableCell>{student.grade}학년</TableCell>
-                        <TableCell>{student.class_number}반</TableCell>
-                        <TableCell>{student.student_number}번</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteStudent(student.id)}
-                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                {filteredStudents.length > 50 && (
-                  <div className="p-4 text-center text-sm text-muted-foreground border-t border-border/50">
-                    {filteredStudents.length - 50}명의 학생이 더 있습니다. 검색 또는 필터를 사용하세요.
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>학생 목록 업로드</DialogTitle>
+                  <DialogDescription>
+                    Excel 파일로 학생 목록을 일괄 업로드할 수 있습니다.
+                    <br />
+                    파일 형식: 1행에 "학년", "반", "번호", "이름" 순서로 입력
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      type="file"
+                      accept=".xlsx,.xls"
+                      onChange={handleFileUpload}
+                      disabled={uploading}
+                    />
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      disabled={uploading}
+                    >
+                      <Upload className="h-4 w-4" />
+                    </Button>
                   </div>
-                )}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Upload Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Upload className="w-5 h-5 text-primary" />
-              학생 목록 업로드
-            </DialogTitle>
-            <DialogDescription>
-              엑셀 파일로 학생 목록을 업로드하세요.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div 
-              className="border-2 border-dashed rounded-xl p-8 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all"
-              onClick={() => document.getElementById('student-upload')?.click()}
-            >
-              <FileSpreadsheet className="h-10 w-10 mx-auto mb-3 text-primary/50" />
-              <p className="font-medium">클릭하여 파일 선택</p>
-              <p className="text-sm text-muted-foreground mt-1">
-                .xlsx, .xls 파일 지원
-              </p>
-            </div>
-            <Input
-              id="student-upload"
-              type="file"
-              accept=".xlsx,.xls"
-              onChange={handleFileUpload}
-              disabled={uploading}
-              className="hidden"
-            />
-            <div className="bg-muted/30 p-4 rounded-lg">
-              <p className="text-sm font-medium mb-2">파일 형식</p>
-              <p className="text-xs text-muted-foreground">
-                첫 번째 행: 학년, 반, 번호, 이름<br />
-                예: 1, 1, 1, 홍길동
-              </p>
-            </div>
+                  {uploading && (
+                    <p className="text-sm text-muted-foreground">업로드 중...</p>
+                  )}
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
-        </DialogContent>
-      </Dialog>
+        </CardContent>
+      </Card>
 
-      {/* Delete Dialog */}
+      {/* 일괄 삭제 확인 다이얼로그 */}
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <DialogContent className="bg-card/95 backdrop-blur-xl border-border/50">
+        <DialogContent>
           <DialogHeader>
-            <DialogTitle className="text-destructive">학생 삭제 확인</DialogTitle>
+            <DialogTitle>학생 일괄 삭제</DialogTitle>
             <DialogDescription>
               {deleteTarget?.type === 'grade' 
-                ? `${deleteTarget.grade}학년의 모든 학생을 삭제하시겠습니까?`
-                : `${deleteTarget?.grade}학년 ${deleteTarget?.class}반의 모든 학생을 삭제하시겠습니까?`
+                ? `${deleteTarget.grade}학년 모든 학생을 삭제하시겠습니까?`
+                : `${deleteTarget?.grade}학년 ${deleteTarget?.class}반 모든 학생을 삭제하시겠습니까?`
               }
-              <br />이 작업은 되돌릴 수 없습니다.
+              <br />
+              <span className="text-destructive font-medium">이 작업은 되돌릴 수 없습니다.</span>
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-2 pt-4">
+          <div className="flex justify-end gap-2">
             <Button variant="outline" onClick={() => setIsDeleteDialogOpen(false)}>
               취소
             </Button>
@@ -680,6 +606,72 @@ export const StudentManagement: React.FC = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* 학생 목록 테이블 */}
+      <Card>
+        <CardHeader>
+          <CardTitle>학생 목록</CardTitle>
+          <CardDescription>
+            {filteredStudents.length > 0 
+              ? `총 ${filteredStudents.length}명의 학생이 있습니다.`
+              : '조건에 맞는 학생이 없습니다.'
+            }
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>학생 ID</TableHead>
+                <TableHead>이름</TableHead>
+                <TableHead>학년</TableHead>
+                <TableHead>반</TableHead>
+                <TableHead>번호</TableHead>
+                <TableHead>비밀번호</TableHead>
+                <TableHead>등록일</TableHead>
+                <TableHead>액션</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredStudents.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8">
+                    {searchTerm || selectedGrade || selectedClass 
+                      ? '조건에 맞는 학생이 없습니다.'
+                      : '등록된 학생이 없습니다. 학생을 추가해주세요.'
+                    }
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredStudents.map((student) => (
+                  <TableRow key={student.id}>
+                    <TableCell className="font-mono text-sm">
+                      {student.student_id}
+                    </TableCell>
+                    <TableCell>{student.name}</TableCell>
+                    <TableCell>{student.grade}학년</TableCell>
+                    <TableCell>{student.class_number}반</TableCell>
+                    <TableCell>{student.student_number}번</TableCell>
+                    <TableCell className="font-mono text-sm">
+                      {student.grade}{student.class_number.toString().padStart(2, '0')}{student.student_number.toString().padStart(2, '0')}
+                    </TableCell>
+                    <TableCell>{new Date(student.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => deleteStudent(student.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 };

@@ -6,5 +6,3 @@ verify_jwt = false
 [functions.import-csv-responses]
 verify_jwt = false
 
-[functions.generate-student-feedback]
-verify_jwt = false

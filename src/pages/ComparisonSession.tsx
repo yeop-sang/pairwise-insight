@@ -41,22 +41,16 @@ export const ComparisonSession = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [startTime, setStartTime] = useState<number>(Date.now());
-  
-  // 응답 로딩 완료 상태 추적
-  const [responsesLoaded, setResponsesLoaded] = useState(false);
 
   // 현재 사용자 정보 (교사 또는 학생)  
   const isStudent = !!student;
   const isTeacher = !!user && !!profile;
   const currentUserId = student?.id || user?.id;
 
-  // 현재 문항의 응답 개수를 계산 (응답 로딩 완료 후에만 유효한 값 반환)
+  // 현재 문항의 응답 개수를 계산 (useAdvancedComparisonLogic보다 먼저 계산)
   const currentQuestionResponseCount = useMemo(() => {
-    if (!responsesLoaded) return 0;
-    const count = allResponses.filter(r => r.question_number === currentQuestion).length;
-    console.log(`Question ${currentQuestion}: ${count} responses (loaded: ${responsesLoaded})`);
-    return count;
-  }, [allResponses, currentQuestion, responsesLoaded]);
+    return allResponses.filter(r => r.question_number === currentQuestion).length;
+  }, [allResponses, currentQuestion]);
 
   // 고급 비교 알고리즘 훅 사용
   const {
@@ -77,8 +71,7 @@ export const ComparisonSession = () => {
     responses,
     reviewerId: student?.student_number?.toString() || user?.id || '', // Use student_number as string to match with response.student_code
     currentQuestion,
-    // 응답 로딩 완료 후에만 유효한 응답 수 전달
-    numResponses: responsesLoaded && currentQuestionResponseCount > 0 ? currentQuestionResponseCount : undefined,
+    numResponses: currentQuestionResponseCount,
     studentUUID: student?.id // Pass UUID for database operations
   });
 
@@ -376,11 +369,6 @@ export const ComparisonSession = () => {
       
       console.log('Responses loaded:', responsesData?.length, 'total responses');
       setAllResponses(responsesData || []);
-      
-      // 응답 로딩 완료 플래그 설정
-      if (responsesData && responsesData.length > 0) {
-        setResponsesLoaded(true);
-      }
       
       // 최대 문항 수 계산
       const maxQuestionNumber = Math.max(...(responsesData || []).map(r => r.question_number));

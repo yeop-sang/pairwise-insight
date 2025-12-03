@@ -104,13 +104,6 @@ export const useAdvancedComparisonLogic = ({
         return;
       }
 
-      // numResponses가 유효하지 않으면 초기화 보류
-      if (providedNumResponses === undefined || providedNumResponses <= 0) {
-        console.log(`Waiting for valid numResponses (current: ${providedNumResponses})...`);
-        setIsInitializing(false);
-        return;
-      }
-
       // Wait for session metadata to be loaded
       if (sessionLoading || !sessionMetadata) {
         console.log("Waiting for session metadata to load...");
@@ -154,7 +147,7 @@ export const useAdvancedComparisonLogic = ({
       console.error("Error initializing algorithm:", error);
       setIsInitializing(false);
     }
-  }, [projectId, responses, reviewerId, currentQuestion, sessionMetadata, sessionLoading, providedNumResponses]);
+  }, [projectId, responses, reviewerId, currentQuestion, sessionMetadata, sessionLoading]);
 
   const updateStats = useCallback((alg: ComparisonAlgorithm) => {
     const completion = alg.getCompletionStats();
