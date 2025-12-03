@@ -1,6 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
-import { calculateRequiredComparisons } from '@/utils/comparisonCalculations';
+import { 
+  calculateComparisonsPerStudent, 
+  MAX_COMPARISONS_PER_STUDENT,
+  MIN_COMPARISONS_PER_STUDENT 
+} from '@/utils/comparisonCalculations';
 
 interface SessionConfig {
   targetPerResponse: number;
@@ -28,7 +32,7 @@ interface SessionMetadata {
 
 const DEFAULT_CONFIG: SessionConfig = {
   targetPerResponse: 15,
-  reviewerTargetPerPerson: 15,
+  reviewerTargetPerPerson: 15, // 기본값, 동적으로 계산됨
   pairingStrategy: 'balanced_adaptive',
   kElo: 32.0,
   allowTie: true,
@@ -121,19 +125,16 @@ export const useSessionMetadata = (
         
         const numAssignedStudents = assignedStudents?.length || 1; // 최소 1명
         
-        // 응답 개수에 따른 기본 비교 횟수 계산
-        const baseComparisons = numResponses 
-          ? calculateRequiredComparisons(numResponses)
+        // 새로운 공식: 각 쌍이 최소 3회 비교되도록 학생당 비교 횟수 계산
+        // 최소 5회, 최대 30회로 제한
+        const requiredComparisonsPerStudent = numResponses 
+          ? calculateComparisonsPerStudent(numResponses, numAssignedStudents)
           : DEFAULT_CONFIG.reviewerTargetPerPerson;
         
-        // 전체 필요 횟수 = 기본 횟수 * 3
-        const totalRequiredComparisons = baseComparisons * 3;
-        
-        // 각 학생당 필요 횟수 = 전체 필요 횟수 / 할당된 학생 수
-        const requiredComparisonsPerStudent = Math.ceil(totalRequiredComparisons / numAssignedStudents);
-        
-        console.log(`Creating session: ${numResponses} responses, ${numAssignedStudents} students assigned`);
-        console.log(`Base comparisons: ${baseComparisons}, Total required (3x): ${totalRequiredComparisons}, Per student: ${requiredComparisonsPerStudent}`);
+        console.log(`Creating session for question ${questionNumber}:`);
+        console.log(`  - Responses: ${numResponses}`);
+        console.log(`  - Assigned students: ${numAssignedStudents}`);
+        console.log(`  - Comparisons per student: ${requiredComparisonsPerStudent} (min: ${MIN_COMPARISONS_PER_STUDENT}, max: ${MAX_COMPARISONS_PER_STUDENT})`);
         
         const { error } = await supabase
           .from('session_metadata')
