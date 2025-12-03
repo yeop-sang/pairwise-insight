@@ -1,6 +1,6 @@
 import React, { useState, useEffect, createContext, useContext } from 'react';
 import { User, Session } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 import { useToast } from '@/hooks/use-toast';
 
 interface Profile {
@@ -150,9 +150,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const signOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
-      
-      // 세션 관련 오류는 무시하고 로그아웃 처리
-      if (error && !error.message.toLowerCase().includes('session') && !error.message.toLowerCase().includes('auth')) {
+      // 세션이 없어도 상태를 클리어하고 리다이렉트
+      if (error && !error.message.includes('Session not found')) {
         throw error;
       }
       
@@ -169,17 +168,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // 메인 페이지로 리다이렉트
       window.location.href = '/';
     } catch (error: any) {
-      // 로그아웃 실패 시에도 상태 초기화 및 리다이렉트
-      setUser(null);
-      setSession(null);
-      setProfile(null);
-      
       toast({
-        title: "로그아웃 완료",
-        description: "성공적으로 로그아웃되었습니다."
+        variant: "destructive",
+        title: "오류 발생",
+        description: error.message
       });
-      
-      window.location.href = '/';
     }
   };
 

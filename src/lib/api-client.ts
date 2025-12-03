@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from '@/lib/supabase';
 
 const FASTAPI_BASE_URL = import.meta.env.VITE_FASTAPI_BASE_URL;
 

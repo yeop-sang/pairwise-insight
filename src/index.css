@@ -8,35 +8,35 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Modern teal/emerald palette - easy on eyes, high visibility */
-    --background: 165 20% 98%;
-    --foreground: 168 15% 12%;
+    /* Modern metallic blue palette */
+    --background: 220 25% 98%;
+    --foreground: 220 15% 15%;
 
     --card: 0 0% 100%;
-    --card-foreground: 168 15% 12%;
+    --card-foreground: 220 15% 15%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 168 15% 12%;
+    --popover-foreground: 220 15% 15%;
 
-    /* Teal as primary - calming and modern */
-    --primary: 168 76% 42%;
+    /* Metallic blue as primary */
+    --primary: 214 95% 58%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 168 55% 65%;
+    --primary-muted: 214 85% 75%;
     
-    /* Teal metallic colors */
-    --metallic-silver: 165 15% 82%;
-    --metallic-dark: 168 30% 25%;
-    --metallic-light: 165 25% 94%;
+    /* Metallic colors */
+    --metallic-silver: 210 20% 80%;
+    --metallic-dark: 215 25% 27%;
+    --metallic-light: 210 30% 92%;
 
     /* Neutral grays for secondary */
-    --secondary: 165 12% 95%;
-    --secondary-foreground: 168 15% 12%;
+    --secondary: 220 15% 95%;
+    --secondary-foreground: 220 15% 15%;
 
-    --muted: 165 12% 95%;
-    --muted-foreground: 168 8% 45%;
+    --muted: 220 15% 95%;
+    --muted-foreground: 220 10% 45%;
 
-    --accent: 168 60% 95%;
-    --accent-foreground: 168 76% 42%;
+    --accent: 214 95% 96%;
+    --accent-foreground: 214 95% 58%;
 
     /* Status colors */
     --destructive: 0 72% 51%;
@@ -48,41 +48,41 @@ All colors MUST be HSL.
     --warning: 43 96% 56%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 165 15% 88%;
-    --input: 165 15% 88%;
-    --ring: 168 76% 42%;
+    --border: 220 20% 88%;
+    --input: 220 20% 88%;
+    --ring: 214 95% 58%;
 
     --radius: 0.75rem;
 
-    --sidebar-background: 165 15% 98%;
+    --sidebar-background: 0 0% 98%;
 
-    --sidebar-foreground: 168 10% 26%;
+    --sidebar-foreground: 240 5.3% 26.1%;
 
-    --sidebar-primary: 168 30% 15%;
+    --sidebar-primary: 240 5.9% 10%;
 
     --sidebar-primary-foreground: 0 0% 98%;
 
-    --sidebar-accent: 165 15% 95%;
+    --sidebar-accent: 240 4.8% 95.9%;
 
-    --sidebar-accent-foreground: 168 30% 15%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
 
-    --sidebar-border: 165 12% 91%;
+    --sidebar-border: 220 13% 91%;
 
-    --sidebar-ring: 168 76% 42%;
+    --sidebar-ring: 214 95% 58%;
 
-    /* Teal gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(168 76% 42%), hsl(168 55% 65%));
-    --gradient-metallic: linear-gradient(135deg, hsl(165 25% 94%), hsl(165 15% 82%), hsl(168 30% 25%));
-    --gradient-hero: linear-gradient(135deg, hsl(168 76% 42%) 0%, hsl(165 50% 60%) 50%, hsl(168 30% 25%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(165 20% 98%));
-    --gradient-subtle: linear-gradient(180deg, hsl(165 20% 98%), hsl(168 60% 98%));
+    /* Metallic gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(214 95% 58%), hsl(214 85% 75%));
+    --gradient-metallic: linear-gradient(135deg, hsl(210 30% 92%), hsl(210 20% 80%), hsl(215 25% 27%));
+    --gradient-hero: linear-gradient(135deg, hsl(214 95% 58%) 0%, hsl(210 20% 80%) 50%, hsl(215 25% 27%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(220 25% 98%));
+    --gradient-subtle: linear-gradient(180deg, hsl(220 25% 98%), hsl(214 95% 98%));
 
-    /* Shadows with teal tint */
-    --shadow-soft: 0 2px 8px hsl(168 76% 42% / 0.08);
-    --shadow-medium: 0 8px 24px hsl(168 76% 42% / 0.12);
-    --shadow-strong: 0 20px 60px hsl(168 76% 42% / 0.2);
-    --shadow-glow: 0 0 60px hsl(168 76% 42% / 0.25);
-    --shadow-metallic: 0 8px 32px hsl(168 30% 25% / 0.15);
+    /* Shadows with metallic tint */
+    --shadow-soft: 0 2px 8px hsl(214 95% 58% / 0.08);
+    --shadow-medium: 0 8px 24px hsl(214 95% 58% / 0.12);
+    --shadow-strong: 0 20px 60px hsl(214 95% 58% / 0.2);
+    --shadow-glow: 0 0 60px hsl(214 95% 58% / 0.25);
+    --shadow-metallic: 0 8px 32px hsl(215 25% 27% / 0.15);
 
     /* Academic spacing */
     --space-xs: 0.25rem;
@@ -109,27 +109,27 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 168 25% 7%;
-    --foreground: 165 20% 91%;
+    --background: 217 32% 7%;
+    --foreground: 213 31% 91%;
 
-    --card: 168 25% 10%;
-    --card-foreground: 165 20% 91%;
+    --card: 217 32% 10%;
+    --card-foreground: 213 31% 91%;
 
-    --popover: 168 25% 10%;
-    --popover-foreground: 165 20% 91%;
+    --popover: 217 32% 10%;
+    --popover-foreground: 213 31% 91%;
 
-    --primary: 168 70% 55%;
+    --primary: 213 94% 68%;
     --primary-foreground: 0 0% 100%;
-    --primary-muted: 168 40% 25%;
+    --primary-muted: 213 50% 25%;
 
-    --secondary: 168 25% 17%;
-    --secondary-foreground: 165 20% 91%;
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 213 31% 91%;
 
-    --muted: 168 25% 17%;
-    --muted-foreground: 165 15% 65%;
+    --muted: 217 32% 17%;
+    --muted-foreground: 215 20% 65%;
 
-    --accent: 168 25% 17%;
-    --accent-foreground: 168 70% 55%;
+    --accent: 217 32% 17%;
+    --accent-foreground: 213 94% 68%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
@@ -140,29 +140,29 @@ All colors MUST be HSL.
     --warning: 43 96% 56%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 168 25% 17%;
-    --input: 168 25% 17%;
-    --ring: 168 70% 55%;
-    --sidebar-background: 168 25% 10%;
-    --sidebar-foreground: 165 15% 95%;
-    --sidebar-primary: 168 70% 48%;
+    --border: 217 32% 17%;
+    --input: 217 32% 17%;
+    --ring: 213 94% 68%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 168 20% 16%;
-    --sidebar-accent-foreground: 165 15% 95%;
-    --sidebar-border: 168 20% 16%;
-    --sidebar-ring: 168 70% 55%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
 
     /* Gradients for visual interest */
-    --gradient-primary: linear-gradient(135deg, hsl(168 70% 55%), hsl(168 40% 25%));
-    --gradient-subtle: linear-gradient(180deg, hsl(168 25% 7%), hsl(168 25% 17%));
-    --gradient-hero: linear-gradient(135deg, hsl(168 70% 50%) 0%, hsl(145 60% 45%) 100%);
-    --gradient-card: linear-gradient(145deg, hsl(168 25% 10%), hsl(168 25% 12%));
+    --gradient-primary: linear-gradient(135deg, hsl(213 94% 68%), hsl(213 50% 25%));
+    --gradient-subtle: linear-gradient(180deg, hsl(217 32% 7%), hsl(217 32% 17%));
+    --gradient-hero: linear-gradient(135deg, hsl(213 94% 58%) 0%, hsl(270 80% 60%) 100%);
+    --gradient-card: linear-gradient(145deg, hsl(217 32% 10%), hsl(217 32% 12%));
 
     /* Shadows for depth */
     --shadow-soft: 0 2px 8px hsl(0 0% 0% / 0.2);
     --shadow-medium: 0 8px 24px hsl(0 0% 0% / 0.3);
     --shadow-strong: 0 16px 48px hsl(0 0% 0% / 0.4);
-    --shadow-glow: 0 0 40px hsl(168 70% 55% / 0.25);
+    --shadow-glow: 0 0 40px hsl(213 94% 68% / 0.25);
 
     /* Academic spacing */
     --space-xs: 0.25rem;
@@ -239,8 +239,8 @@ All colors MUST be HSL.
   }
   
   .metallic-effect {
-    background: linear-gradient(135deg, hsl(165 25% 94%), hsl(165 15% 82%));
-    box-shadow: 0 8px 32px hsl(168 30% 25% / 0.15);
+    background: linear-gradient(135deg, hsl(210 30% 92%), hsl(210 20% 80%));
+    box-shadow: 0 8px 32px hsl(215 25% 27% / 0.15);
   }
 
   .hover-lift {
