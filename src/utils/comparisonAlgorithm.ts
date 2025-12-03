@@ -1,3 +1,5 @@
+import { MIN_COMPARISONS_PER_PAIR, calculateTotalPairs } from './comparisonCalculations';
+
 interface StudentResponse {
   id: string;
   student_code: string;
@@ -33,6 +35,8 @@ export class ComparisonAlgorithm {
   private reviewers: Map<string, ReviewerState> = new Map();
   private responseStates: Map<string, ResponseState> = new Map();
   private reviewerCompletedPairs: Map<string, Set<string>> = new Map(); // Track completed pairs per reviewer
+  private pairComparisonCounts: Map<string, number> = new Map(); // 쌍별 비교 횟수 추적
+  private minComparisonsPerPair: number = MIN_COMPARISONS_PER_PAIR;
   private totalTargetComparisons: number;
   private currentPhase: 'random' | 'adaptive' = 'random';
   private phaseThreshold: number; // 50% 지점
@@ -55,6 +59,14 @@ export class ComparisonAlgorithm {
       });
     });
     
+    // 모든 쌍에 대해 비교 횟수 0으로 초기화
+    for (let i = 0; i < responses.length; i++) {
+      for (let j = i + 1; j < responses.length; j++) {
+        const pairKey = this.getPairKey(responses[i].id, responses[j].id);
+        this.pairComparisonCounts.set(pairKey, 0);
+      }
+    }
+    
     // 응답별 상태 초기화
     const averageComparisonsPerResponse = (this.totalTargetComparisons * 2) / responses.length;
     responses.forEach(response => {
@@ -67,6 +79,8 @@ export class ComparisonAlgorithm {
         losses: 0
       });
     });
+    
+    console.log(`Initialized ${this.pairComparisonCounts.size} pairs for tracking (target: ${this.minComparisonsPerPair} comparisons per pair)`);
   }
 
   async initializeWithExistingComparisons(projectId: string, supabase: any) {
@@ -97,6 +111,10 @@ export class ComparisonAlgorithm {
         
         if (responseA && responseB) {
           const pairKey = this.getPairKey(comp.response_a_id, comp.response_b_id);
+          
+          // 쌍별 비교 횟수 업데이트
+          const currentPairCount = this.pairComparisonCounts.get(pairKey) || 0;
+          this.pairComparisonCounts.set(pairKey, currentPairCount + 1);
           
           // student_number를 문자열로 변환해서 reviewerId로 사용
           const reviewerIdFromDb = comp.students?.student_number?.toString();
@@ -139,6 +157,10 @@ export class ComparisonAlgorithm {
           this.updateTempScores(comp.response_a_id, comp.response_b_id, comp.decision);
         }
       });
+      
+      // 쌍별 비교 횟수 통계 로깅
+      const pairStats = this.getPairCompletionStats();
+      console.log(`Pair completion stats: ${pairStats.completedPairs}/${pairStats.totalPairs} pairs completed (${pairStats.pairCoverage}%)`);
       
       // 현재 단계 결정 - 총 완료된 비교 횟수 계산
       let totalCompleted = 0;
@@ -253,20 +275,28 @@ export class ComparisonAlgorithm {
     
     if (!responseA || !responseB || !reviewer) return 0;
 
-    // 적응 단계에서만 우선순위 계산 (랜덤 단계에서는 사용 안 함)
+    const pairKey = this.getPairKey(responseAId, responseBId);
+    const pairCount = this.pairComparisonCounts.get(pairKey) || 0;
+
     let priority = 0;
 
-    // 1. 비슷한 점수(등수)인 응답끼리 우선 (점수 차이가 작을수록 높은 우선순위)
-    const scoreDiff = Math.abs(responseA.tempScore - responseB.tempScore);
-    priority = 100 - scoreDiff * 20;
+    // 1. 핵심: 비교가 덜 된 쌍에 높은 우선순위 (각 쌍 최소 3회 보장)
+    const needsMoreComparisons = this.minComparisonsPerPair - pairCount;
+    if (needsMoreComparisons > 0) {
+      priority += needsMoreComparisons * 50; // 비교가 필요한 쌍에 강력한 우선순위
+    }
     
-    // 2. 비교가 더 필요한 응답 우선 (need가 높을수록 우선순위 높음)
+    // 2. 비슷한 점수(등수)인 응답끼리 우선 (점수 차이가 작을수록 높은 우선순위)
+    const scoreDiff = Math.abs(responseA.tempScore - responseB.tempScore);
+    priority += Math.max(0, 100 - scoreDiff * 20);
+    
+    // 3. 비교가 더 필요한 응답 우선 (need가 높을수록 우선순위 높음)
     priority += (responseA.need + responseB.need) * 2;
     
-    // 3. 비교 횟수가 적은 응답 우선 (더 확실한 순위 결정을 위해)
+    // 4. 비교 횟수가 적은 응답 우선 (더 확실한 순위 결정을 위해)
     const minComparisons = Math.min(responseA.totalComparisons, responseB.totalComparisons);
     if (minComparisons < 3) {
-      priority += (3 - minComparisons) * 10; // 비교 횟수가 3회 미만이면 보너스
+      priority += (3 - minComparisons) * 10;
     }
 
     return Math.max(0, priority);
@@ -280,6 +310,10 @@ export class ComparisonAlgorithm {
     if (!reviewer || !responseA || !responseB) return;
 
     const pairKey = this.getPairKey(responseAId, responseBId);
+    
+    // 쌍별 비교 횟수 업데이트
+    const currentPairCount = this.pairComparisonCounts.get(pairKey) || 0;
+    this.pairComparisonCounts.set(pairKey, currentPairCount + 1);
     
     // 채점자별 완료 페어에 추가
     if (!this.reviewerCompletedPairs.has(reviewerId)) {
@@ -312,6 +346,36 @@ export class ComparisonAlgorithm {
     if (this.currentPhase === 'random' && totalCompleted >= this.phaseThreshold) {
       this.currentPhase = 'adaptive';
     }
+    
+    // 쌍 완료 로깅
+    const newPairCount = this.pairComparisonCounts.get(pairKey) || 0;
+    if (newPairCount === this.minComparisonsPerPair) {
+      console.log(`Pair ${pairKey} reached target of ${this.minComparisonsPerPair} comparisons`);
+    }
+  }
+
+  // 쌍별 완료 통계
+  getPairCompletionStats() {
+    let completedPairs = 0;
+    let totalPairComparisons = 0;
+    const totalPairs = this.pairComparisonCounts.size;
+    
+    this.pairComparisonCounts.forEach((count) => {
+      totalPairComparisons += count;
+      if (count >= this.minComparisonsPerPair) {
+        completedPairs++;
+      }
+    });
+    
+    const avgComparisonsPerPair = totalPairs > 0 ? totalPairComparisons / totalPairs : 0;
+    
+    return {
+      completedPairs,
+      totalPairs,
+      pairCoverage: totalPairs > 0 ? Math.round((completedPairs / totalPairs) * 100) : 0,
+      avgComparisonsPerPair: Math.round(avgComparisonsPerPair * 10) / 10,
+      minComparisonsPerPair: this.minComparisonsPerPair
+    };
   }
 
   getCompletionStats() {
@@ -327,6 +391,9 @@ export class ComparisonAlgorithm {
     const averageComparisonsPerResponse = totalComparisons > 0 ? 
       (totalComparisons * 2) / this.responses.length : 0;
 
+    // 쌍별 통계 포함
+    const pairStats = this.getPairCompletionStats();
+
     return {
       totalComparisons,
       targetComparisons: this.totalTargetComparisons,
@@ -336,7 +403,12 @@ export class ComparisonAlgorithm {
       totalReviewers,
       averageComparisonsPerResponse: Math.round(averageComparisonsPerResponse),
       currentPhase: this.currentPhase,
-      isComplete: completedReviewers === totalReviewers
+      isComplete: completedReviewers === totalReviewers,
+      // 쌍별 통계 추가
+      pairCoverage: pairStats.pairCoverage,
+      completedPairs: pairStats.completedPairs,
+      totalPairs: pairStats.totalPairs,
+      avgComparisonsPerPair: pairStats.avgComparisonsPerPair
     };
   }
 

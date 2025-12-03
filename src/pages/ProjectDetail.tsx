@@ -7,9 +7,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Users, Plus, BookOpen, Power } from 'lucide-react';
+import { ArrowLeft, Users, Plus, BookOpen, Power, FileText, BarChart3, MessageSquare, Sparkles } from 'lucide-react';
 import { ScoreAggregation } from '@/components/ScoreAggregation';
 import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
+import { StudentFeedbackPanel } from '@/components/StudentFeedbackPanel';
 
 interface Project {
   id: string;
@@ -74,7 +75,6 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !user) return;
 
     try {
-      // 현재 교사의 학생 수만 가져오기 (학년/반별)
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('grade, class_number')
@@ -84,20 +84,13 @@ export const ProjectDetail: React.FC = () => {
 
       if (studentsError) throw studentsError;
 
-      // 이미 할당된 학생 수 (학년/반별)
       const { data: assignmentsData, error: assignmentsError } = await supabase
         .from('project_assignments')
-        .select(`
-          students (
-            grade,
-            class_number
-          )
-        `)
+        .select(`students (grade, class_number)`)
         .eq('project_id', id);
 
       if (assignmentsError) throw assignmentsError;
 
-      // 학년/반별 통계 계산
       const classStats = (studentsData || []).reduce((acc, student) => {
         const key = `${student.grade}-${student.class_number}`;
         if (!acc[key]) {
@@ -112,7 +105,6 @@ export const ProjectDetail: React.FC = () => {
         return acc;
       }, {} as Record<string, ClassInfo>);
 
-      // 할당된 학생 수 계산
       (assignmentsData || []).forEach(assignment => {
         if (assignment.students) {
           const key = `${assignment.students.grade}-${assignment.students.class_number}`;
@@ -137,7 +129,6 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !user) return;
 
     try {
-      // 현재 교사의 해당 학년/반 학생들만 가져오기
       const { data: allStudents, error: allStudentsError } = await supabase
         .from('students')
         .select('id, student_id, name, grade, class_number')
@@ -145,31 +136,24 @@ export const ProjectDetail: React.FC = () => {
         .eq('grade', grade)
         .eq('class_number', classNumber);
 
-      if (allStudentsError) {
-        throw allStudentsError;
-      }
+      if (allStudentsError) throw allStudentsError;
 
       if (!allStudents || allStudents.length === 0) {
         toast({
           title: '알림',
-          description: `${grade}학년 ${classNumber}반에 등록된 학생이 없습니다. 먼저 학생 관리에서 학생을 등록해주세요.`,
+          description: `${grade}학년 ${classNumber}반에 등록된 학생이 없습니다.`,
         });
         return;
       }
 
-      // 이미 할당된 학생들의 ID 가져오기
       const { data: assignedStudents, error: assignedError } = await supabase
         .from('project_assignments')
         .select('student_id')
         .eq('project_id', id);
 
-      if (assignedError) {
-        throw assignedError;
-      }
+      if (assignedError) throw assignedError;
 
       const assignedStudentIds = (assignedStudents || []).map(a => a.student_id);
-
-      // 미할당 학생들 필터링
       const unassignedStudents = allStudents.filter(student => 
         !assignedStudentIds.includes(student.id)
       );
@@ -182,7 +166,6 @@ export const ProjectDetail: React.FC = () => {
         return;
       }
 
-      // 프로젝트에 학생들 할당
       const assignments = unassignedStudents.map(student => ({
         project_id: id,
         student_id: student.id,
@@ -192,9 +175,7 @@ export const ProjectDetail: React.FC = () => {
         .from('project_assignments')
         .insert(assignments);
 
-      if (assignError) {
-        throw assignError;
-      }
+      if (assignError) throw assignError;
 
       toast({
         title: '성공',
@@ -216,7 +197,6 @@ export const ProjectDetail: React.FC = () => {
     if (!id || !confirm(`${grade}학년 ${classNumber}반의 모든 할당을 취소하시겠습니까?`)) return;
 
     try {
-      // 현재 교사의 해당 학년/반 학생들만 선택
       const { data: studentsData, error: studentsError } = await supabase
         .from('students')
         .select('id')
@@ -282,16 +262,19 @@ export const ProjectDetail: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">로딩 중...</div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-12 h-12 border-4 border-primary/20 rounded-full animate-spin border-t-primary"></div>
+          <p className="text-muted-foreground">로딩 중...</p>
+        </div>
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="text-center">프로젝트를 찾을 수 없습니다.</div>
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex items-center justify-center">
+        <p className="text-muted-foreground">프로젝트를 찾을 수 없습니다.</p>
       </div>
     );
   }
@@ -299,210 +282,244 @@ export const ProjectDetail: React.FC = () => {
   const totalStudents = classes.reduce((sum, cls) => sum + cls.student_count, 0);
   const totalAssigned = classes.reduce((sum, cls) => sum + cls.assigned_count, 0);
 
-  // Calculate actual number of questions from the question JSON
   const getActualQuestionCount = () => {
     if (!project?.question) return 1;
     try {
       const questions = JSON.parse(project.question);
       return Object.keys(questions).length;
     } catch (error) {
-      console.error('Failed to parse questions:', error);
       return project.num_questions || 1;
     }
   };
 
   const actualQuestionCount = getActualQuestionCount();
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Button
-          variant="ghost"
-          onClick={() => navigate('/dashboard')}
-          className="mb-4"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          대시보드로 돌아가기
-        </Button>
+  const statCards = [
+    { label: '전체 학생', value: totalStudents, icon: Users, gradient: 'from-blue-500/10 to-cyan-500/10', iconColor: 'text-blue-500' },
+    { label: '할당된 학생', value: totalAssigned, icon: Users, gradient: 'from-emerald-500/10 to-green-500/10', iconColor: 'text-emerald-500' },
+    { label: '할당률', value: `${totalStudents > 0 ? Math.round((totalAssigned / totalStudents) * 100) : 0}%`, icon: BarChart3, gradient: 'from-violet-500/10 to-purple-500/10', iconColor: 'text-violet-500' },
+  ];
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">{project.title}</h1>
-            <p className="text-muted-foreground mt-2">{project.description}</p>
-          </div>
-          <div className="flex gap-2">
-            <Badge variant={project.is_active ? "default" : "secondary"}>
-              {project.is_active ? '활성' : '비활성'}
-            </Badge>
-            <Button
-              onClick={toggleProjectStatus}
-              variant={project.is_active ? "default" : "outline"}
-              size="sm"
-            >
-              <Power className="w-4 h-4 mr-2" />
-              {project.is_active ? '비활성화' : '활성화'}
-            </Button>
-            <Button
-              onClick={() => navigate(`/project/${id}/assignments`)}
-              variant="outline"
-            >
-              <BookOpen className="w-4 h-4 mr-2" />
-              할당 현황 보기
-            </Button>
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+      <div className="fixed inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 -left-40 w-60 h-60 bg-primary/5 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8 animate-fade-in">
+          <Button
+            variant="ghost"
+            onClick={() => navigate('/dashboard')}
+            className="mb-4 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            대시보드로 돌아가기
+          </Button>
+
+          <div className="flex items-start justify-between">
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-gradient-to-br from-primary to-primary/80 rounded-xl shadow-lg shadow-primary/25">
+                  <Sparkles className="h-6 w-6 text-primary-foreground" />
+                </div>
+                <h1 className="text-3xl font-bold">{project.title}</h1>
+                <Badge 
+                  className={project.is_active 
+                    ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' 
+                    : 'bg-muted text-muted-foreground'
+                  }
+                >
+                  {project.is_active ? '활성' : '비활성'}
+                </Badge>
+              </div>
+              <p className="text-muted-foreground pl-14">{project.description}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                onClick={toggleProjectStatus}
+                variant="outline"
+                className="backdrop-blur-sm bg-card/50"
+              >
+                <Power className="w-4 h-4 mr-2" />
+                {project.is_active ? '비활성화' : '활성화'}
+              </Button>
+              <Button
+                onClick={() => navigate(`/project/${id}/assignments`)}
+                variant="outline"
+                className="backdrop-blur-sm bg-card/50"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                할당 현황
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* 통계 카드 */}
-      <div className="grid gap-6 md:grid-cols-3 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">전체 학생 수</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalStudents}</div>
-          </CardContent>
-        </Card>
+        {/* Stats */}
+        <div className="grid gap-6 md:grid-cols-3 mb-8">
+          {statCards.map((stat, index) => (
+            <Card 
+              key={stat.label}
+              className="group border-border/50 bg-card/50 backdrop-blur-sm hover:bg-card/80 transition-all duration-300 animate-slide-up"
+              style={{ animationDelay: `${index * 100}ms` }}
+            >
+              <div className={`absolute inset-0 bg-gradient-to-br ${stat.gradient} opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-lg`}></div>
+              <CardContent className="relative p-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-3xl font-bold">{stat.value}</p>
+                    <p className="text-sm text-muted-foreground mt-1">{stat.label}</p>
+                  </div>
+                  <div className={`p-3 rounded-2xl bg-gradient-to-br ${stat.gradient}`}>
+                    <stat.icon className={`h-6 w-6 ${stat.iconColor}`} />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">할당된 학생</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{totalAssigned}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">할당률</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {totalStudents > 0 ? Math.round((totalAssigned / totalStudents) * 100) : 0}%
+        {/* Questions Card */}
+        <Card className="mb-8 border-border/50 bg-card/50 backdrop-blur-sm animate-slide-up" style={{ animationDelay: '300ms' }}>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <FileText className="h-5 w-5 text-primary" />
+              </div>
+              <CardTitle>프로젝트 문항</CardTitle>
             </div>
+          </CardHeader>
+          <CardContent>
+            {(() => {
+              try {
+                const questions = JSON.parse(project.question || '{}');
+                return (
+                  <div className="space-y-3">
+                    {Object.entries(questions).map(([key, value]) => (
+                      <div key={key} className="p-4 bg-muted/30 rounded-lg border border-border/50">
+                        <span className="text-sm font-medium text-primary">문항 {key}</span>
+                        <p className="mt-1">{value as string}</p>
+                      </div>
+                    ))}
+                  </div>
+                );
+              } catch {
+                return <p>{project.question}</p>;
+              }
+            })()}
           </CardContent>
         </Card>
-      </div>
 
-      {/* 프로젝트 질문 */}
-      <Card className="mb-8">
-        <CardHeader>
-          <CardTitle>프로젝트 질문</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {(() => {
-            try {
-              const questions = JSON.parse(project.question || '{}');
-              return (
-                <div className="space-y-2">
-                  {Object.entries(questions).map(([key, value], index) => (
-                    <p key={key} className="text-lg">
-                      <span className="font-medium">문항 {key}:</span> {value as string}
-                    </p>
-                  ))}
-                </div>
-              );
-            } catch {
-              return <p className="text-lg">{project.question}</p>;
-            }
-          })()}
-        </CardContent>
-      </Card>
+        {/* Tabs */}
+        <Tabs defaultValue="assignment" className="animate-slide-up" style={{ animationDelay: '400ms' }}>
+          <TabsList className="grid w-full grid-cols-4 bg-card/50 backdrop-blur-sm border border-border/50">
+            <TabsTrigger value="assignment" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Users className="w-4 h-4 mr-2" />
+              학생 할당
+            </TabsTrigger>
+            <TabsTrigger value="scores" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              점수 집계
+            </TabsTrigger>
+            <TabsTrigger value="keywords" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <Sparkles className="w-4 h-4 mr-2" />
+              키워드
+            </TabsTrigger>
+            <TabsTrigger value="feedback" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              피드백
+            </TabsTrigger>
+          </TabsList>
 
-      {/* 탭 */}
-      <Tabs defaultValue="assignment" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="assignment">학생 할당</TabsTrigger>
-          <TabsTrigger value="scores">점수 집계</TabsTrigger>
-          <TabsTrigger value="keywords">키워드</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="assignment" className="mt-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>학급별 할당 관리</CardTitle>
-              <CardDescription>
-                학년과 반을 선택하여 프로젝트에 할당하거나 할당을 취소할 수 있습니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {classes.length === 0 ? (
-                <div className="text-center py-8">
-                  <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-lg font-semibold mb-2">등록된 학생이 없습니다</h3>
-                  <p className="text-muted-foreground mb-4">
-                    먼저 학생 관리에서 학생을 등록해주세요.
-                  </p>
-                  <Button onClick={() => navigate('/student-management')}>
-                    <Plus className="w-4 h-4 mr-2" />
-                    학생 관리로 이동
-                  </Button>
-                </div>
-              ) : (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                  {classes.map((cls) => (
-                    <Card key={`${cls.grade}-${cls.class_number}`} className="p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-semibold">
-                          {cls.grade}학년 {cls.class_number}반
-                        </h3>
-                        <Badge variant="outline">
-                          {cls.assigned_count}/{cls.student_count}
-                        </Badge>
-                      </div>
-                      
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">
-                          전체: {cls.student_count}명, 할당: {cls.assigned_count}명
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          {cls.assigned_count < cls.student_count && (
-                            <Button
-                              size="sm"
-                              onClick={() => assignClassToProject(cls.grade, cls.class_number)}
-                              className="flex-1"
-                            >
-                              할당
-                            </Button>
-                          )}
+          <TabsContent value="assignment" className="mt-6">
+            <Card className="border-border/50 bg-card/50 backdrop-blur-sm">
+              <CardHeader>
+                <CardTitle>학급별 할당 관리</CardTitle>
+                <CardDescription>
+                  학년과 반을 선택하여 프로젝트에 할당하거나 할당을 취소할 수 있습니다.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {classes.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Users className="h-8 w-8 text-primary/50" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">등록된 학생이 없습니다</h3>
+                    <p className="text-muted-foreground mb-4">먼저 학생 관리에서 학생을 등록해주세요.</p>
+                    <Button onClick={() => navigate('/student-management')}>
+                      <Plus className="w-4 h-4 mr-2" />
+                      학생 관리로 이동
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                    {classes.map((cls) => (
+                      <Card key={`${cls.grade}-${cls.class_number}`} className="border-border/50 bg-background/50">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <h3 className="font-semibold">{cls.grade}학년 {cls.class_number}반</h3>
+                            <Badge variant="outline" className="bg-background">
+                              {cls.assigned_count}/{cls.student_count}
+                            </Badge>
+                          </div>
                           
-                          {cls.assigned_count > 0 && (
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => removeClassFromProject(cls.grade, cls.class_number)}
-                              className="flex-1"
-                            >
-                              할당 취소
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+                          <div className="space-y-3">
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-primary transition-all"
+                                style={{ width: `${(cls.assigned_count / cls.student_count) * 100}%` }}
+                              />
+                            </div>
+                            
+                            <div className="flex gap-2">
+                              {cls.assigned_count < cls.student_count && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => assignClassToProject(cls.grade, cls.class_number)}
+                                  className="flex-1 bg-gradient-to-r from-primary to-primary/90"
+                                >
+                                  할당
+                                </Button>
+                              )}
+                              
+                              {cls.assigned_count > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeClassFromProject(cls.grade, cls.class_number)}
+                                  className="flex-1"
+                                >
+                                  취소
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-        <TabsContent value="scores" className="mt-6">
-          <ScoreAggregation
-            projectId={id!}
-            maxQuestions={actualQuestionCount}
-          />
-        </TabsContent>
+          <TabsContent value="scores" className="mt-6">
+            <ScoreAggregation projectId={id!} maxQuestions={actualQuestionCount} />
+          </TabsContent>
 
-        <TabsContent value="keywords" className="mt-6">
-          <ExplainabilityPanel
-            projectId={id!}
-            maxQuestions={actualQuestionCount}
-          />
-        </TabsContent>
-      </Tabs>
+          <TabsContent value="keywords" className="mt-6">
+            <ExplainabilityPanel projectId={id!} maxQuestions={actualQuestionCount} />
+          </TabsContent>
+
+          <TabsContent value="feedback" className="mt-6">
+            <StudentFeedbackPanel projectId={id!} maxQuestions={actualQuestionCount} />
+          </TabsContent>
+        </Tabs>
+      </div>
     </div>
   );
 };
