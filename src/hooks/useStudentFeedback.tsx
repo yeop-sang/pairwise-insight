@@ -62,17 +62,17 @@ export const useStudentFeedback = (projectId: string) => {
 
       if (feedbackError) throw feedbackError;
 
-      // Fetch good keywords
+      // Fetch good keywords for this specific question
       const { data: keywordsData, error: keywordsError } = await supabase
         .from('explain_features')
-        .select('good_words')
+        .select('good_words, question_number')
         .eq('project_id', projectId)
         .eq('question_number', questionNumber)
         .order('created_at', { ascending: false })
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (keywordsError && keywordsError.code !== 'PGRST116') {
+      if (keywordsError) {
         console.error('Keywords fetch error:', keywordsError);
       }
 
