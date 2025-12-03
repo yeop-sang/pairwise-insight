@@ -77,7 +77,7 @@ export const StudentDashboard = () => {
       const projectsWithCompletion = projectsData?.map(project => {
         const assignment = assignedProjects.find(a => a.project_id === project.id);
         const comparisonCount = comparisonCounts[project.id] || 0;
-        const targetComparisons = 15 * (project.num_questions || 1); // 15 per question
+        const targetComparisons = 25 * (project.num_questions || 1); // 최대 25회 per question
         
         return {
           ...project,
