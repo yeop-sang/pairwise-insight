@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { Plus, Users, BarChart3, Clock, FileText, Trash2, Download } from "lucide-react";
+import { Plus, Users, BarChart3, Clock, FileText, Trash2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useDataDownload } from "@/hooks/useDataDownload";
 
 interface Project {
   id: string;
@@ -26,7 +25,6 @@ export const Dashboard = () => {
   const navigate = useNavigate();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const { downloadExplainFeatures, downloadFeatureWords } = useDataDownload();
 
   useEffect(() => {
     if (!authLoading) {
@@ -254,28 +252,6 @@ export const Dashboard = () => {
                       <div className="text-center min-w-20">
                         <p className="text-xs">{new Date(project.created_at).toLocaleDateString()}</p>
                       </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadExplainFeatures(project.id);
-                        }}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        좋은/나쁜 단어
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          downloadFeatureWords(project.id);
-                        }}
-                      >
-                        <Download className="h-4 w-4 mr-1" />
-                        단어 중요도
-                      </Button>
                       <Button
                         variant="ghost"
                         size="sm"
