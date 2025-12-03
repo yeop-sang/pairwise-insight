@@ -165,18 +165,6 @@ export const StudentDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="p-3 bg-muted rounded-lg">
-                      <h4 className="font-medium text-sm mb-1">평가 질문:</h4>
-                      <p className="text-sm text-muted-foreground">{project.question}</p>
-                    </div>
-
-                    {project.rubric && (
-                      <div className="p-3 bg-accent rounded-lg">
-                        <h4 className="font-medium text-sm mb-1">평가 기준:</h4>
-                        <p className="text-sm text-muted-foreground">{project.rubric}</p>
-                      </div>
-                    )}
-
                     <div className="flex items-center gap-2 text-xs text-muted-foreground">
                       <Clock className="w-4 h-4" />
                       <span>생성일: {new Date(project.created_at).toLocaleDateString('ko-KR')}</span>
