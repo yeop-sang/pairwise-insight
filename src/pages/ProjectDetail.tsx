@@ -392,7 +392,22 @@ export const ProjectDetail: React.FC = () => {
           <CardTitle>프로젝트 질문</CardTitle>
         </CardHeader>
         <CardContent>
-          <p className="text-lg">{project.question}</p>
+          {(() => {
+            try {
+              const questions = JSON.parse(project.question || '{}');
+              return (
+                <div className="space-y-2">
+                  {Object.entries(questions).map(([key, value], index) => (
+                    <p key={key} className="text-lg">
+                      <span className="font-medium">문항 {key}:</span> {value as string}
+                    </p>
+                  ))}
+                </div>
+              );
+            } catch {
+              return <p className="text-lg">{project.question}</p>;
+            }
+          })()}
         </CardContent>
       </Card>
 

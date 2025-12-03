@@ -25,6 +25,7 @@ interface ScoreAggregationProps {
 interface ComparisonResult {
   response_id: string;
   student_code: string;
+  response_text: string;
   win_count: number;
   loss_count: number;
   tie_count: number;
@@ -73,6 +74,17 @@ export const ScoreAggregation = ({
       const questionNumbers = [...new Set(responseData?.map(r => r.question_number) || [])].sort();
       const allResults: ComparisonResult[] = [];
 
+      // 응답 텍스트 가져오기
+      const { data: responsesData, error: responsesError } = await supabase
+        .from('student_responses')
+        .select('id, student_code, response_text, question_number')
+        .eq('project_id', projectId);
+
+      const responseTextMap = new Map<string, string>();
+      (responsesData || []).forEach(r => {
+        responseTextMap.set(r.id, r.response_text);
+      });
+
       for (const qNum of questionNumbers) {
         try {
           const { data: resultsData, error: resultsError } = await supabase.rpc(
@@ -84,7 +96,8 @@ export const ScoreAggregation = ({
 
           const questionResults: ComparisonResult[] = (resultsData || []).map((r: any) => ({
             ...r,
-            question_number: qNum
+            question_number: qNum,
+            response_text: responseTextMap.get(r.response_id) || ''
           }));
           allResults.push(...questionResults);
         } catch (err) {
@@ -343,10 +356,12 @@ export const ScoreAggregation = ({
                           <div className={`flex items-center justify-center w-12 h-12 rounded-full font-bold ${getRankColor(result.rank)}`}>
                             <span>{result.rank}</span>
                           </div>
-                          <div>
-                            <h3 className="text-lg font-semibold">{result.student_code}</h3>
-                            <p className="text-sm text-muted-foreground">
-                              승률: {result.win_rate.toFixed(1)}%
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm text-muted-foreground line-clamp-2">
+                              {result.response_text || '(응답 없음)'}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              학생 코드: {result.student_code} | 승률: {result.win_rate.toFixed(1)}%
                             </p>
                           </div>
                         </div>

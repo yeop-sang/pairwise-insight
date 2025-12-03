@@ -93,6 +93,7 @@ export const ProjectAssignment: React.FC = () => {
         .select(`
           *,
           students (
+            id,
             student_id,
             name,
             grade,
@@ -105,19 +106,48 @@ export const ProjectAssignment: React.FC = () => {
 
       if (error) throw error;
 
+      // 각 학생의 실제 비교 완료 여부 확인
+      const studentIds = (data || [])
+        .filter(a => a.students)
+        .map(a => a.students!.id);
+
+      // comparisons 테이블에서 각 학생의 비교 수 확인
+      const { data: comparisonsData, error: comparisonsError } = await supabase
+        .from('comparisons')
+        .select('student_id')
+        .eq('project_id', id)
+        .in('student_id', studentIds);
+
+      // 학생별 비교 횟수 계산
+      const comparisonCounts = new Map<string, number>();
+      (comparisonsData || []).forEach(c => {
+        const count = comparisonCounts.get(c.student_id) || 0;
+        comparisonCounts.set(c.student_id, count + 1);
+      });
+
+      // reviewer_stats 테이블에서 목표 비교 횟수 확인 (기본값 15)
+      const targetComparisons = 15;
+
       const formattedData = (data || [])
-        .filter(assignment => assignment.students) // 학생 정보가 있는 것만 필터링
-        .map(assignment => ({
-          id: assignment.id,
-          student_id: assignment.students!.student_id,
-          name: assignment.students!.name,
-          grade: assignment.students!.grade,
-          class_number: assignment.students!.class_number,
-          student_number: assignment.students!.student_number,
-          has_completed: assignment.has_completed,
-          completed_at: assignment.completed_at,
-          assigned_at: assignment.assigned_at,
-        }));
+        .filter(assignment => assignment.students)
+        .map(assignment => {
+          const studentDbId = assignment.students!.id;
+          const comparisonCount = comparisonCounts.get(studentDbId) || 0;
+          // 실제 비교 횟수가 목표 이상이면 완료로 표시
+          const actuallyCompleted = comparisonCount >= targetComparisons || assignment.has_completed;
+          
+          return {
+            id: assignment.id,
+            student_id: assignment.students!.student_id,
+            name: assignment.students!.name,
+            grade: assignment.students!.grade,
+            class_number: assignment.students!.class_number,
+            student_number: assignment.students!.student_number,
+            has_completed: actuallyCompleted,
+            completed_at: assignment.completed_at,
+            assigned_at: assignment.assigned_at,
+          };
+        });
 
       setAssignedStudents(formattedData);
     } catch (error) {
