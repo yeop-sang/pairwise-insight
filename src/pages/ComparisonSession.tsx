@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Zap, Clock, ChevronLeft, ChevronRight, Minus, Target, TrendingUp } from "lucide-react";
+import { ArrowLeft, Zap, Clock, ChevronLeft, ChevronRight, Minus, Target } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { supabase } from "@/lib/supabase";
@@ -598,13 +598,6 @@ export const ComparisonSession = () => {
               <Target className="h-3 w-3" />
               {reviewerStats.completed}/{requiredComparisonsForQuestion} 완료
             </Badge>
-            <Badge 
-              variant={phaseInfo?.phase === 'random' ? 'default' : 'destructive'} 
-              className="flex items-center gap-1"
-            >
-              <TrendingUp className="h-3 w-3" />
-              {phaseInfo?.phase === 'random' ? '랜덤 단계' : '적응 단계'}
-            </Badge>
           </div>
         </div>
       </div>
@@ -650,13 +643,6 @@ export const ComparisonSession = () => {
               <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>예상 남은 시간</span>
                 <span>{estimatedTime}</span>
-              </div>
-            )}
-            
-            {phaseInfo && (
-              <div className="bg-muted/50 p-3 rounded-lg">
-                <p className="text-sm font-medium mb-1">현재 단계: {phaseInfo.phase === 'random' ? '랜덤 단계' : '적응 단계'}</p>
-                <p className="text-xs text-muted-foreground">{phaseInfo.description}</p>
               </div>
             )}
           </div>
