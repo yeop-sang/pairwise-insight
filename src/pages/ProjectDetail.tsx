@@ -10,6 +10,7 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Users, Plus, BookOpen, Power } from 'lucide-react';
 import { ScoreAggregation } from '@/components/ScoreAggregation';
 import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
+import { StudentFeedbackPanel } from '@/components/StudentFeedbackPanel';
 
 interface Project {
   id: string;
@@ -413,10 +414,11 @@ export const ProjectDetail: React.FC = () => {
 
       {/* 탭 */}
       <Tabs defaultValue="assignment" className="w-full mt-8">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="assignment">학생 할당</TabsTrigger>
           <TabsTrigger value="scores">점수 집계</TabsTrigger>
           <TabsTrigger value="keywords">키워드</TabsTrigger>
+          <TabsTrigger value="feedback">학생 피드백</TabsTrigger>
         </TabsList>
 
         <TabsContent value="assignment" className="mt-6">
@@ -498,6 +500,13 @@ export const ProjectDetail: React.FC = () => {
 
         <TabsContent value="keywords" className="mt-6">
           <ExplainabilityPanel
+            projectId={id!}
+            maxQuestions={actualQuestionCount}
+          />
+        </TabsContent>
+
+        <TabsContent value="feedback" className="mt-6">
+          <StudentFeedbackPanel
             projectId={id!}
             maxQuestions={actualQuestionCount}
           />
