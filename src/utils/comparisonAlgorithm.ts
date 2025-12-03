@@ -34,13 +34,13 @@ export class ComparisonAlgorithm {
   private responseStates: Map<string, ResponseState> = new Map();
   private reviewerCompletedPairs: Map<string, Set<string>> = new Map(); // Track completed pairs per reviewer
   private totalTargetComparisons: number;
-  private currentPhase: 'balance' | 'adaptive' = 'balance';
-  private phaseThreshold: number; // 20% 지점
+  private currentPhase: 'random' | 'adaptive' = 'random';
+  private phaseThreshold: number; // 50% 지점
   
-  constructor(responses: StudentResponse[], reviewerIds: string[], reviewerTargetPerPerson: number = 15) {
+  constructor(responses: StudentResponse[], reviewerIds: string[], reviewerTargetPerPerson: number = 25) {
     this.responses = responses;
     this.totalTargetComparisons = reviewerIds.length * reviewerTargetPerPerson;
-    this.phaseThreshold = Math.floor(this.totalTargetComparisons * 0.2);
+    this.phaseThreshold = Math.floor(this.totalTargetComparisons * 0.5); // 50%에서 전환
     
     console.log(`Initializing ComparisonAlgorithm: ${reviewerIds.length} reviewers, target ${reviewerTargetPerPerson} per person, total target: ${this.totalTargetComparisons}`);
     
@@ -145,7 +145,7 @@ export class ComparisonAlgorithm {
       this.reviewerCompletedPairs.forEach(pairSet => {
         totalCompleted += pairSet.size;
       });
-      this.currentPhase = totalCompleted < this.phaseThreshold ? 'balance' : 'adaptive';
+      this.currentPhase = totalCompleted < this.phaseThreshold ? 'random' : 'adaptive';
       
     } catch (error) {
       console.error('Error initializing comparison algorithm:', error);
@@ -199,12 +199,17 @@ export class ComparisonAlgorithm {
       return null;
     }
 
-    // 우선순위에 따라 정렬하고 상위 후보에서 랜덤 선택
-    candidates.sort((a, b) => b.priority - a.priority);
-    const topCandidates = candidates.slice(0, Math.min(5, candidates.length));
-    const selectedPair = topCandidates[Math.floor(Math.random() * topCandidates.length)];
-
-    return selectedPair;
+    if (this.currentPhase === 'random') {
+      // 랜덤 단계: 완전 무작위 선택
+      const selectedPair = candidates[Math.floor(Math.random() * candidates.length)];
+      return selectedPair;
+    } else {
+      // 적응 단계: 우선순위에 따라 정렬하고 상위 후보에서 랜덤 선택
+      candidates.sort((a, b) => b.priority - a.priority);
+      const topCandidates = candidates.slice(0, Math.min(5, candidates.length));
+      const selectedPair = topCandidates[Math.floor(Math.random() * topCandidates.length)];
+      return selectedPair;
+    }
   }
 
   private generateCandidatePairs(reviewerId: string): ComparisonPair[] {
@@ -248,24 +253,20 @@ export class ComparisonAlgorithm {
     
     if (!responseA || !responseB || !reviewer) return 0;
 
+    // 적응 단계에서만 우선순위 계산 (랜덤 단계에서는 사용 안 함)
     let priority = 0;
 
-    if (this.currentPhase === 'balance') {
-      // 균형 단계: ResponseNeed 합이 큰 페어 우선
-      priority = responseA.need + responseB.need;
-    } else {
-      // 적응 단계: 점수가 비슷한 페어 우선
-      const scoreDiff = Math.abs(responseA.tempScore - responseB.tempScore);
-      priority = 100 - scoreDiff * 10; // 점수 차이가 작을수록 높은 우선순위
-      
-      // 커버리지 보정
-      priority += (responseA.need + responseB.need) * 0.3;
-      
-      // 다양성 보정 (최근 본 응답과의 중복 패널티)
-      const recentPenalty = reviewer.recentResponses.filter(id => 
-        id === responseAId || id === responseBId
-      ).length;
-      priority -= recentPenalty * 5;
+    // 1. 비슷한 점수(등수)인 응답끼리 우선 (점수 차이가 작을수록 높은 우선순위)
+    const scoreDiff = Math.abs(responseA.tempScore - responseB.tempScore);
+    priority = 100 - scoreDiff * 20;
+    
+    // 2. 비교가 더 필요한 응답 우선 (need가 높을수록 우선순위 높음)
+    priority += (responseA.need + responseB.need) * 2;
+    
+    // 3. 비교 횟수가 적은 응답 우선 (더 확실한 순위 결정을 위해)
+    const minComparisons = Math.min(responseA.totalComparisons, responseB.totalComparisons);
+    if (minComparisons < 3) {
+      priority += (3 - minComparisons) * 10; // 비교 횟수가 3회 미만이면 보너스
     }
 
     return Math.max(0, priority);
@@ -308,7 +309,7 @@ export class ComparisonAlgorithm {
     this.reviewerCompletedPairs.forEach(pairSet => {
       totalCompleted += pairSet.size;
     });
-    if (this.currentPhase === 'balance' && totalCompleted >= this.phaseThreshold) {
+    if (this.currentPhase === 'random' && totalCompleted >= this.phaseThreshold) {
       this.currentPhase = 'adaptive';
     }
   }

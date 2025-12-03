@@ -71,13 +71,13 @@ export const useAdvancedComparisonLogic = ({
     completedReviewers: 0,
     totalReviewers: 0,
     averageComparisonsPerResponse: 0,
-    currentPhase: 'balance' as 'balance' | 'adaptive',
+    currentPhase: 'random' as 'random' | 'adaptive',
     isComplete: false
   });
   const [reviewerStats, setReviewerStats] = useState({
     completed: 0,
-    remaining: sessionMetadata?.config.reviewerTargetPerPerson || 15,
-    total: sessionMetadata?.config.reviewerTargetPerPerson || 15,
+    remaining: sessionMetadata?.config.reviewerTargetPerPerson || 25,
+    total: sessionMetadata?.config.reviewerTargetPerPerson || 25,
     progress: 0
   });
   
@@ -305,9 +305,9 @@ export const useAdvancedComparisonLogic = ({
     const stats = completionStats;
     return {
       phase: stats.currentPhase,
-      description: stats.currentPhase === 'balance' 
-        ? '균형 단계 - 모든 응답을 골고루 비교하고 있습니다'
-        : '적응 단계 - 순위가 애매한 응답들을 중점 비교하고 있습니다',
+      description: stats.currentPhase === 'random' 
+        ? '랜덤 단계 - 무작위로 응답을 비교하고 있습니다'
+        : '적응 단계 - 비슷한 순위의 응답들을 중점 비교하고 있습니다',
       progress: stats.progress
     };
   }, [algorithm, completionStats]);
