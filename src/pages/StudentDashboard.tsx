@@ -17,7 +17,11 @@ interface Project {
   created_at: string;
   is_active: boolean;
   has_completed?: boolean;
+  comparison_count?: number;
+  target_comparisons?: number;
 }
+
+type ProgressStatus = 'not_started' | 'in_progress' | 'completed';
 
 export const StudentDashboard = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -54,12 +58,32 @@ export const StudentDashboard = () => {
       
       if (projectsError) throw projectsError;
       
+      // Get comparison counts for each project
+      const { data: comparisonsData, error: comparisonsError } = await supabase
+        .from('comparisons')
+        .select('project_id')
+        .eq('student_id', student.id)
+        .in('project_id', projectIds);
+      
+      if (comparisonsError) throw comparisonsError;
+      
+      // Count comparisons per project
+      const comparisonCounts: Record<string, number> = {};
+      comparisonsData?.forEach(c => {
+        comparisonCounts[c.project_id] = (comparisonCounts[c.project_id] || 0) + 1;
+      });
+      
       // Merge completion status with project data
       const projectsWithCompletion = projectsData?.map(project => {
         const assignment = assignedProjects.find(a => a.project_id === project.id);
+        const comparisonCount = comparisonCounts[project.id] || 0;
+        const targetComparisons = 15 * (project.num_questions || 1); // 15 per question
+        
         return {
           ...project,
-          has_completed: assignment?.has_completed || false
+          has_completed: assignment?.has_completed || comparisonCount >= targetComparisons,
+          comparison_count: comparisonCount,
+          target_comparisons: targetComparisons
         };
       }) || [];
       
@@ -85,6 +109,24 @@ export const StudentDashboard = () => {
       title: '로그아웃',
       description: '성공적으로 로그아웃되었습니다.',
     });
+  };
+
+  const getProgressStatus = (project: Project): ProgressStatus => {
+    if (project.has_completed) return 'completed';
+    if ((project.comparison_count || 0) > 0) return 'in_progress';
+    return 'not_started';
+  };
+
+  const getStatusBadge = (project: Project) => {
+    const status = getProgressStatus(project);
+    switch (status) {
+      case 'completed':
+        return { label: '진행 완료', variant: 'default' as const, className: 'bg-green-500 hover:bg-green-600' };
+      case 'in_progress':
+        return { label: '진행중', variant: 'secondary' as const, className: 'bg-amber-500 hover:bg-amber-600 text-white' };
+      case 'not_started':
+        return { label: '진행 이전', variant: 'outline' as const, className: '' };
+    }
   };
 
   if (!student || loading) {
@@ -156,10 +198,10 @@ export const StudentDashboard = () => {
                       )}
                     </div>
                     <Badge 
-                      variant={project.has_completed ? "default" : project.is_active ? "secondary" : "outline"}
-                      className={project.has_completed ? "bg-green-500 hover:bg-green-600" : ""}
+                      variant={getStatusBadge(project).variant}
+                      className={getStatusBadge(project).className}
                     >
-                      {project.has_completed ? "완료" : project.is_active ? "진행중" : "종료됨"}
+                      {getStatusBadge(project).label}
                     </Badge>
                   </div>
                 </CardHeader>
@@ -183,7 +225,7 @@ export const StudentDashboard = () => {
                       ) : (
                         <>
                           <BookOpen className="w-4 h-4 mr-2" />
-                          {project.is_active ? "비교 평가 시작" : "평가 종료됨"}
+                          {!project.is_active ? "평가 종료됨" : (project.comparison_count || 0) > 0 ? "평가 계속하기" : "비교 평가 시작"}
                         </>
                       )}
                     </Button>
