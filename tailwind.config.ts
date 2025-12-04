@@ -237,6 +237,54 @@ export default {
 				'explode-out': {
 					'0%': { transform: 'translate(-50%, -50%) rotate(var(--angle)) translateY(0)', opacity: '1' },
 					'100%': { transform: 'translate(-50%, -50%) rotate(var(--angle)) translateY(var(--distance))', opacity: '0' }
+				},
+				'center-burst': {
+					'0%': { 
+						transform: 'scale(0)', 
+						opacity: '0',
+						filter: 'blur(30px)'
+					},
+					'30%': { 
+						transform: 'scale(0.3)', 
+						opacity: '0.5',
+						filter: 'blur(10px)'
+					},
+					'60%': { 
+						transform: 'scale(1.2)', 
+						opacity: '1',
+						filter: 'blur(0)'
+					},
+					'80%': { 
+						transform: 'scale(0.95)',
+					},
+					'100%': { 
+						transform: 'scale(1)', 
+						opacity: '1',
+					}
+				},
+				'screen-burst': {
+					'0%': { 
+						transform: 'translate(-50%, -50%) scale(0)', 
+						opacity: '1',
+					},
+					'100%': { 
+						transform: 'translate(-50%, -50%) scale(100)', 
+						opacity: '0',
+					}
+				},
+				'pulse-ring': {
+					'0%': { 
+						transform: 'translate(-50%, -50%) scale(0.5)', 
+						opacity: '0.8',
+					},
+					'50%': { 
+						transform: 'translate(-50%, -50%) scale(1)', 
+						opacity: '0.4',
+					},
+					'100%': { 
+						transform: 'translate(-50%, -50%) scale(0.5)', 
+						opacity: '0.8',
+					}
 				}
 			},
 			animation: {
@@ -265,7 +313,10 @@ export default {
 				'confetti-fall': 'confetti-fall 3s linear infinite',
 				'firework': 'firework 1.5s ease-out infinite',
 				'shooting-star': 'shooting-star 2s linear infinite',
-				'explode-out': 'explode-out 0.8s ease-out forwards'
+				'explode-out': 'explode-out 0.8s ease-out forwards',
+				'center-burst': 'center-burst 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+				'screen-burst': 'screen-burst 0.8s ease-out forwards',
+				'pulse-ring': 'pulse-ring 2s ease-in-out infinite'
 			}
 		}
 	},

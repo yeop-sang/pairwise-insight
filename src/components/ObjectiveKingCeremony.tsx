@@ -1,8 +1,75 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useReviewerAlignment, AlignmentItem } from '@/hooks/useReviewerAlignment';
 import { Trophy, Crown, Star, X, Loader2, Sparkles } from 'lucide-react';
+
+// 효과음 재생 함수
+const playSound = (type: 'drumroll' | 'tada' | 'bell' | 'pop' | 'applause') => {
+  const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+  
+  if (type === 'drumroll') {
+    // 드럼롤 효과
+    for (let i = 0; i < 30; i++) {
+      setTimeout(() => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = 100 + Math.random() * 50;
+        osc.type = 'triangle';
+        gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gain.gain.exponentialDecayTo?.(0.01, audioContext.currentTime + 0.1) || gain.gain.setValueAtTime(0.01, audioContext.currentTime + 0.05);
+        osc.start(audioContext.currentTime);
+        osc.stop(audioContext.currentTime + 0.05);
+      }, i * 50);
+    }
+  } else if (type === 'tada' || type === 'pop') {
+    // 팡파레/팝 효과
+    const notes = type === 'tada' ? [523.25, 659.25, 783.99, 1046.50] : [800, 1000, 1200];
+    notes.forEach((freq, i) => {
+      setTimeout(() => {
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.frequency.value = freq;
+        osc.type = type === 'tada' ? 'square' : 'sine';
+        gain.gain.setValueAtTime(0.2, audioContext.currentTime);
+        gain.gain.exponentialDecayTo?.(0.01, audioContext.currentTime + 0.3) || gain.gain.setValueAtTime(0.01, audioContext.currentTime + 0.2);
+        osc.start(audioContext.currentTime);
+        osc.stop(audioContext.currentTime + 0.2);
+      }, i * 100);
+    });
+  } else if (type === 'bell') {
+    // 벨 소리
+    const osc = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    osc.connect(gain);
+    gain.connect(audioContext.destination);
+    osc.frequency.value = 800;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gain.gain.exponentialDecayTo?.(0.01, audioContext.currentTime + 0.5) || gain.gain.setValueAtTime(0.01, audioContext.currentTime + 0.3);
+    osc.start(audioContext.currentTime);
+    osc.stop(audioContext.currentTime + 0.5);
+  } else if (type === 'applause') {
+    // 박수 효과 (노이즈)
+    const bufferSize = audioContext.sampleRate * 2;
+    const buffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioContext.sampleRate * 0.5));
+    }
+    const source = audioContext.createBufferSource();
+    const gain = audioContext.createGain();
+    source.buffer = buffer;
+    source.connect(gain);
+    gain.connect(audioContext.destination);
+    gain.gain.setValueAtTime(0.1, audioContext.currentTime);
+    source.start(audioContext.currentTime);
+  }
+};
 
 interface ObjectiveKingCeremonyProps {
   open: boolean;
@@ -49,14 +116,21 @@ export const ObjectiveKingCeremony: React.FC<ObjectiveKingCeremonyProps> = ({
     const timers: NodeJS.Timeout[] = [];
 
     if (phase === 'intro') {
-      timers.push(setTimeout(() => setPhase('third'), 2000));
+      playSound('drumroll');
+      timers.push(setTimeout(() => setPhase('third'), 2500));
     } else if (phase === 'third') {
-      timers.push(setTimeout(() => setPhase('second'), 3500));
+      playSound('pop');
+      playSound('bell');
+      timers.push(setTimeout(() => setPhase('second'), 4000));
     } else if (phase === 'second') {
-      timers.push(setTimeout(() => setPhase('first'), 3500));
+      playSound('pop');
+      playSound('bell');
+      timers.push(setTimeout(() => setPhase('first'), 4000));
     } else if (phase === 'first') {
+      playSound('tada');
+      playSound('applause');
       setShowConfetti(true);
-      timers.push(setTimeout(() => setPhase('podium'), 4000));
+      timers.push(setTimeout(() => setPhase('podium'), 5000));
     }
 
     return () => timers.forEach(clearTimeout);
@@ -190,6 +264,19 @@ export const ObjectiveKingCeremony: React.FC<ObjectiveKingCeremonyProps> = ({
     </div>
   );
 
+  // 화면 전체 폭발 효과
+  const renderScreenBurst = (color: string) => (
+    <div className="absolute inset-0 pointer-events-none z-0">
+      <div 
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full animate-screen-burst"
+        style={{
+          background: color,
+          boxShadow: `0 0 100px ${color}, 0 0 200px ${color}`,
+        }}
+      />
+    </div>
+  );
+
   // 화려한 수상자 발표 카드
   const renderWinnerCard = (rank: number, winner: AlignmentItem | null, isActive: boolean) => {
     if (!winner) return null;
@@ -223,98 +310,118 @@ export const ObjectiveKingCeremony: React.FC<ObjectiveKingCeremonyProps> = ({
 
     return (
       <div className={`absolute inset-0 flex items-center justify-center ${isActive ? 'animate-screen-flash' : ''}`}>
+        {/* 화면 중앙 폭발 효과 */}
+        {isActive && renderScreenBurst(configs.glowColor)}
+        
         {/* 배경 폭발 효과 */}
         {isActive && renderSparkleExplosion(configs.particles)}
         {isActive && renderRibbons()}
-        {isActive && rank === 1 && renderBells()}
-        {isActive && rank === 1 && renderFireworks()}
+        {isActive && renderBells()}
+        {isActive && renderFireworks()}
         
-        {/* 방사형 광선 효과 */}
+        {/* 방사형 광선 효과 - 중앙에서 뻗어나감 */}
         {isActive && (
-          <div 
-            className="absolute inset-0 animate-spin-slow opacity-30"
-            style={{
-              background: `conic-gradient(from 0deg, transparent, ${configs.glowColor}, transparent, ${configs.glowColor}, transparent)`,
-            }}
-          />
+          <>
+            <div 
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[200vw] h-[200vw] animate-spin-slow opacity-40"
+              style={{
+                background: `conic-gradient(from 0deg, transparent, ${configs.glowColor}, transparent, ${configs.glowColor}, transparent, ${configs.glowColor}, transparent)`,
+              }}
+            />
+            <div 
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[150vw] h-[150vw] animate-pulse-ring"
+              style={{
+                background: `radial-gradient(circle, transparent 30%, ${configs.glowColor} 50%, transparent 70%)`,
+              }}
+            />
+          </>
         )}
 
-        {/* 메인 카드 */}
+        {/* 메인 카드 - 중앙에서 작게 시작해서 크게 튀어나옴 */}
         <div
-          className={`relative z-50 transform transition-all duration-500
-            ${isActive ? 'animate-mega-zoom-in scale-100 opacity-100' : 'scale-0 opacity-0'}`}
+          className={`relative z-50 transform transition-all
+            ${isActive ? 'animate-center-burst' : 'scale-0 opacity-0'}`}
         >
-          {/* 외부 글로우 링 */}
+          {/* 외부 글로우 링 - 더 크게 */}
           <div 
-            className={`absolute -inset-8 rounded-full animate-pulse-glow`}
+            className={`absolute -inset-16 rounded-full animate-pulse-glow`}
             style={{ 
               background: `radial-gradient(circle, ${configs.glowColor} 0%, transparent 70%)`,
             }}
           />
           
-          {/* 회전하는 별 장식 */}
-          <div className="absolute -inset-16 animate-spin-slow">
-            {[0, 60, 120, 180, 240, 300].map((deg, i) => (
+          {/* 회전하는 별 장식 - 더 크게 */}
+          <div className="absolute -inset-32 animate-spin-slow">
+            {[0, 45, 90, 135, 180, 225, 270, 315].map((deg, i) => (
               <Star 
                 key={i}
-                className="absolute w-8 h-8 text-yellow-400"
+                className="absolute w-12 h-12 text-yellow-400 animate-sparkle"
                 style={{
                   left: '50%',
                   top: '50%',
-                  transform: `rotate(${deg}deg) translateY(-120px)`,
+                  transform: `rotate(${deg}deg) translateY(-200px)`,
+                  animationDelay: `${i * 0.1}s`,
                 }}
               />
             ))}
           </div>
 
-          {/* 카드 본체 */}
+          {/* 카드 본체 - 더 크게 */}
           <div
-            className={`relative p-12 rounded-3xl bg-gradient-to-br ${configs.bgGradient} 
+            className={`relative p-16 rounded-3xl bg-gradient-to-br ${configs.bgGradient} 
               shadow-2xl ring-8 ${configs.ringColor} ring-opacity-50
               ${rank === 1 ? 'animate-golden-pulse' : 'animate-medal-swing'}`}
             style={{
-              boxShadow: `0 0 60px ${configs.glowColor}, 0 0 120px ${configs.glowColor}`,
+              boxShadow: `0 0 80px ${configs.glowColor}, 0 0 150px ${configs.glowColor}, 0 0 200px ${configs.glowColor}`,
+              minWidth: '450px',
             }}
           >
-            {/* 반짝이 효과 */}
-            <Sparkles className="absolute top-4 left-4 w-8 h-8 text-white/60 animate-sparkle" />
-            <Sparkles className="absolute top-4 right-4 w-8 h-8 text-white/60 animate-sparkle" style={{ animationDelay: '0.5s' }} />
-            <Sparkles className="absolute bottom-4 left-4 w-8 h-8 text-white/60 animate-sparkle" style={{ animationDelay: '0.3s' }} />
-            <Sparkles className="absolute bottom-4 right-4 w-8 h-8 text-white/60 animate-sparkle" style={{ animationDelay: '0.7s' }} />
+            {/* 반짝이 효과 - 더 많이 */}
+            {Array.from({ length: 8 }).map((_, i) => (
+              <Sparkles 
+                key={i}
+                className="absolute w-10 h-10 text-white/70 animate-sparkle" 
+                style={{ 
+                  top: `${10 + (i % 4) * 25}%`,
+                  left: i < 4 ? '5%' : '85%',
+                  animationDelay: `${i * 0.15}s` 
+                }} 
+              />
+            ))}
 
             <div className="text-center">
-              {/* 메달 */}
-              <div className="text-9xl mb-4 animate-bounce-dramatic filter drop-shadow-2xl">
+              {/* 메달 - 더 크게 */}
+              <div className="text-[10rem] mb-6 animate-bounce-dramatic filter drop-shadow-2xl leading-none">
                 {configs.medal}
               </div>
               
               {/* 타이틀 */}
-              <div className="text-3xl font-black text-white mb-4 drop-shadow-lg animate-pulse">
+              <div className="text-4xl font-black text-white mb-6 drop-shadow-lg animate-pulse">
                 {configs.title}
               </div>
               
-              {/* 이름 - 대형 강조 */}
+              {/* 이름 - 대형 강조, 화면 중앙에서 강조 */}
               <div 
-                className="text-6xl font-black text-white mb-4 drop-shadow-2xl animate-name-glow"
+                className="text-7xl font-black text-white mb-6 drop-shadow-2xl animate-name-glow tracking-wider"
                 style={{
-                  textShadow: `0 0 20px ${configs.glowColor}, 0 0 40px ${configs.glowColor}, 0 0 60px ${configs.glowColor}`,
+                  textShadow: `0 0 30px ${configs.glowColor}, 0 0 60px ${configs.glowColor}, 0 0 90px ${configs.glowColor}, 0 0 120px ${configs.glowColor}`,
                 }}
               >
                 {winner.name}
               </div>
               
               {/* 학번 */}
-              <div className="text-2xl font-bold text-white/90 mb-6">
+              <div className="text-3xl font-bold text-white/90 mb-8">
                 {winner.student_code}
               </div>
               
-              {/* 일치도 */}
-              <div className="px-8 py-4 bg-black/30 rounded-2xl backdrop-blur-sm">
-                <div className="text-5xl font-black text-white animate-score-pop">
+              {/* 일치도 - 더 크게 */}
+              <div className="px-12 py-6 bg-black/30 rounded-2xl backdrop-blur-sm inline-block">
+                <div className="text-6xl font-black text-white animate-score-pop">
                   {(winner.alignment_score * 100).toFixed(1)}%
                 </div>
-                <div className="text-xl text-white/80 mt-2">일치도</div>
-                <div className="text-lg text-white/70 mt-1">
+                <div className="text-2xl text-white/80 mt-3">일치도</div>
+                <div className="text-xl text-white/70 mt-2">
                   ({winner.matches}/{winner.total_comparisons}회 일치)
                 </div>
               </div>
@@ -426,7 +533,7 @@ export const ObjectiveKingCeremony: React.FC<ObjectiveKingCeremonyProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[700px] p-0 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-yellow-500/30">
+      <DialogContent className="max-w-[95vw] w-[95vw] h-[90vh] max-h-[90vh] p-0 overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 border-2 border-yellow-500/50 shadow-[0_0_100px_rgba(255,215,0,0.3)]">
         <Button
           variant="ghost"
           size="icon"
