@@ -7,14 +7,26 @@ import { useStudentAuth } from "@/hooks/useStudentAuth";
 import { useUserRole } from "@/hooks/useUserRole";
 import { useToast } from "@/hooks/use-toast";
 import { useEffect } from "react";
-
 const Index = () => {
   const navigate = useNavigate();
-  const { user, profile, signIn, signUp, resetPassword } = useAuth();
-  const { student } = useStudentAuth();
-  const { isAdmin, isTeacher, isLoading } = useUserRole();
-  const { toast } = useToast();
-
+  const {
+    user,
+    profile,
+    signIn,
+    signUp,
+    resetPassword
+  } = useAuth();
+  const {
+    student
+  } = useStudentAuth();
+  const {
+    isAdmin,
+    isTeacher,
+    isLoading
+  } = useUserRole();
+  const {
+    toast
+  } = useToast();
   useEffect(() => {
     if (isLoading) return;
     if (user && profile) {
@@ -28,10 +40,11 @@ const Index = () => {
       navigate('/student-dashboard');
     }
   }, [user, profile, student, isAdmin, isTeacher, isLoading, navigate]);
-
   const handleLogin = async (email: string, password: string) => {
     try {
-      const { error } = await signIn(email, password);
+      const {
+        error
+      } = await signIn(email, password);
       if (error) {
         toast({
           title: '로그인 실패',
@@ -47,7 +60,6 @@ const Index = () => {
       });
     }
   };
-
   const handleSignup = async (email: string, password: string, name: string) => {
     try {
       await signUp(email, password, name, 'teacher');
@@ -55,13 +67,10 @@ const Index = () => {
       console.error('Signup error:', error);
     }
   };
-
   const handleResetPassword = async (email: string) => {
     await resetPassword(email);
   };
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col overflow-hidden relative">
+  return <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col overflow-hidden relative">
       {/* Decorative background elements */}
       <div className="fixed inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-[600px] h-[600px] bg-primary/10 rounded-full blur-3xl"></div>
@@ -93,28 +102,17 @@ const Index = () => {
             </div>
             
             <p className="text-lg text-muted-foreground leading-relaxed max-w-xl">
-              데이터 기반의 공정하고 객관적인 평가 시스템으로 
-              학생들의 성장을 돕습니다.
+              ​생각을 나누고 함께 성장하는 동료평가    
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 pt-4">
-              <Button 
-                variant="outline" 
-                size="lg" 
-                asChild 
-                className="text-lg h-14 px-8 font-semibold border-2 border-border hover:border-primary hover:bg-primary/5 backdrop-blur-sm bg-card/50 transition-all hover:-translate-y-1 hover:shadow-lg"
-              >
+              <Button variant="outline" size="lg" asChild className="text-lg h-14 px-8 font-semibold border-2 border-border hover:border-primary hover:bg-primary/5 backdrop-blur-sm bg-card/50 transition-all hover:-translate-y-1 hover:shadow-lg">
                 <Link to="/student-login">
                   <UserCheck className="mr-2 h-5 w-5" />
                   학생 로그인
                 </Link>
               </Button>
-              <Button 
-                variant="outline" 
-                size="lg" 
-                asChild 
-                className="text-lg h-14 px-8 font-semibold border-2 border-border hover:border-primary hover:bg-primary/5 backdrop-blur-sm bg-card/50 transition-all hover:-translate-y-1 hover:shadow-lg"
-              >
+              <Button variant="outline" size="lg" asChild className="text-lg h-14 px-8 font-semibold border-2 border-border hover:border-primary hover:bg-primary/5 backdrop-blur-sm bg-card/50 transition-all hover:-translate-y-1 hover:shadow-lg">
                 <Link to="/user-guide">
                   <BarChart3 className="mr-2 h-5 w-5" />
                   사용방법
@@ -139,19 +137,13 @@ const Index = () => {
                       교사 계정으로 시작하기
                     </h2>
                   </div>
-                  <AuthForm 
-                    onLogin={handleLogin} 
-                    onSignup={handleSignup}
-                    onResetPassword={handleResetPassword}
-                  />
+                  <AuthForm onLogin={handleLogin} onSignup={handleSignup} onResetPassword={handleResetPassword} />
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
