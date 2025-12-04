@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { ArrowLeft, Users, Plus, BookOpen, Power, FileText, BarChart3, MessageSquare, Sparkles } from 'lucide-react';
+import { ArrowLeft, Users, Plus, BookOpen, Power, FileText, BarChart3, MessageSquare, Sparkles, Trophy } from 'lucide-react';
 import { ScoreAggregation } from '@/components/ScoreAggregation';
 import { ExplainabilityPanel } from '@/components/ExplainabilityPanel';
 import { StudentFeedbackPanel } from '@/components/StudentFeedbackPanel';
+import { ObjectiveKingCeremony } from '@/components/ObjectiveKingCeremony';
 
 interface Project {
   id: string;
@@ -38,6 +39,7 @@ export const ProjectDetail: React.FC = () => {
   const [project, setProject] = useState<Project | null>(null);
   const [classes, setClasses] = useState<ClassInfo[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showCeremony, setShowCeremony] = useState(false);
 
   useEffect(() => {
     if (!user || !id) {
@@ -354,8 +356,22 @@ export const ProjectDetail: React.FC = () => {
                 <BookOpen className="w-4 h-4 mr-2" />
                 할당 현황
               </Button>
+              <Button
+                onClick={() => setShowCeremony(true)}
+                className="bg-gradient-to-r from-yellow-500 to-amber-500 hover:from-yellow-600 hover:to-amber-600 text-white shadow-lg shadow-yellow-500/25"
+              >
+                <Trophy className="w-4 h-4 mr-2" />
+                객관왕찾기
+              </Button>
             </div>
           </div>
+
+          {/* 객관왕 시상식 모달 */}
+          <ObjectiveKingCeremony
+            open={showCeremony}
+            onOpenChange={setShowCeremony}
+            projectId={id!}
+          />
         </div>
 
         {/* Stats */}

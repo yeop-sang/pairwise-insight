@@ -125,25 +125,63 @@ export default {
 			},
 			keyframes: {
 				'accordion-down': {
-					from: {
-						height: '0'
-					},
-					to: {
-						height: 'var(--radix-accordion-content-height)'
-					}
+					from: { height: '0' },
+					to: { height: 'var(--radix-accordion-content-height)' }
 				},
 				'accordion-up': {
-					from: {
-						height: 'var(--radix-accordion-content-height)'
-					},
-					to: {
-						height: '0'
-					}
+					from: { height: 'var(--radix-accordion-content-height)' },
+					to: { height: '0' }
+				},
+				'zoom-in-bounce': {
+					'0%': { transform: 'scale(0) rotate(-10deg)', opacity: '0' },
+					'50%': { transform: 'scale(1.2) rotate(5deg)', opacity: '1' },
+					'100%': { transform: 'scale(1) rotate(0deg)', opacity: '1' }
+				},
+				'sparkle': {
+					'0%, 100%': { opacity: '1', transform: 'scale(1)' },
+					'50%': { opacity: '0.5', transform: 'scale(1.2)' }
+				},
+				'rise-up': {
+					'0%': { transform: 'translateY(100%)', opacity: '0' },
+					'100%': { transform: 'translateY(0)', opacity: '1' }
+				},
+				'medal-swing': {
+					'0%, 100%': { transform: 'rotate(-3deg)' },
+					'50%': { transform: 'rotate(3deg)' }
+				},
+				'golden-glow': {
+					'0%, 100%': { boxShadow: '0 0 20px rgba(255, 215, 0, 0.4)' },
+					'50%': { boxShadow: '0 0 40px rgba(255, 215, 0, 0.8)' }
+				},
+				'confetti': {
+					'0%': { transform: 'translateY(0) rotate(0deg)', opacity: '1' },
+					'100%': { transform: 'translateY(100vh) rotate(720deg)', opacity: '0' }
+				},
+				'particle': {
+					'0%': { transform: 'scale(0) translateY(0)', opacity: '1' },
+					'100%': { transform: 'scale(1) translateY(-100px)', opacity: '0' }
+				},
+				'bounce-slow': {
+					'0%, 100%': { transform: 'translateY(0)' },
+					'50%': { transform: 'translateY(-10px)' }
+				},
+				'fade-in': {
+					'0%': { opacity: '0', transform: 'translateY(10px)' },
+					'100%': { opacity: '1', transform: 'translateY(0)' }
 				}
 			},
 			animation: {
 				'accordion-down': 'accordion-down 0.2s ease-out',
-				'accordion-up': 'accordion-up 0.2s ease-out'
+				'accordion-up': 'accordion-up 0.2s ease-out',
+				'zoom-in-bounce': 'zoom-in-bounce 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+				'sparkle': 'sparkle 1.5s ease-in-out infinite',
+				'rise-up': 'rise-up 0.8s ease-out forwards',
+				'medal-swing': 'medal-swing 2s ease-in-out infinite',
+				'golden-glow': 'golden-glow 2s ease-in-out infinite',
+				'confetti': 'confetti 4s linear forwards',
+				'particle': 'particle 1s ease-out forwards',
+				'bounce-slow': 'bounce-slow 2s ease-in-out infinite',
+				'fade-in': 'fade-in 0.5s ease-out forwards'
 			}
 		}
 	},
