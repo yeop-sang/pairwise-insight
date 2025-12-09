@@ -181,7 +181,7 @@ const UserGuide = () => {
                 <CardDescription>평가를 진행할 프로젝트 만들기</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="bg-muted/50 p-6 rounded-lg space-y-3">
+                <div className="bg-muted/50 p-6 rounded-lg space-y-4">
                   <div className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <div>
@@ -193,21 +193,77 @@ const UserGuide = () => {
                     <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="font-semibold mb-1">프로젝트 정보 입력</p>
-                      <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1 mt-2">
-                        <li>프로젝트 이름: 평가 프로젝트의 제목</li>
-                        <li>설명: 프로젝트에 대한 간단한 설명</li>
-                        <li>대상 학년: 평가 대상 학생들의 학년</li>
-                        <li>대상 반: 평가 대상 학생들의 반</li>
-                        <li>마감일: 평가 마감 날짜 및 시간</li>
-                      </ul>
+                      <p className="text-sm text-muted-foreground">프로젝트 이름과 설명을 입력합니다</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
+                    <Upload className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
+                    <div>
+                      <p className="font-semibold mb-1">학생 답안 엑셀 파일 업로드</p>
+                      <p className="text-sm text-muted-foreground">학생들의 답안이 담긴 엑셀(.xlsx) 또는 CSV 파일을 업로드합니다</p>
+                    </div>
+                  </div>
+                  
+                  <div className="border-2 border-dashed border-primary/30 rounded-lg p-4 bg-background">
+                    <p className="font-semibold mb-3 flex items-center gap-2">
+                      <FileSpreadsheet className="h-5 w-5 text-primary" />
+                      엑셀 파일 양식 (학생 답안)
+                    </p>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm border-collapse">
+                        <thead>
+                          <tr className="bg-muted">
+                            <th className="border border-border p-2 text-left">학생코드</th>
+                            <th className="border border-border p-2 text-left">문항1</th>
+                            <th className="border border-border p-2 text-left">문항2</th>
+                            <th className="border border-border p-2 text-left">문항3</th>
+                            <th className="border border-border p-2 text-left">...</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr>
+                            <td className="border border-border p-2 font-mono text-xs">ABC_1101</td>
+                            <td className="border border-border p-2 text-xs">광합성은 빛 에너지를 이용하여...</td>
+                            <td className="border border-border p-2 text-xs">세포 호흡은 산소를 소비하며...</td>
+                            <td className="border border-border p-2 text-xs">DNA는 유전 정보를 담고 있으며...</td>
+                            <td className="border border-border p-2 text-xs">...</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-border p-2 font-mono text-xs">ABC_1102</td>
+                            <td className="border border-border p-2 text-xs">식물이 태양빛을 받아 포도당을...</td>
+                            <td className="border border-border p-2 text-xs">미토콘드리아에서 ATP를 생성...</td>
+                            <td className="border border-border p-2 text-xs">이중나선 구조로 되어 있고...</td>
+                            <td className="border border-border p-2 text-xs">...</td>
+                          </tr>
+                          <tr>
+                            <td className="border border-border p-2 font-mono text-xs">ABC_1103</td>
+                            <td className="border border-border p-2 text-xs">엽록체에서 이산화탄소와 물을...</td>
+                            <td className="border border-border p-2 text-xs">포도당을 분해하여 에너지를...</td>
+                            <td className="border border-border p-2 text-xs">뉴클레오타이드로 구성되며...</td>
+                            <td className="border border-border p-2 text-xs">...</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                    <div className="mt-3 space-y-1">
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ <strong>첫 번째 열:</strong> 학생코드 (학생 관리에서 생성된 ID와 동일해야 함)
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ <strong>두 번째 열부터:</strong> 각 문항에 대한 학생의 서술형 답안
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ <strong>첫 번째 행:</strong> 헤더 (학생코드, 문항1, 문항2, ...)
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-start gap-3">
                     <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="font-semibold mb-1">평가 질문 작성</p>
+                      <p className="font-semibold mb-1">루브릭 설정 (선택사항)</p>
                       <p className="text-sm text-muted-foreground">
-                        학생들이 동료를 평가할 질문들을 작성합니다 (예: "팀 프로젝트 기여도", "협업 능력")
+                        각 문항별로 평가 기준(루브릭)을 설정할 수 있습니다. 이는 AI 피드백 생성 시 참고됩니다.
                       </p>
                     </div>
                   </div>
@@ -215,7 +271,7 @@ const UserGuide = () => {
                     <CheckCircle className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
                     <div>
                       <p className="font-semibold mb-1">프로젝트 생성 완료</p>
-                      <p className="text-sm text-muted-foreground">"생성하기" 버튼을 클릭하여 프로젝트를 생성합니다</p>
+                      <p className="text-sm text-muted-foreground">"프로젝트 생성" 버튼을 클릭하여 완료합니다</p>
                     </div>
                   </div>
                 </div>
