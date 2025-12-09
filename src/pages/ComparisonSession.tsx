@@ -11,7 +11,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAdvancedComparisonLogic } from "@/hooks/useAdvancedComparisonLogic";
 import { Progress } from "@/components/ui/progress";
 import { RubricDisplay } from "@/components/RubricDisplay";
-
+import { ExperienceFeedbackModal } from "@/components/ExperienceFeedbackModal";
 interface StudentResponse {
   id: string;
   student_code: string;
@@ -189,6 +189,9 @@ export const ComparisonSession = () => {
 
   // 완료 여부 추적
   const [hasUpdatedCompletion, setHasUpdatedCompletion] = useState(false);
+  
+  // 피드백 모달 상태
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // 모든 문항별로 실제 완료된 비교 횟수 확인
   const [allQuestionsCompletedCounts, setAllQuestionsCompletedCounts] = useState<Record<number, number>>({});
@@ -312,6 +315,8 @@ export const ComparisonSession = () => {
       } else {
         console.log('Project assignment completion updated successfully');
         setHasUpdatedCompletion(true);
+        // 완료 후 피드백 모달 표시
+        setShowFeedbackModal(true);
         toast({
           title: "완료",
           description: "모든 문항의 비교를 완료했습니다!",
@@ -514,6 +519,17 @@ export const ComparisonSession = () => {
             학생 대시보드로 돌아가기
           </Button>
         </Card>
+        
+        {/* 피드백 모달 */}
+        {student && (
+          <ExperienceFeedbackModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+            projectId={projectId || ''}
+            studentId={student.id}
+            onSubmitSuccess={() => setShowFeedbackModal(false)}
+          />
+        )}
       </div>
     );
   }
