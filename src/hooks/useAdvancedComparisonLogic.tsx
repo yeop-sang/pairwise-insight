@@ -197,12 +197,13 @@ export const useAdvancedComparisonLogic = ({
     }
 
     try {
-      // Handle submission timing
+      // Handle submission timing - get calculated values immediately
       const submissionTimeData = handleSubmission();
       
       // Map decision to database format
       const dbDecision = decision === 'A' ? 'left' : decision === 'B' ? 'right' : 'neutral';
-      const decisionTimeMs = timeStamps.comparisonTimeMs || 0;
+      // Use the returned value from handleSubmission, not the stale state
+      const decisionTimeMs = submissionTimeData.comparisonTimeMs || 0;
       
       console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}, time: ${decisionTimeMs}ms`);
       console.log(`Reviewer ID: ${reviewerId}, Session metadata:`, sessionMetadata);
@@ -213,7 +214,7 @@ export const useAdvancedComparisonLogic = ({
       // Generate decision ID for duplicate prevention
       const decisionId = crypto.randomUUID();
       
-      // Prepare comparison data with enhanced tracking
+      // Prepare comparison data with enhanced tracking - use submissionTimeData for accurate values
       const comparisonData = {
         decision_id: decisionId,
         project_id: projectId,
@@ -224,9 +225,9 @@ export const useAdvancedComparisonLogic = ({
         question_number: currentPair.responseA.question_number,
         comparison_time_ms: decisionTimeMs,
         response_time: decisionTimeMs, // 새 컬럼에도 저장
-        shown_at_client: timeStamps.shownAtClient.toISOString(),
+        shown_at_client: submissionTimeData.shownAtClient.toISOString(),
         shown_at_server: new Date().toISOString(),
-        submitted_at_client: timeStamps.submittedAtClient?.toISOString() || new Date().toISOString(),
+        submitted_at_client: submissionTimeData.submittedAtClient?.toISOString() || new Date().toISOString(),
         submitted_at_server: new Date().toISOString(),
         ui_order_left_id: currentPair.responseA.id,
         ui_order_right_id: currentPair.responseB.id,

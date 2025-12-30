@@ -80,28 +80,36 @@ export const useTimeTracking = ({ onFocusEvent }: UseTimeTrackingProps = {}) => 
     hasInteractionStarted.current = true;
   }, [onFocusEvent]);
 
-  // Handle submission
+  // Handle submission - returns calculated values immediately
   const handleSubmission = useCallback(() => {
     const submittedAt = new Date();
-    setTimeStamps(prev => {
-      const focusAt = Math.max(
-        prev.focusWindowAt?.getTime() || 0,
-        prev.focusInteractionAt?.getTime() || 0
-      );
-      
-      const focusToClickMs = focusAt > 0 ? submittedAt.getTime() - focusAt : null;
-      const comparisonTimeMs = submittedAt.getTime() - prev.shownAtClient.getTime();
-
-      return {
-        ...prev,
-        submittedAtClient: submittedAt,
-        submittedAtServer: submittedAt, // Server will override this
-        focusToClickMs,
-        comparisonTimeMs,
-      };
-    });
     
-    return timeStamps;
+    // Calculate values synchronously before state update
+    const focusAt = Math.max(
+      timeStamps.focusWindowAt?.getTime() || 0,
+      timeStamps.focusInteractionAt?.getTime() || 0
+    );
+    
+    const focusToClickMs = focusAt > 0 ? submittedAt.getTime() - focusAt : null;
+    const comparisonTimeMs = submittedAt.getTime() - timeStamps.shownAtClient.getTime();
+
+    // Update state
+    setTimeStamps(prev => ({
+      ...prev,
+      submittedAtClient: submittedAt,
+      submittedAtServer: submittedAt, // Server will override this
+      focusToClickMs,
+      comparisonTimeMs,
+    }));
+    
+    // Return calculated values immediately (not waiting for state update)
+    return {
+      ...timeStamps,
+      submittedAtClient: submittedAt,
+      submittedAtServer: submittedAt,
+      focusToClickMs,
+      comparisonTimeMs,
+    };
   }, [timeStamps]);
 
   // Set up event listeners
