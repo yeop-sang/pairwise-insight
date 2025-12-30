@@ -145,9 +145,21 @@ export const ComparisonSession = () => {
     }
   }, [isStudent, isTeacher, projectId, navigate]);
 
+  // 학생 정보로 student_code 생성 (학년 + 반(2자리) + 번호(2자리))
+  const generateStudentCode = (studentData: typeof student): string => {
+    if (!studentData) return '';
+    const grade = studentData.grade || 1;
+    const classNum = (studentData.class_number || 1).toString().padStart(2, '0');
+    const number = (studentData.student_number || 1).toString().padStart(2, '0');
+    return `${grade}${classNum}${number}`;
+  };
+
   // 학생의 자기 응답 조회
   const fetchMyResponses = async () => {
     if (!student || !projectId) return;
+
+    const studentCode = generateStudentCode(student);
+    console.log('Generated student_code for matching:', studentCode);
 
     try {
       // student_code로 매칭하여 내 응답 조회
@@ -155,7 +167,7 @@ export const ComparisonSession = () => {
         .from('student_responses')
         .select('question_number, response_text')
         .eq('project_id', projectId)
-        .eq('student_code', student.student_number?.toString());
+        .eq('student_code', studentCode);
 
       if (error) throw error;
 
