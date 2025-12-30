@@ -213,33 +213,41 @@ const UserGuide = () => {
                       <table className="w-full text-sm border-collapse">
                         <thead>
                           <tr className="bg-muted">
-                            <th className="border border-border p-2 text-left">학생코드</th>
+                            <th className="border border-border p-2 text-left">학년</th>
+                            <th className="border border-border p-2 text-left">반</th>
+                            <th className="border border-border p-2 text-left">번호</th>
+                            <th className="border border-border p-2 text-left">이름</th>
                             <th className="border border-border p-2 text-left">문항1</th>
                             <th className="border border-border p-2 text-left">문항2</th>
-                            <th className="border border-border p-2 text-left">문항3</th>
                             <th className="border border-border p-2 text-left">...</th>
                           </tr>
                         </thead>
                         <tbody>
                           <tr>
-                            <td className="border border-border p-2 font-mono text-xs">ABC_1101</td>
+                            <td className="border border-border p-2">1</td>
+                            <td className="border border-border p-2">1</td>
+                            <td className="border border-border p-2">1</td>
+                            <td className="border border-border p-2">홍길동</td>
                             <td className="border border-border p-2 text-xs">광합성은 빛 에너지를 이용하여...</td>
                             <td className="border border-border p-2 text-xs">세포 호흡은 산소를 소비하며...</td>
-                            <td className="border border-border p-2 text-xs">DNA는 유전 정보를 담고 있으며...</td>
                             <td className="border border-border p-2 text-xs">...</td>
                           </tr>
                           <tr>
-                            <td className="border border-border p-2 font-mono text-xs">ABC_1102</td>
+                            <td className="border border-border p-2">1</td>
+                            <td className="border border-border p-2">1</td>
+                            <td className="border border-border p-2">2</td>
+                            <td className="border border-border p-2">김철수</td>
                             <td className="border border-border p-2 text-xs">식물이 태양빛을 받아 포도당을...</td>
                             <td className="border border-border p-2 text-xs">미토콘드리아에서 ATP를 생성...</td>
-                            <td className="border border-border p-2 text-xs">이중나선 구조로 되어 있고...</td>
                             <td className="border border-border p-2 text-xs">...</td>
                           </tr>
                           <tr>
-                            <td className="border border-border p-2 font-mono text-xs">ABC_1103</td>
+                            <td className="border border-border p-2">1</td>
+                            <td className="border border-border p-2">1</td>
+                            <td className="border border-border p-2">3</td>
+                            <td className="border border-border p-2">이영희</td>
                             <td className="border border-border p-2 text-xs">엽록체에서 이산화탄소와 물을...</td>
                             <td className="border border-border p-2 text-xs">포도당을 분해하여 에너지를...</td>
-                            <td className="border border-border p-2 text-xs">뉴클레오타이드로 구성되며...</td>
                             <td className="border border-border p-2 text-xs">...</td>
                           </tr>
                         </tbody>
@@ -247,13 +255,16 @@ const UserGuide = () => {
                     </div>
                     <div className="mt-3 space-y-1">
                       <p className="text-xs text-muted-foreground">
-                        ⚠️ <strong>첫 번째 열:</strong> 학생코드 (학생 관리에서 생성된 ID와 동일해야 함)
+                        ⚠️ <strong>첫 번째 ~ 네 번째 열:</strong> 학년, 반, 번호, 이름 (학생 관리와 동일한 형식)
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        ⚠️ <strong>두 번째 열부터:</strong> 각 문항에 대한 학생의 서술형 답안
+                        ⚠️ <strong>다섯 번째 열부터:</strong> 각 문항에 대한 학생의 서술형 답안
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        ⚠️ <strong>첫 번째 행:</strong> 헤더 (학생코드, 문항1, 문항2, ...)
+                        ⚠️ <strong>자동 매칭:</strong> 학생 관리에 등록된 학생과 학년/반/번호 기준으로 자동 매칭됩니다
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        ⚠️ <strong>매칭되지 않은 학생:</strong> 응답은 저장되지만, 해당 학생이 자기평가에서 본인 응답을 조회할 수 없습니다
                       </p>
                     </div>
                   </div>

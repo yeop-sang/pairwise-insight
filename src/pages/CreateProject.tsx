@@ -7,9 +7,34 @@ import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
-import { Upload, FileSpreadsheet, ArrowLeft, Sparkles, ArrowRight, CheckCircle } from "lucide-react";
+import { Upload, FileSpreadsheet, ArrowLeft, Sparkles, ArrowRight, CheckCircle, AlertTriangle } from "lucide-react";
 import * as XLSX from 'xlsx';
 import { ProjectReviewStep } from "@/components/ProjectReviewStep";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+
+interface ParsedResponse {
+  code: string;
+  answer: string;
+  questionIndex: number;
+  studentId: string | null;
+  grade: number;
+  classNumber: number;
+  studentNumber: number;
+  name: string;
+  matched: boolean;
+}
+
+interface MatchResult {
+  total: number;
+  matched: number;
+  unmatched: string[];
+}
+
+interface ParsedData {
+  responses: ParsedResponse[];
+  questions: Record<number, string>;
+  matchResult: MatchResult | null;
+}
 
 export const CreateProject = () => {
   const { user, profile } = useAuth();
@@ -20,10 +45,7 @@ export const CreateProject = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [projectTitle, setProjectTitle] = useState('');
   const [projectDescription, setProjectDescription] = useState('');
-  const [parsedData, setParsedData] = useState<{
-    responses: Array<{code: string, answer: string, questionIndex: number}>,
-    questions: Record<number, string>
-  } | null>(null);
+  const [parsedData, setParsedData] = useState<ParsedData | null>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -90,9 +112,84 @@ export const CreateProject = () => {
     return rows;
   };
 
+  const parseRowData = (rows: any[][]): {
+    responses: Omit<ParsedResponse, 'studentId' | 'matched'>[];
+    questions: Record<number, string>;
+  } => {
+    if (rows.length < 2) {
+      throw new Error("파일에는 최소 2줄(헤더 + 데이터)이 필요합니다.");
+    }
+
+    const headerRow = rows[0];
+    const expectedHeaders = ['학년', '반', '번호', '이름'];
+    
+    // Validate first 4 columns
+    for (let i = 0; i < 4; i++) {
+      const headerValue = headerRow[i]?.toString().trim();
+      if (headerValue !== expectedHeaders[i]) {
+        throw new Error(`첫 번째 행의 ${i + 1}번째 열은 "${expectedHeaders[i]}"이어야 합니다. (현재: "${headerValue || '없음'}")`);
+      }
+    }
+
+    if (headerRow.length < 5) {
+      throw new Error("최소 5개의 컬럼(학년, 반, 번호, 이름, 문항1)이 필요합니다.");
+    }
+
+    // Extract questions from 5th column onwards
+    const questions: Record<number, string> = {};
+    for (let j = 4; j < headerRow.length; j++) {
+      const questionText = headerRow[j]?.toString()?.trim() || `문항 ${j - 3}`;
+      questions[j - 3] = questionText;
+    }
+
+    const data: Omit<ParsedResponse, 'studentId' | 'matched'>[] = [];
+
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (!row || row.length === 0) continue;
+
+      const gradeRaw = row[0];
+      const classRaw = row[1];
+      const numberRaw = row[2];
+      const nameRaw = row[3];
+
+      const grade = parseInt(gradeRaw?.toString() || '0');
+      const classNumber = parseInt(classRaw?.toString() || '0');
+      const studentNumber = parseInt(numberRaw?.toString() || '0');
+      const name = nameRaw?.toString().trim() || '';
+
+      if (!grade || !classNumber || !studentNumber || !name) continue;
+
+      // Generate student code: grade + class(2 digits) + number(2 digits)
+      const code = `${grade}${classNumber.toString().padStart(2, '0')}${studentNumber.toString().padStart(2, '0')}`;
+
+      // Extract answers from 5th column onwards
+      for (let j = 4; j < row.length; j++) {
+        const rawAnswer = row[j];
+        const answer = rawAnswer?.toString()?.trim() || "";
+        
+        data.push({
+          code,
+          grade,
+          classNumber,
+          studentNumber,
+          name,
+          answer,
+          questionIndex: j - 4 // 0-indexed
+        });
+      }
+    }
+
+    if (data.length === 0) {
+      throw new Error("유효한 학생 응답이 없습니다.");
+    }
+
+    return { responses: data, questions };
+  };
+
   const parseFile = async (file: File): Promise<{
-    responses: Array<{code: string, answer: string, questionIndex: number}>,
-    questions: Record<number, string>
+    responses: Omit<ParsedResponse, 'studentId' | 'matched'>[];
+    questions: Record<number, string>;
   }> => {
     return new Promise((resolve, reject) => {
       const fileExtension = file.name.toLowerCase().split('.').pop();
@@ -100,55 +197,14 @@ export const CreateProject = () => {
       if (fileExtension === 'csv') {
         const reader = new FileReader();
         reader.onload = (e) => {
-          const text = e.target?.result as string;
-          const rows = parseCSVToRows(text);
-          
-          if (rows.length < 2) {
-            reject(new Error("파일에는 최소 2줄(헤더 + 데이터)이 필요합니다."));
-            return;
+          try {
+            const text = e.target?.result as string;
+            const rows = parseCSVToRows(text);
+            const result = parseRowData(rows);
+            resolve(result);
+          } catch (error: any) {
+            reject(error);
           }
-          
-          const headerCells = rows[0];
-          const numColumns = headerCells.length;
-          
-          const questions: Record<number, string> = {};
-          for (let j = 1; j < headerCells.length; j++) {
-            const questionText = headerCells[j]?.trim() || `문항 ${j}`;
-            questions[j] = questionText;
-          }
-          
-          if (numColumns < 2) {
-            reject(new Error("최소 2개의 컬럼(학생번호 + 응답)이 필요합니다."));
-            return;
-          }
-          
-          const data: Array<{code: string, answer: string, questionIndex: number}> = [];
-          
-          for (let i = 1; i < rows.length; i++) {
-            const cells = rows[i];
-            const rawStudentCode = cells[0];
-            const studentCode = rawStudentCode?.toString()?.trim();
-            
-            if (!studentCode) continue;
-            
-            for (let j = 1; j < cells.length; j++) {
-              const rawAnswer = cells[j];
-              const answer = rawAnswer?.toString()?.trim() || "";
-              
-              data.push({
-                code: studentCode,
-                answer: answer,
-                questionIndex: j - 1
-              });
-            }
-          }
-          
-          if (data.length === 0) {
-            reject(new Error("유효한 학생 응답이 없습니다."));
-            return;
-          }
-          
-          resolve({ responses: data, questions });
         };
         reader.onerror = (error) => reject(error);
         reader.readAsText(file);
@@ -162,63 +218,10 @@ export const CreateProject = () => {
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
             const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 }) as any[][];
-            
-            if (jsonData.length < 2) {
-              reject(new Error("파일에는 최소 2줄(헤더 + 데이터)이 필요합니다."));
-              return;
-            }
-            
-            const headerRow = jsonData[0];
-            const numColumns = headerRow.length;
-            
-            if (numColumns < 2) {
-              reject(new Error("최소 2개의 컬럼(학생번호 + 응답)이 필요합니다."));
-              return;
-            }
-            
-            const questions: Record<number, string> = {};
-            for (let j = 1; j < headerRow.length; j++) {
-              const questionText = headerRow[j]?.toString()?.trim() || `문항 ${j}`;
-              questions[j] = questionText;
-            }
-            
-            const data: Array<{code: string, answer: string, questionIndex: number}> = [];
-            
-            for (let i = 1; i < jsonData.length; i++) {
-              const row = jsonData[i];
-              if (!row || row.length === 0) continue;
-              
-              const rawStudentCode = row[0];
-              let studentCode = "";
-              if (rawStudentCode !== null && rawStudentCode !== undefined) {
-                studentCode = rawStudentCode.toString().trim();
-              }
-              
-              if (!studentCode) continue;
-              
-              for (let j = 1; j < row.length; j++) {
-                const rawAnswer = row[j];
-                let answer = "";
-                if (rawAnswer !== null && rawAnswer !== undefined) {
-                  answer = rawAnswer.toString().trim();
-                }
-                
-                data.push({
-                  code: studentCode,
-                  answer: answer,
-                  questionIndex: j - 1
-                });
-              }
-            }
-            
-            if (data.length === 0) {
-              reject(new Error("유효한 학생 응답이 없습니다."));
-              return;
-            }
-            
-            resolve({ responses: data, questions });
-          } catch (error) {
-            reject(new Error(`엑셀 파일 파싱에 실패했습니다: ${error}`));
+            const result = parseRowData(jsonData);
+            resolve(result);
+          } catch (error: any) {
+            reject(error);
           }
         };
         reader.onerror = (error) => reject(error);
@@ -228,6 +231,70 @@ export const CreateProject = () => {
         reject(new Error("지원하지 않는 파일 형식입니다."));
       }
     });
+  };
+
+  const matchStudentsWithResponses = async (
+    responses: Omit<ParsedResponse, 'studentId' | 'matched'>[]
+  ): Promise<{ responses: ParsedResponse[]; matchResult: MatchResult }> => {
+    if (!user) {
+      throw new Error("사용자 인증이 필요합니다.");
+    }
+
+    // Fetch teacher's students
+    const { data: students, error } = await supabase
+      .from('students')
+      .select('id, grade, class_number, student_number, name')
+      .eq('teacher_id', user.id);
+
+    if (error) {
+      throw new Error(`학생 목록 조회 실패: ${error.message}`);
+    }
+
+    // Create matching map: grade-class-number -> { id, name }
+    const studentMap = new Map<string, { id: string; name: string }>();
+    students?.forEach(s => {
+      const key = `${s.grade}-${s.class_number}-${s.student_number}`;
+      studentMap.set(key, { id: s.id, name: s.name });
+    });
+
+    // Match responses with students
+    let matchedCount = 0;
+    const unmatchedNames: string[] = [];
+    const processedStudents = new Set<string>();
+
+    const matchedResponses: ParsedResponse[] = responses.map(r => {
+      const key = `${r.grade}-${r.classNumber}-${r.studentNumber}`;
+      const student = studentMap.get(key);
+
+      if (student) {
+        // Name mismatch warning (optional)
+        if (student.name !== r.name) {
+          console.warn(`이름 불일치: 파일(${r.name}) vs DB(${student.name}) - ${key}`);
+        }
+
+        if (!processedStudents.has(key)) {
+          matchedCount++;
+          processedStudents.add(key);
+        }
+
+        return { ...r, studentId: student.id, matched: true };
+      } else {
+        if (!processedStudents.has(key)) {
+          unmatchedNames.push(`${r.grade}학년 ${r.classNumber}반 ${r.studentNumber}번 ${r.name}`);
+          processedStudents.add(key);
+        }
+        return { ...r, studentId: null, matched: false };
+      }
+    });
+
+    return {
+      responses: matchedResponses,
+      matchResult: {
+        total: processedStudents.size,
+        matched: matchedCount,
+        unmatched: unmatchedNames
+      }
+    };
   };
 
   const handleFileUpload = async () => {
@@ -252,54 +319,55 @@ export const CreateProject = () => {
     setLoading(true);
 
     try {
+      // Parse file
       const { responses, questions } = await parseFile(csvFile);
       
       if (responses.length === 0) {
         throw new Error("파일에 유효한 데이터가 없습니다.");
       }
 
-      const validationErrors = [];
-      const studentCodes = new Set();
-      const responseMap = new Map<string, {code: string, answer: string, questionIndex: number, rowNumber: number}>();
+      // Match students
+      const { responses: matchedResponses, matchResult } = await matchStudentsWithResponses(responses);
+
+      // Validation and deduplication
+      const responseMap = new Map<string, ParsedResponse & { rowNumber: number }>();
       
-      for (let i = 0; i < responses.length; i++) {
-        const response = responses[i];
-        
-        if (!response.code) {
-          validationErrors.push(`데이터 ${i + 1}번째: 빈 학생번호가 있습니다.`);
-          continue;
-        }
-        
+      for (let i = 0; i < matchedResponses.length; i++) {
+        const response = matchedResponses[i];
         const key = `${response.code}-${response.questionIndex}`;
         
         if (responseMap.has(key)) {
           const existing = responseMap.get(key)!;
           if (!existing.answer && response.answer) {
-            responseMap.set(key, {...response, rowNumber: i + 1});
+            responseMap.set(key, { ...response, rowNumber: i + 1 });
           }
         } else {
-          responseMap.set(key, {...response, rowNumber: i + 1});
+          responseMap.set(key, { ...response, rowNumber: i + 1 });
         }
-        
-        studentCodes.add(response.code);
       }
       
-      const deduplicatedResponses = Array.from(responseMap.values()).map(({rowNumber, ...response}) => response);
-      
-      if (validationErrors.length > 0) {
-        throw new Error(`데이터 검증 실패:\n${validationErrors.slice(0, 5).join('\n')}${validationErrors.length > 5 ? '\n...' : ''}`);
+      const deduplicatedResponses = Array.from(responseMap.values()).map(({ rowNumber, ...response }) => response);
+
+      // Show matching result
+      if (matchResult.unmatched.length > 0) {
+        toast({
+          variant: "default",
+          title: `학생 매칭 결과: ${matchResult.matched}/${matchResult.total}명 성공`,
+          description: `${matchResult.unmatched.length}명의 학생이 학생 관리에 등록되어 있지 않습니다. 해당 학생의 응답은 저장되지만 자기평가에서 조회할 수 없습니다.`,
+        });
+      } else {
+        toast({
+          title: "학생 매칭 완료",
+          description: `모든 학생(${matchResult.matched}명)이 성공적으로 매칭되었습니다.`
+        });
       }
 
       setParsedData({
         responses: deduplicatedResponses,
-        questions
+        questions,
+        matchResult
       });
       setStep('review');
-
-      toast({
-        title: "파일 업로드 완료",
-        description: "다음 단계에서 루브릭을 설정해주세요."
-      });
 
     } catch (error: any) {
       toast({
@@ -347,7 +415,7 @@ export const CreateProject = () => {
           .insert(
             batch.map(response => ({
               project_id: project.id,
-              student_id: null,
+              student_id: response.studentId, // Now includes matched UUID or null
               student_code: response.code,
               response_text: response.answer,
               question_number: response.questionIndex + 1
@@ -359,9 +427,12 @@ export const CreateProject = () => {
         }
       }
 
+      const matchedCount = parsedData.matchResult?.matched || 0;
+      const totalCount = parsedData.matchResult?.total || 0;
+
       toast({
         title: "프로젝트 생성 완료",
-        description: `${parsedData.responses.length}개의 학생 응답이 업로드되었습니다.`
+        description: `${parsedData.responses.length}개의 응답이 업로드되었습니다. (학생 매칭: ${matchedCount}/${totalCount}명)`
       });
 
       navigate("/dashboard");
@@ -482,10 +553,162 @@ export const CreateProject = () => {
                   }
                   setStep('upload');
                 }}
-                className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 group"
+                className="w-full h-12 text-base gap-2"
               >
-                다음 단계로
-                <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-1 transition-transform" />
+                다음 단계
+                <ArrowRight className="w-4 h-4" />
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (step === 'upload') {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
+        <div className="fixed inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 -left-40 w-60 h-60 bg-primary/5 rounded-full blur-3xl"></div>
+        </div>
+
+        <div className="relative container mx-auto px-4 py-8 max-w-3xl">
+          <Button
+            variant="ghost"
+            onClick={() => setStep('info')}
+            className="mb-6 text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="w-4 h-4 mr-2" />
+            이전 단계
+          </Button>
+
+          {/* Step indicator */}
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {steps.map((s, i) => (
+              <div key={s.key} className="flex items-center">
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  step === s.key 
+                    ? 'bg-primary text-primary-foreground' 
+                    : s.completed 
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-muted text-muted-foreground'
+                }`}>
+                  {s.completed ? <CheckCircle className="w-4 h-4" /> : <span>{i + 1}</span>}
+                  <span className="hidden sm:inline">{s.label}</span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div className={`w-8 h-0.5 mx-2 ${s.completed ? 'bg-primary' : 'bg-border'}`}></div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <Card className="border-border/50 bg-card/80 backdrop-blur-xl shadow-xl animate-slide-up">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-primary/10 rounded-xl">
+                  <Upload className="w-5 h-5 text-primary" />
+                </div>
+                <CardTitle className="text-2xl">학생 응답 파일 업로드</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <Alert className="bg-primary/5 border-primary/20">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertDescription>
+                  <strong>중요:</strong> 파일의 첫 4열은 반드시 <strong>학년, 반, 번호, 이름</strong> 순서여야 합니다. 
+                  학생 관리에 등록된 학생과 자동으로 매칭됩니다.
+                </AlertDescription>
+              </Alert>
+
+              <div 
+                className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all ${
+                  csvFile ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50'
+                }`}
+              >
+                <input
+                  type="file"
+                  id="csv-upload"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+                <label htmlFor="csv-upload" className="cursor-pointer block">
+                  <div className={`mx-auto w-16 h-16 rounded-2xl flex items-center justify-center mb-4 ${
+                    csvFile ? 'bg-primary/20' : 'bg-muted'
+                  }`}>
+                    <FileSpreadsheet className={`w-8 h-8 ${csvFile ? 'text-primary' : 'text-muted-foreground'}`} />
+                  </div>
+                  {csvFile ? (
+                    <div>
+                      <p className="font-medium text-lg">{csvFile.name}</p>
+                      <p className="text-sm text-muted-foreground mt-1">클릭하여 파일 변경</p>
+                    </div>
+                  ) : (
+                    <div>
+                      <p className="font-medium text-lg">엑셀/CSV 파일 업로드</p>
+                      <p className="text-sm text-muted-foreground mt-1">클릭하거나 파일을 드래그하세요</p>
+                    </div>
+                  )}
+                </label>
+              </div>
+
+              <div className="border border-border rounded-lg p-4 bg-muted/30">
+                <p className="font-medium mb-3 flex items-center gap-2">
+                  <FileSpreadsheet className="h-4 w-4 text-primary" />
+                  파일 양식 예시
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-muted">
+                        <th className="border border-border p-2 text-left">학년</th>
+                        <th className="border border-border p-2 text-left">반</th>
+                        <th className="border border-border p-2 text-left">번호</th>
+                        <th className="border border-border p-2 text-left">이름</th>
+                        <th className="border border-border p-2 text-left">문항1</th>
+                        <th className="border border-border p-2 text-left">문항2</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td className="border border-border p-2">1</td>
+                        <td className="border border-border p-2">1</td>
+                        <td className="border border-border p-2">1</td>
+                        <td className="border border-border p-2">홍길동</td>
+                        <td className="border border-border p-2 text-xs">광합성은...</td>
+                        <td className="border border-border p-2 text-xs">세포 호흡은...</td>
+                      </tr>
+                      <tr>
+                        <td className="border border-border p-2">1</td>
+                        <td className="border border-border p-2">1</td>
+                        <td className="border border-border p-2">2</td>
+                        <td className="border border-border p-2">김철수</td>
+                        <td className="border border-border p-2 text-xs">식물이...</td>
+                        <td className="border border-border p-2 text-xs">미토콘드리아...</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <Button 
+                onClick={handleFileUpload}
+                disabled={!csvFile || loading}
+                className="w-full h-12 text-base gap-2"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    파일 분석 중...
+                  </>
+                ) : (
+                  <>
+                    다음 단계
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
               </Button>
             </CardContent>
           </Card>
@@ -495,9 +718,58 @@ export const CreateProject = () => {
   }
 
   if (step === 'review' && parsedData) {
+    const uniqueStudents = new Set(parsedData.responses.map(r => r.code));
+    const numQuestions = Object.keys(parsedData.questions).length;
+    
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-        <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 py-8">
+        <div className="container mx-auto px-4 max-w-5xl">
+          {/* Step indicator */}
+          <div className="flex items-center justify-center gap-2 mb-8">
+            {steps.map((s, i) => (
+              <div key={s.key} className="flex items-center">
+                <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+                  step === s.key 
+                    ? 'bg-primary text-primary-foreground' 
+                    : s.completed 
+                      ? 'bg-primary/10 text-primary'
+                      : 'bg-muted text-muted-foreground'
+                }`}>
+                  {s.completed ? <CheckCircle className="w-4 h-4" /> : <span>{i + 1}</span>}
+                  <span className="hidden sm:inline">{s.label}</span>
+                </div>
+                {i < steps.length - 1 && (
+                  <div className={`w-8 h-0.5 mx-2 ${s.completed ? 'bg-primary' : 'bg-border'}`}></div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Matching result alert */}
+          {parsedData.matchResult && (
+            <Alert className={`mb-6 ${
+              parsedData.matchResult.unmatched.length > 0 
+                ? 'bg-yellow-500/10 border-yellow-500/30' 
+                : 'bg-green-500/10 border-green-500/30'
+            }`}>
+              {parsedData.matchResult.unmatched.length > 0 ? (
+                <AlertTriangle className="h-4 w-4 text-yellow-600" />
+              ) : (
+                <CheckCircle className="h-4 w-4 text-green-600" />
+              )}
+              <AlertDescription>
+                <strong>학생 매칭 결과:</strong> {parsedData.matchResult.matched}/{parsedData.matchResult.total}명 매칭 성공
+                {parsedData.matchResult.unmatched.length > 0 && (
+                  <div className="mt-2 text-sm">
+                    <span className="text-yellow-600 font-medium">미매칭 학생: </span>
+                    {parsedData.matchResult.unmatched.slice(0, 5).join(', ')}
+                    {parsedData.matchResult.unmatched.length > 5 && ` 외 ${parsedData.matchResult.unmatched.length - 5}명`}
+                  </div>
+                )}
+              </AlertDescription>
+            </Alert>
+          )}
+
           <ProjectReviewStep
             questions={parsedData.questions}
             responses={parsedData.responses}
@@ -509,132 +781,5 @@ export const CreateProject = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5">
-      <div className="fixed inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 -left-40 w-60 h-60 bg-primary/5 rounded-full blur-3xl"></div>
-      </div>
-
-      <div className="relative container mx-auto px-4 py-8 max-w-3xl">
-        <Button
-          variant="ghost"
-          onClick={() => setStep('info')}
-          className="mb-6 text-muted-foreground hover:text-foreground"
-        >
-          <ArrowLeft className="w-4 h-4 mr-2" />
-          이전 단계로
-        </Button>
-
-        {/* Step indicator */}
-        <div className="flex items-center justify-center gap-2 mb-8">
-          {steps.map((s, i) => (
-            <div key={s.key} className="flex items-center">
-              <div className={`flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                step === s.key 
-                  ? 'bg-primary text-primary-foreground' 
-                  : s.completed 
-                    ? 'bg-primary/10 text-primary'
-                    : 'bg-muted text-muted-foreground'
-              }`}>
-                {s.completed ? <CheckCircle className="w-4 h-4" /> : <span>{i + 1}</span>}
-                <span className="hidden sm:inline">{s.label}</span>
-              </div>
-              {i < steps.length - 1 && (
-                <div className={`w-8 h-0.5 mx-2 ${s.completed ? 'bg-primary' : 'bg-border'}`}></div>
-              )}
-            </div>
-          ))}
-        </div>
-
-        <Card className="border-border/50 bg-card/80 backdrop-blur-xl shadow-xl animate-slide-up">
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-primary/10 rounded-xl">
-                <Upload className="w-5 h-5 text-primary" />
-              </div>
-              <CardTitle className="text-2xl">학생 응답 파일 업로드</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div 
-              className={`border-2 border-dashed rounded-xl p-10 text-center transition-all cursor-pointer hover:border-primary/50 hover:bg-primary/5 ${
-                csvFile ? 'border-primary bg-primary/5' : 'border-border'
-              }`}
-              onClick={() => document.getElementById('csv-upload')?.click()}
-            >
-              <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <FileSpreadsheet className="h-8 w-8 text-primary" />
-              </div>
-              <div className="space-y-2">
-                <p className="text-lg font-medium">
-                  {csvFile ? csvFile.name : 'CSV 또는 엑셀 파일을 선택하세요'}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  첫 번째 열: 학생번호 | 나머지 열: 각 문항 응답
-                </p>
-              </div>
-              <Input
-                id="csv-upload"
-                type="file"
-                accept=".csv,.xlsx,.xls"
-                onChange={handleFileChange}
-                className="hidden"
-              />
-              {!csvFile && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="mt-4"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  파일 선택
-                </Button>
-              )}
-            </div>
-
-            <div className="bg-muted/30 p-5 rounded-xl border border-border/50">
-              <p className="text-sm font-medium mb-3">파일 형식 안내</p>
-              <ul className="text-sm text-muted-foreground space-y-2">
-                <li className="flex items-start gap-2">
-                  <span className="text-primary">•</span>
-                  첫 번째 행은 헤더 (학생번호, 문항1, 문항2, ...)
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary">•</span>
-                  첫 번째 열에는 각 학생의 고유 번호
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary">•</span>
-                  나머지 열에는 각 문항에 대한 학생의 응답
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-primary">•</span>
-                  CSV 또는 엑셀 파일 형식 (.csv, .xlsx, .xls)
-                </li>
-              </ul>
-            </div>
-
-            <Button 
-              onClick={handleFileUpload} 
-              disabled={loading || !csvFile} 
-              className="w-full h-12 bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-lg shadow-primary/25 group"
-            >
-              {loading ? (
-                <span className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-primary-foreground/20 border-t-primary-foreground rounded-full animate-spin"></div>
-                  업로드 중...
-                </span>
-              ) : (
-                <span className="flex items-center gap-2">
-                  다음: 루브릭 설정
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </span>
-              )}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
-  );
+  return null;
 };
