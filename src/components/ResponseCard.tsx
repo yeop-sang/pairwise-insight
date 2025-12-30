@@ -47,12 +47,9 @@ export const ResponseCard = ({
     }`}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-xs">
-              {position === "left" ? "응답 A" : "응답 B"}
-            </Badge>
-            <span className="text-sm text-muted-foreground">{ownerMasked}</span>
-          </div>
+          <Badge variant="outline" className="text-xs">
+            {position === "left" ? "응답 A" : "응답 B"}
+          </Badge>
           
           <Button
             variant="ghost"
