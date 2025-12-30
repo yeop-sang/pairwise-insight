@@ -41,11 +41,20 @@ export const SelfEvaluationStep = ({
   onComplete,
 }: SelfEvaluationStepProps) => {
   const { toast } = useToast();
-  const [score, setScore] = useState<number | null>(phase === 'post' ? preScore || null : null);
+  const [score, setScore] = useState<number | null>(null);
   const [reason, setReason] = useState("");
   const [changeReason, setChangeReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [hoveredScore, setHoveredScore] = useState<number | null>(null);
+
+  // 문항이 바뀔 때 상태 초기화
+  useEffect(() => {
+    // 사후평가일 경우 사전 점수를 기본값으로 설정, 아니면 null
+    setScore(phase === 'post' ? preScore || null : null);
+    setReason("");
+    setChangeReason("");
+    setHoveredScore(null);
+  }, [questionNumber, phase, preScore]);
 
   const scoreChanged = phase === 'post' && preScore !== undefined && score !== null && score !== preScore;
 
