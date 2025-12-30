@@ -13,6 +13,7 @@ import { Progress } from "@/components/ui/progress";
 import { RubricDisplay } from "@/components/RubricDisplay";
 import { ExperienceFeedbackModal } from "@/components/ExperienceFeedbackModal";
 import { SelfEvaluationStep } from "@/components/SelfEvaluationStep";
+import { CognitiveLoadModal } from "@/components/CognitiveLoadModal";
 
 interface StudentResponse {
   id: string;
@@ -296,26 +297,38 @@ export const ComparisonSession = () => {
     actualCompletedCount >= requiredComparisonsForQuestion || 
     (!currentPair && !isInitializing && actualCompletedCount > 0);
   
-  // Auto-advance to next question when current is complete (but not on the last question)
-  useEffect(() => {
-    if (isCurrentQuestionComplete && !isInitializing && currentQuestion < maxQuestions) {
-      // For questions 1-4, auto-advance to next question
-      if (currentQuestion < maxQuestions) {
-        console.log(`Question ${currentQuestion} completed with ${reviewerStats?.completed} comparisons. Moving to next question.`);
-        const timer = setTimeout(() => {
-          setCurrentQuestion(prev => prev + 1);
-        }, 1000); // Small delay to show completion message
-        
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed]);
-
   // 완료 여부 추적
   const [hasUpdatedCompletion, setHasUpdatedCompletion] = useState(false);
   
   // 피드백 모달 상태
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+
+  // 인지부하 측정 모달 상태
+  const [showCognitiveLoadModal, setShowCognitiveLoadModal] = useState(false);
+  const [cognitiveLoadPhase, setCognitiveLoadPhase] = useState<'initial_self_eval' | 'comparison' | 'final_self_eval'>('initial_self_eval');
+  const [cognitiveLoadQuestionNumber, setCognitiveLoadQuestionNumber] = useState<number | null>(null);
+  const [pendingPhaseTransition, setPendingPhaseTransition] = useState<(() => void) | null>(null);
+  const [cognitiveLoadShownForQuestions, setCognitiveLoadShownForQuestions] = useState<Set<number>>(new Set());
+
+  // Auto-advance to next question when current is complete (but not on the last question)
+  // Now shows cognitive load modal before advancing
+  useEffect(() => {
+    if (isCurrentQuestionComplete && !isInitializing && currentQuestion < maxQuestions && sessionPhase === 'comparing') {
+      // Check if cognitive load modal already shown for this question
+      if (!cognitiveLoadShownForQuestions.has(currentQuestion) && !showCognitiveLoadModal) {
+        console.log(`Question ${currentQuestion} completed with ${reviewerStats?.completed} comparisons. Showing cognitive load modal.`);
+        
+        // Show cognitive load modal
+        setCognitiveLoadPhase('comparison');
+        setCognitiveLoadQuestionNumber(currentQuestion);
+        setPendingPhaseTransition(() => () => {
+          setCognitiveLoadShownForQuestions(prev => new Set(prev).add(currentQuestion));
+          setCurrentQuestion(prev => prev + 1);
+        });
+        setShowCognitiveLoadModal(true);
+      }
+    }
+  }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed, sessionPhase, cognitiveLoadShownForQuestions, showCognitiveLoadModal]);
 
   // 모든 문항별로 실제 완료된 비교 횟수 확인
   const [allQuestionsCompletedCounts, setAllQuestionsCompletedCounts] = useState<Record<number, number>>({});
@@ -457,14 +470,25 @@ export const ComparisonSession = () => {
     }
   }, [student?.id, projectId, hasUpdatedCompletion, allQuestionsCompletedCounts, toast]);
 
-  // Complete project assignment when all questions are done - now moves to post_evaluation
+  // Complete project assignment when all questions are done - show cognitive load modal for last question first
   useEffect(() => {
     if (allQuestionsComplete && !isInitializing && isStudent && sessionPhase === 'comparing') {
-      console.log('All questions completed, moving to post evaluation');
-      setPostEvaluationQuestion(1);
-      setSessionPhase('post_evaluation');
+      // Check if cognitive load modal already shown for the last question
+      if (!cognitiveLoadShownForQuestions.has(maxQuestions) && !showCognitiveLoadModal) {
+        console.log(`Last question ${maxQuestions} completed. Showing cognitive load modal before post evaluation.`);
+        
+        // Show cognitive load modal for last comparison question
+        setCognitiveLoadPhase('comparison');
+        setCognitiveLoadQuestionNumber(maxQuestions);
+        setPendingPhaseTransition(() => () => {
+          setCognitiveLoadShownForQuestions(prev => new Set(prev).add(maxQuestions));
+          setPostEvaluationQuestion(1);
+          setSessionPhase('post_evaluation');
+        });
+        setShowCognitiveLoadModal(true);
+      }
     }
-  }, [allQuestionsComplete, isInitializing, isStudent, sessionPhase]);
+  }, [allQuestionsComplete, isInitializing, isStudent, sessionPhase, maxQuestions, cognitiveLoadShownForQuestions, showCognitiveLoadModal]);
 
   // 사후 자기평가가 모두 완료되면 프로젝트 완료 처리
   useEffect(() => {
@@ -622,27 +646,48 @@ export const ComparisonSession = () => {
       if (preEvaluationQuestion < maxQuestions) {
         setPreEvaluationQuestion(prev => prev + 1);
       } else {
-        // 모든 사전 평가 완료 → 비교 시작
+        // 모든 사전 평가 완료 → 인지부하 측정 후 비교 시작
         await fetchPreEvaluations();
-        setSessionPhase('comparing');
+        setCognitiveLoadPhase('initial_self_eval');
+        setCognitiveLoadQuestionNumber(null);
+        setPendingPhaseTransition(() => () => setSessionPhase('comparing'));
+        setShowCognitiveLoadModal(true);
       }
     };
 
     return (
-      <SelfEvaluationStep
-        projectId={projectId || ''}
-        studentId={student.id}
-        questionNumber={preEvaluationQuestion}
-        totalQuestions={maxQuestions}
-        phase="pre"
-        myResponse={myResponses[preEvaluationQuestion] || ''}
-        questionText={getQuestionByNumber(preEvaluationQuestion)}
-        onComplete={handlePreEvalComplete}
-      />
+      <>
+        <SelfEvaluationStep
+          projectId={projectId || ''}
+          studentId={student.id}
+          questionNumber={preEvaluationQuestion}
+          totalQuestions={maxQuestions}
+          phase="pre"
+          myResponse={myResponses[preEvaluationQuestion] || ''}
+          questionText={getQuestionByNumber(preEvaluationQuestion)}
+          onComplete={handlePreEvalComplete}
+        />
+        
+        {/* 인지부하 측정 모달 */}
+        <CognitiveLoadModal
+          isOpen={showCognitiveLoadModal}
+          onClose={() => {}}
+          projectId={projectId || ''}
+          studentId={student.id}
+          questionNumber={cognitiveLoadQuestionNumber}
+          phase={cognitiveLoadPhase}
+          onSubmitSuccess={() => {
+            setShowCognitiveLoadModal(false);
+            if (pendingPhaseTransition) {
+              pendingPhaseTransition();
+              setPendingPhaseTransition(null);
+            }
+          }}
+        />
+      </>
     );
   }
 
-  // 사후 자기평가 단계
   if (sessionPhase === 'post_evaluation' && isStudent && student) {
     const preEval = preEvaluations.find(e => e.question_number === postEvaluationQuestion);
     
@@ -650,24 +695,46 @@ export const ComparisonSession = () => {
       if (postEvaluationQuestion < maxQuestions) {
         setPostEvaluationQuestion(prev => prev + 1);
       } else {
-        // 모든 사후 평가 완료 → 완료 화면
-        setSessionPhase('completed');
+        // 모든 사후 평가 완료 → 인지부하 측정 후 완료 화면
+        setCognitiveLoadPhase('final_self_eval');
+        setCognitiveLoadQuestionNumber(null);
+        setPendingPhaseTransition(() => () => setSessionPhase('completed'));
+        setShowCognitiveLoadModal(true);
       }
     };
 
     return (
-      <SelfEvaluationStep
-        projectId={projectId || ''}
-        studentId={student.id}
-        questionNumber={postEvaluationQuestion}
-        totalQuestions={maxQuestions}
-        phase="post"
-        myResponse={myResponses[postEvaluationQuestion] || ''}
-        questionText={getQuestionByNumber(postEvaluationQuestion)}
-        preScore={preEval?.score}
-        preReason={preEval?.reason}
-        onComplete={handlePostEvalComplete}
-      />
+      <>
+        <SelfEvaluationStep
+          projectId={projectId || ''}
+          studentId={student.id}
+          questionNumber={postEvaluationQuestion}
+          totalQuestions={maxQuestions}
+          phase="post"
+          myResponse={myResponses[postEvaluationQuestion] || ''}
+          questionText={getQuestionByNumber(postEvaluationQuestion)}
+          preScore={preEval?.score}
+          preReason={preEval?.reason}
+          onComplete={handlePostEvalComplete}
+        />
+        
+        {/* 인지부하 측정 모달 */}
+        <CognitiveLoadModal
+          isOpen={showCognitiveLoadModal}
+          onClose={() => {}}
+          projectId={projectId || ''}
+          studentId={student.id}
+          questionNumber={cognitiveLoadQuestionNumber}
+          phase={cognitiveLoadPhase}
+          onSubmitSuccess={() => {
+            setShowCognitiveLoadModal(false);
+            if (pendingPhaseTransition) {
+              pendingPhaseTransition();
+              setPendingPhaseTransition(null);
+            }
+          }}
+        />
+      </>
     );
   }
 
@@ -981,6 +1048,25 @@ export const ComparisonSession = () => {
           신중하게 비교한 후 더 우수한 응답을 선택해주세요
         </p>
       </div>
+
+      {/* 인지부하 측정 모달 - 비교평가 중 */}
+      {student && (
+        <CognitiveLoadModal
+          isOpen={showCognitiveLoadModal}
+          onClose={() => {}}
+          projectId={projectId || ''}
+          studentId={student.id}
+          questionNumber={cognitiveLoadQuestionNumber}
+          phase={cognitiveLoadPhase}
+          onSubmitSuccess={() => {
+            setShowCognitiveLoadModal(false);
+            if (pendingPhaseTransition) {
+              pendingPhaseTransition();
+              setPendingPhaseTransition(null);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };
