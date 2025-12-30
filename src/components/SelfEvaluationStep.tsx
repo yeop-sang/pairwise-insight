@@ -68,14 +68,7 @@ export const SelfEvaluationStep = ({
       return;
     }
 
-    if (!reason.trim()) {
-      toast({
-        variant: "destructive",
-        title: "이유를 입력해주세요",
-        description: "해당 점수를 준 이유를 작성해주세요.",
-      });
-      return;
-    }
+    // 이유는 선택사항이므로 검증하지 않음
 
     if (phase === 'post' && scoreChanged && !changeReason.trim()) {
       toast({
@@ -262,16 +255,16 @@ export const SelfEvaluationStep = ({
         </Card>
       )}
 
-      {/* 이유 입력 */}
+      {/* 이유 입력 (선택사항) */}
       <Card className="mb-6">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg">
-            💭 {phase === 'post' ? '이 점수를 준 이유' : '이 점수를 준 이유'}
+            💭 이 점수를 준 이유 <span className="text-sm font-normal text-muted-foreground">(선택)</span>
           </CardTitle>
         </CardHeader>
         <CardContent>
           <Textarea
-            placeholder="해당 점수를 준 이유를 작성해주세요..."
+            placeholder="해당 점수를 준 이유를 작성해주세요... (선택사항)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             className="min-h-[100px] resize-none"
@@ -284,7 +277,7 @@ export const SelfEvaluationStep = ({
         <Card className="mb-6">
           <CardHeader className="pb-3">
             <CardTitle className="text-lg">
-              🔄 점수를 바꾼 이유
+              🔄 점수를 바꾼 이유 <span className="text-sm font-normal text-destructive">(필수)</span>
             </CardTitle>
           </CardHeader>
           <CardContent>
