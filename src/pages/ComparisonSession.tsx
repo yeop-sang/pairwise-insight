@@ -827,7 +827,8 @@ export const ComparisonSession = () => {
   }
 
   // Priority 2: Check if current question is completed (but not the last question)
-  if (isCurrentQuestionComplete && currentQuestion < maxQuestions) {
+  // Skip this screen if cognitive load modal should be shown
+  if (isCurrentQuestionComplete && currentQuestion < maxQuestions && !showCognitiveLoadModal && cognitiveLoadShownForQuestions.has(currentQuestion)) {
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="p-8 text-center">
@@ -847,8 +848,43 @@ export const ComparisonSession = () => {
     );
   }
 
-  // 비교 쌍이 없고 초기화 중이 아니면 완료로 처리
+  // 비교 쌍이 없고 초기화 중이 아닌 경우
+  // cognitive load modal이 표시 중이거나 표시될 예정이면 이 화면 대신 modal을 표시
   if (!currentPair && !isInitializing) {
+    // cognitive load modal을 표시해야 하는 경우 (문항 완료 후)
+    if (isCurrentQuestionComplete && !cognitiveLoadShownForQuestions.has(currentQuestion) && student) {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <Card className="p-8 text-center">
+            <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+              ✓
+            </div>
+            <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
+            <p className="text-muted-foreground mb-4">
+              인지부하 측정을 진행해주세요.
+            </p>
+          </Card>
+          
+          {/* 인지부하 측정 모달 */}
+          <CognitiveLoadModal
+            isOpen={showCognitiveLoadModal}
+            onClose={() => {}}
+            projectId={projectId || ''}
+            studentId={student.id}
+            questionNumber={cognitiveLoadQuestionNumber}
+            phase={cognitiveLoadPhase}
+            onSubmitSuccess={() => {
+              setShowCognitiveLoadModal(false);
+              if (pendingPhaseTransition) {
+                pendingPhaseTransition();
+                setPendingPhaseTransition(null);
+              }
+            }}
+          />
+        </div>
+      );
+    }
+    
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="p-8 text-center max-w-2xl mx-auto">
