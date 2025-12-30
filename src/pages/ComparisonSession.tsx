@@ -444,32 +444,7 @@ export const ComparisonSession = () => {
   const [pendingPhaseTransition, setPendingPhaseTransition] = useState<(() => void) | null>(null);
   const [cognitiveLoadShownForQuestions, setCognitiveLoadShownForQuestions] = useState<Set<number>>(new Set());
 
-  // Auto-advance to next question when current is complete (but not on the last question)
-  // Now shows cognitive load modal before advancing
-  // 레이스 컨디션 방지: cognitiveLoadLoaded가 true일 때만 동작
-  useEffect(() => {
-    if (!cognitiveLoadLoaded) return; // 인지부하 데이터 로드 전에는 실행하지 않음
-    
-    if (isCurrentQuestionComplete && !isInitializing && currentQuestion < maxQuestions && sessionPhase === 'comparing') {
-      // Check if cognitive load modal already shown for this question
-      if (!cognitiveLoadShownForQuestions.has(currentQuestion) && !showCognitiveLoadModal) {
-        console.log(`Question ${currentQuestion} completed with ${reviewerStats?.completed} comparisons. Showing cognitive load modal.`);
-        
-        // Show cognitive load modal
-        setCognitiveLoadPhase('comparison');
-        setCognitiveLoadQuestionNumber(currentQuestion);
-        setPendingPhaseTransition(() => () => {
-          setCognitiveLoadShownForQuestions(prev => new Set(prev).add(currentQuestion));
-          setCurrentQuestion(prev => prev + 1);
-        });
-        setShowCognitiveLoadModal(true);
-      } else if (cognitiveLoadShownForQuestions.has(currentQuestion)) {
-        // 인지부하 이미 완료됨 → 다음 문항으로 자동 전환
-        console.log(`Question ${currentQuestion} cognitive load already done. Auto-advancing to next question.`);
-        setCurrentQuestion(prev => prev + 1);
-      }
-    }
-  }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed, sessionPhase, cognitiveLoadShownForQuestions, showCognitiveLoadModal, cognitiveLoadLoaded]);
+  // 참고: 문항 완료 시 인지부하 모달 처리는 아래 통합 Effect에서 담당
 
   // 모든 문항별로 실제 완료된 비교 횟수 확인
   const [allQuestionsCompletedCounts, setAllQuestionsCompletedCounts] = useState<Record<number, number>>({});
@@ -611,25 +586,61 @@ export const ComparisonSession = () => {
     }
   }, [student?.id, projectId, hasUpdatedCompletion, allQuestionsCompletedCounts, toast]);
 
-  // Complete project assignment when all questions are done - show cognitive load modal for last question first
+  // 마지막 문항 완료 시 또는 현재 문항 완료 후 인지부하 모달 표시 (통합 Effect)
+  // 조건: comparing 단계에서 현재 문항이 완료되었고, 인지부하 데이터가 로드되었으며, 모달이 아직 표시 중이 아닌 경우
   useEffect(() => {
-    if (allQuestionsComplete && !isInitializing && isStudent && sessionPhase === 'comparing') {
-      // Check if cognitive load modal already shown for the last question
-      if (!cognitiveLoadShownForQuestions.has(maxQuestions) && !showCognitiveLoadModal) {
-        console.log(`Last question ${maxQuestions} completed. Showing cognitive load modal before post evaluation.`);
-        
-        // Show cognitive load modal for last comparison question
-        setCognitiveLoadPhase('comparison');
-        setCognitiveLoadQuestionNumber(maxQuestions);
+    if (!cognitiveLoadLoaded) return;
+    if (sessionPhase !== 'comparing') return;
+    if (showCognitiveLoadModal) return;
+    if (!isStudent) return;
+    
+    // 현재 문항이 완료되었는지 확인 (마지막 문항 포함)
+    const isComplete = isCurrentQuestionComplete || (allQuestionsComplete && currentQuestion === maxQuestions);
+    
+    if (!isComplete) return;
+    
+    // 인지부하가 아직 표시되지 않은 경우
+    if (!cognitiveLoadShownForQuestions.has(currentQuestion)) {
+      console.log(`Question ${currentQuestion} completed. Showing cognitive load modal.`);
+      
+      setCognitiveLoadPhase('comparison');
+      setCognitiveLoadQuestionNumber(currentQuestion);
+      
+      // 다음 단계 결정: 마지막 문항이면 post_evaluation으로, 아니면 다음 문항으로
+      if (currentQuestion >= maxQuestions) {
         setPendingPhaseTransition(() => () => {
-          setCognitiveLoadShownForQuestions(prev => new Set(prev).add(maxQuestions));
+          setCognitiveLoadShownForQuestions(prev => new Set(prev).add(currentQuestion));
           setPostEvaluationQuestion(1);
           setSessionPhase('post_evaluation');
         });
-        setShowCognitiveLoadModal(true);
+      } else {
+        setPendingPhaseTransition(() => () => {
+          setCognitiveLoadShownForQuestions(prev => new Set(prev).add(currentQuestion));
+          setCurrentQuestion(prev => prev + 1);
+        });
       }
+      setShowCognitiveLoadModal(true);
+    } else if (currentQuestion < maxQuestions) {
+      // 인지부하가 이미 완료되어 있으면 자동으로 다음 문항으로 전환
+      console.log(`Question ${currentQuestion} cognitive load already done. Auto-advancing to next question.`);
+      setCurrentQuestion(prev => prev + 1);
+    } else {
+      // 마지막 문항이고 인지부하도 이미 완료됨 → post_evaluation으로 이동
+      console.log(`Last question cognitive load already done. Moving to post_evaluation.`);
+      setPostEvaluationQuestion(1);
+      setSessionPhase('post_evaluation');
     }
-  }, [allQuestionsComplete, isInitializing, isStudent, sessionPhase, maxQuestions, cognitiveLoadShownForQuestions, showCognitiveLoadModal]);
+  }, [
+    cognitiveLoadLoaded, 
+    sessionPhase, 
+    isCurrentQuestionComplete, 
+    allQuestionsComplete,
+    currentQuestion, 
+    maxQuestions, 
+    cognitiveLoadShownForQuestions, 
+    showCognitiveLoadModal, 
+    isStudent
+  ]);
 
   // 사후 자기평가가 모두 완료되면 프로젝트 완료 처리
   useEffect(() => {
@@ -925,88 +936,28 @@ export const ComparisonSession = () => {
     );
   }
 
-  // Priority 1: Check if ALL questions are completed first
-  if (allQuestionsComplete) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="p-8 text-center max-w-2xl mx-auto">
-          <div className="h-20 w-20 text-green-500 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center text-3xl">
-            🎉
-          </div>
-          <h2 className="text-3xl font-bold mb-4 text-foreground">평가 완료! 수고하셨습니다!</h2>
-          <p className="text-lg text-muted-foreground mb-6">
-            {maxQuestions}개 문항의 비교를 모두 완료하셨습니다.<br/>
-            동료 평가에 참여해주셔서 감사합니다.
-          </p>
-          <div className="bg-muted/50 p-6 rounded-lg mb-6">
-            <p className="text-sm text-muted-foreground mb-2">
-              총 <span className="font-semibold text-foreground">{reviewerStats?.completed || 0}개</span>의 비교를 완료했습니다
-            </p>
-            <p className="text-sm text-muted-foreground">
-              여러분의 소중한 피드백이 동료들의 학습에 큰 도움이 됩니다
-            </p>
-          </div>
-          <Button 
-            size="lg" 
-            onClick={() => navigate('/student-dashboard')}
-            className="min-w-48"
-          >
-            학생 대시보드로 돌아가기
-          </Button>
-        </Card>
-        
-        {/* 피드백 모달 */}
-        {student && (
-          <ExperienceFeedbackModal
-            isOpen={showFeedbackModal}
-            onClose={() => setShowFeedbackModal(false)}
-            projectId={projectId || ''}
-            studentId={student.id}
-            onSubmitSuccess={() => setShowFeedbackModal(false)}
-          />
-        )}
-      </div>
-    );
-  }
+  // Note: allQuestionsComplete early return 제거됨 - 대신 통합 Effect에서 post_evaluation으로 전환
 
-  // Priority 2: Check if current question is completed (but not the last question)
-  // Skip this screen if cognitive load modal should be shown
-  if (isCurrentQuestionComplete && currentQuestion < maxQuestions && !showCognitiveLoadModal && cognitiveLoadShownForQuestions.has(currentQuestion)) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Card className="p-8 text-center">
-          <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-            ✓
-          </div>
-          <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
-          <p className="text-muted-foreground mb-4">
-            {currentQuestion}번 문항의 비교 {requiredComparisonsForQuestion}개가 완료되었습니다. 다음 문항으로 이동합니다.
-          </p>
-          <div className="flex items-center justify-center space-x-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span>다음 문항 준비 중...</span>
-          </div>
-        </Card>
-      </div>
-    );
-  }
+  // Priority 2 제거됨 - 인지부하 완료된 문항은 자동으로 다음으로 넘어감
 
   // 비교 쌍이 없고 초기화 중이 아닌 경우
-  // cognitive load modal이 표시 중이거나 표시될 예정이면 이 화면 대신 modal을 표시
+  // 인지부하 모달이 필요한 경우 모달과 함께 대기 메시지 표시
   if (!currentPair && !isInitializing) {
-    // cognitive load modal을 표시해야 하는 경우 (문항 완료 후)
+    // 문항 완료 후 인지부하 측정 대기 중인 경우
     if (isCurrentQuestionComplete && !cognitiveLoadShownForQuestions.has(currentQuestion) && student) {
       return (
-        <div className="container mx-auto px-4 py-8">
-          <Card className="p-8 text-center">
-            <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
-              ✓
-            </div>
-            <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
-            <p className="text-muted-foreground mb-4">
-              인지부하 측정을 진행해주세요.
-            </p>
-          </Card>
+        <>
+          <div className="container mx-auto px-4 py-8">
+            <Card className="p-8 text-center">
+              <div className="h-16 w-16 text-green-500 mx-auto mb-4 rounded-full bg-green-100 flex items-center justify-center">
+                ✓
+              </div>
+              <h2 className="text-2xl font-bold mb-4">문항 {currentQuestion} 완료!</h2>
+              <p className="text-muted-foreground mb-4">
+                인지부하 측정을 진행해주세요.
+              </p>
+            </Card>
+          </div>
           
           {/* 인지부하 측정 모달 */}
           <CognitiveLoadModal
@@ -1024,10 +975,25 @@ export const ComparisonSession = () => {
               }
             }}
           />
+        </>
+      );
+    }
+    
+    // 인지부하도 완료되었는데 화면 전환 대기 중인 경우
+    if (isCurrentQuestionComplete && cognitiveLoadShownForQuestions.has(currentQuestion)) {
+      return (
+        <div className="container mx-auto px-4 py-8">
+          <Card className="p-8 text-center">
+            <div className="flex items-center justify-center space-x-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <span>다음 단계로 이동 중...</span>
+            </div>
+          </Card>
         </div>
       );
     }
     
+    // 일반적인 완료 케이스 (교사 등)
     return (
       <div className="container mx-auto px-4 py-8">
         <Card className="p-8 text-center max-w-2xl mx-auto">
