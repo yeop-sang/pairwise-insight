@@ -127,13 +127,22 @@ export const ProjectDetail: React.FC = () => {
     }
   };
 
+  // 학생 정보로 student_code 생성 (학년 + 반(2자리) + 번호(2자리))
+  const generateStudentCode = (studentData: { grade: number; class_number: number; student_number: number }): string => {
+    const grade = studentData.grade || 1;
+    const classNum = (studentData.class_number || 1).toString().padStart(2, '0');
+    const number = (studentData.student_number || 1).toString().padStart(2, '0');
+    return `${grade}${classNum}${number}`;
+  };
+
   const assignClassToProject = async (grade: number, classNumber: number) => {
     if (!id || !user) return;
 
     try {
+      // 1. 해당 반의 모든 학생 조회
       const { data: allStudents, error: allStudentsError } = await supabase
         .from('students')
-        .select('id, student_id, name, grade, class_number')
+        .select('id, student_id, name, grade, class_number, student_number')
         .eq('teacher_id', user.id)
         .eq('grade', grade)
         .eq('class_number', classNumber);
@@ -148,6 +157,31 @@ export const ProjectDetail: React.FC = () => {
         return;
       }
 
+      // 2. 이 프로젝트에 등록된 응답들의 student_code 목록 조회
+      const { data: responsesData, error: responsesError } = await supabase
+        .from('student_responses')
+        .select('student_code')
+        .eq('project_id', id);
+
+      if (responsesError) throw responsesError;
+
+      const responseStudentCodes = new Set((responsesData || []).map(r => r.student_code));
+
+      // 3. 응답이 있는 학생만 필터링
+      const studentsWithResponses = allStudents.filter(student => {
+        const studentCode = generateStudentCode(student);
+        return responseStudentCodes.has(studentCode);
+      });
+
+      if (studentsWithResponses.length === 0) {
+        toast({
+          title: '알림',
+          description: `${grade}학년 ${classNumber}반에 응답이 등록된 학생이 없습니다. 먼저 학생 응답을 업로드해주세요.`,
+        });
+        return;
+      }
+
+      // 4. 이미 할당된 학생 제외
       const { data: assignedStudents, error: assignedError } = await supabase
         .from('project_assignments')
         .select('student_id')
@@ -156,18 +190,19 @@ export const ProjectDetail: React.FC = () => {
       if (assignedError) throw assignedError;
 
       const assignedStudentIds = (assignedStudents || []).map(a => a.student_id);
-      const unassignedStudents = allStudents.filter(student => 
+      const unassignedStudents = studentsWithResponses.filter(student => 
         !assignedStudentIds.includes(student.id)
       );
 
       if (unassignedStudents.length === 0) {
         toast({
           title: '알림',
-          description: `${grade}학년 ${classNumber}반의 모든 학생이 이미 할당되었습니다.`,
+          description: `${grade}학년 ${classNumber}반의 응답이 있는 학생은 모두 이미 할당되었습니다.`,
         });
         return;
       }
 
+      // 5. 할당 실행
       const assignments = unassignedStudents.map(student => ({
         project_id: id,
         student_id: student.id,
@@ -179,9 +214,14 @@ export const ProjectDetail: React.FC = () => {
 
       if (assignError) throw assignError;
 
+      const skippedCount = allStudents.length - studentsWithResponses.length;
+      const skippedMessage = skippedCount > 0 
+        ? ` (응답 없는 학생 ${skippedCount}명 제외)` 
+        : '';
+
       toast({
         title: '성공',
-        description: `${grade}학년 ${classNumber}반 학생 ${unassignedStudents.length}명이 할당되었습니다.`,
+        description: `${grade}학년 ${classNumber}반 학생 ${unassignedStudents.length}명이 할당되었습니다.${skippedMessage}`,
       });
 
       fetchClassInfo();
