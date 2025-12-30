@@ -76,8 +76,8 @@ export const useAdvancedComparisonLogic = ({
   });
   const [reviewerStats, setReviewerStats] = useState({
     completed: 0,
-    remaining: sessionMetadata?.config.reviewerTargetPerPerson || 25,
-    total: sessionMetadata?.config.reviewerTargetPerPerson || 25,
+    remaining: sessionMetadata?.config.reviewerTargetPerPerson || 20,
+    total: sessionMetadata?.config.reviewerTargetPerPerson || 20,
     progress: 0
   });
   
