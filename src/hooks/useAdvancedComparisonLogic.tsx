@@ -223,6 +223,7 @@ export const useAdvancedComparisonLogic = ({
         student_id: studentUUID || reviewerId, // Use UUID for database
         question_number: currentPair.responseA.question_number,
         comparison_time_ms: decisionTimeMs,
+        response_time: decisionTimeMs, // 새 컬럼에도 저장
         shown_at_client: timeStamps.shownAtClient.toISOString(),
         shown_at_server: new Date().toISOString(),
         submitted_at_client: timeStamps.submittedAtClient?.toISOString() || new Date().toISOString(),
