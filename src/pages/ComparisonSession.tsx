@@ -401,6 +401,19 @@ export const ComparisonSession = () => {
 
   // 실제 완료된 비교 횟수를 확인하기 위한 state
   const [actualCompletedCount, setActualCompletedCount] = useState<number>(0);
+  // 현재 문항의 비교 횟수가 로드되었는지 추적
+  const [actualCountLoaded, setActualCountLoaded] = useState<boolean>(false);
+  // 마지막으로 로드된 문항 번호 (문항 변경 감지용)
+  const [lastLoadedQuestion, setLastLoadedQuestion] = useState<number>(0);
+
+  // 문항이 바뀌면 즉시 카운트 리셋 및 로드 상태 초기화
+  useEffect(() => {
+    if (currentQuestion !== lastLoadedQuestion) {
+      console.log(`Question changed from ${lastLoadedQuestion} to ${currentQuestion}, resetting actualCompletedCount`);
+      setActualCompletedCount(0);
+      setActualCountLoaded(false);
+    }
+  }, [currentQuestion, lastLoadedQuestion]);
 
   // 데이터베이스에서 실제 완료된 비교 횟수 조회
   useEffect(() => {
@@ -417,7 +430,9 @@ export const ComparisonSession = () => {
       if (!error && data) {
         const count = data.length;
         setActualCompletedCount(count);
-        console.log(`Question ${currentQuestion}: ${count} comparisons completed in DB`);
+        setActualCountLoaded(true);
+        setLastLoadedQuestion(currentQuestion);
+        console.log(`Question ${currentQuestion}: ${count} comparisons completed in DB (loaded)`);
       }
     };
 
@@ -427,9 +442,11 @@ export const ComparisonSession = () => {
   // Check if current question is complete (dynamic based on session metadata)
   const requiredComparisonsForQuestion = sessionMetadata?.config.reviewerTargetPerPerson || 15;
   // Complete if target reached OR no more pairs available
-  const isCurrentQuestionComplete = 
+  // IMPORTANT: actualCountLoaded가 true일 때만 완료 판정 (문항 변경 시 오판 방지)
+  const isCurrentQuestionComplete = actualCountLoaded && (
     actualCompletedCount >= requiredComparisonsForQuestion || 
-    (!currentPair && !isInitializing && actualCompletedCount > 0);
+    (!currentPair && !isInitializing && actualCompletedCount > 0)
+  );
   
   // 완료 여부 추적
   const [hasUpdatedCompletion, setHasUpdatedCompletion] = useState(false);
@@ -590,6 +607,7 @@ export const ComparisonSession = () => {
   // 조건: comparing 단계에서 현재 문항이 완료되었고, 인지부하 데이터가 로드되었으며, 모달이 아직 표시 중이 아닌 경우
   useEffect(() => {
     if (!cognitiveLoadLoaded) return;
+    if (!actualCountLoaded) return; // 현재 문항의 비교 횟수가 로드될 때까지 대기
     if (sessionPhase !== 'comparing') return;
     if (showCognitiveLoadModal) return;
     if (!isStudent) return;
@@ -631,7 +649,8 @@ export const ComparisonSession = () => {
       setSessionPhase('post_evaluation');
     }
   }, [
-    cognitiveLoadLoaded, 
+    cognitiveLoadLoaded,
+    actualCountLoaded,
     sessionPhase, 
     isCurrentQuestionComplete, 
     allQuestionsComplete,
