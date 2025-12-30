@@ -7,7 +7,7 @@
 
 // 상수 정의
 export const MIN_COMPARISONS_PER_PAIR = 3; // 각 쌍이 최소 3명에 의해 비교
-export const MAX_COMPARISONS_PER_STUDENT = 30; // 학생당 최대 30회
+export const MAX_COMPARISONS_PER_STUDENT = 20; // 학생당 최대 20회
 export const MIN_COMPARISONS_PER_STUDENT = 5; // 학생당 최소 5회
 
 /**
@@ -80,8 +80,8 @@ export const calculateRequiredComparisons = (numResponses: number): number => {
   const minComparisonsPerResponse = 3;
   const requiredComparisons = Math.ceil((numResponses * minComparisonsPerResponse) / 2);
   
-  // 최대 25회로 제한
-  return Math.min(requiredComparisons, 25);
+  // 최대 20회로 제한
+  return Math.min(requiredComparisons, 20);
 };
 
 /**
