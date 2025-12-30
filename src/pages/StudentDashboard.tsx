@@ -92,8 +92,8 @@ export const StudentDashboard = () => {
       const projectsWithCompletion = projectsData?.map(project => {
         const assignment = assignedProjects.find(a => a.project_id === project.id);
         const comparisonCount = comparisonCounts[project.id] || 0;
-        // Use actual target from session_metadata, fallback to 20 * num_questions
-        const targetComparisons = targetPerProject[project.id] || (20 * (project.num_questions || 1));
+        // Use actual target from session_metadata, fallback to 15 * num_questions
+        const targetComparisons = targetPerProject[project.id] || (15 * (project.num_questions || 1));
         
         return {
           ...project,
