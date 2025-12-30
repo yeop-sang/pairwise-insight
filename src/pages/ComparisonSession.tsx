@@ -12,6 +12,8 @@ import { useAdvancedComparisonLogic } from "@/hooks/useAdvancedComparisonLogic";
 import { Progress } from "@/components/ui/progress";
 import { RubricDisplay } from "@/components/RubricDisplay";
 import { ExperienceFeedbackModal } from "@/components/ExperienceFeedbackModal";
+import { SelfEvaluationStep } from "@/components/SelfEvaluationStep";
+
 interface StudentResponse {
   id: string;
   student_code: string;
@@ -25,6 +27,15 @@ interface Project {
   question: string;
   rubric: string;
 }
+
+interface SelfEvaluation {
+  question_number: number;
+  score: number;
+  reason: string;
+}
+
+// 세션 단계 타입
+type SessionPhase = 'loading' | 'pre_evaluation' | 'comparing' | 'post_evaluation' | 'completed';
 
 export const ComparisonSession = () => {
   const { projectId } = useParams();
@@ -44,6 +55,13 @@ export const ComparisonSession = () => {
   
   // 응답 로딩 완료 상태 추적
   const [responsesLoaded, setResponsesLoaded] = useState(false);
+
+  // 자기평가 관련 상태
+  const [sessionPhase, setSessionPhase] = useState<SessionPhase>('loading');
+  const [preEvaluationQuestion, setPreEvaluationQuestion] = useState<number>(1);
+  const [postEvaluationQuestion, setPostEvaluationQuestion] = useState<number>(1);
+  const [myResponses, setMyResponses] = useState<Record<number, string>>({});
+  const [preEvaluations, setPreEvaluations] = useState<SelfEvaluation[]>([]);
 
   // 현재 사용자 정보 (교사 또는 학생)  
   const isStudent = !!student;
@@ -126,6 +144,100 @@ export const ComparisonSession = () => {
       fetchProjectAndResponses();
     }
   }, [isStudent, isTeacher, projectId, navigate]);
+
+  // 학생의 자기 응답 조회
+  const fetchMyResponses = async () => {
+    if (!student || !projectId) return;
+
+    try {
+      // student_code로 매칭하여 내 응답 조회
+      const { data, error } = await supabase
+        .from('student_responses')
+        .select('question_number, response_text')
+        .eq('project_id', projectId)
+        .eq('student_code', student.student_number?.toString());
+
+      if (error) throw error;
+
+      if (data) {
+        const responseMap: Record<number, string> = {};
+        data.forEach(r => {
+          responseMap[r.question_number] = r.response_text;
+        });
+        setMyResponses(responseMap);
+        console.log('My responses loaded:', responseMap);
+      }
+    } catch (error) {
+      console.error('Error fetching my responses:', error);
+    }
+  };
+
+  // 기존 자기평가 조회
+  const fetchPreEvaluations = async () => {
+    if (!student || !projectId) return;
+
+    try {
+      const { data, error } = await supabase
+        .from('self_evaluations' as any)
+        .select('question_number, score, reason')
+        .eq('project_id', projectId)
+        .eq('student_id', student.id)
+        .eq('phase', 'pre');
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setPreEvaluations(data as unknown as SelfEvaluation[]);
+        console.log('Pre-evaluations loaded:', data);
+      }
+    } catch (error) {
+      console.error('Error fetching pre-evaluations:', error);
+    }
+  };
+
+  // 프로젝트 로딩 후 자기 응답 조회 및 세션 단계 결정
+  useEffect(() => {
+    const initializeSession = async () => {
+      if (!project || !student || !responsesLoaded) return;
+
+      await fetchMyResponses();
+      await fetchPreEvaluations();
+
+      // 사전 자기평가가 모두 완료되었는지 확인
+      const { data: preEvalData, error } = await supabase
+        .from('self_evaluations' as any)
+        .select('question_number')
+        .eq('project_id', projectId)
+        .eq('student_id', student.id)
+        .eq('phase', 'pre');
+
+      if (error) {
+        console.error('Error checking pre-evaluations:', error);
+        setSessionPhase('pre_evaluation');
+        return;
+      }
+
+      const completedPreEvals = new Set((preEvalData || []).map((e: any) => e.question_number));
+      
+      // 모든 문항의 사전 평가가 완료되었는지 확인
+      let allPreEvalsComplete = true;
+      for (let q = 1; q <= maxQuestions; q++) {
+        if (!completedPreEvals.has(q)) {
+          allPreEvalsComplete = false;
+          setPreEvaluationQuestion(q);
+          break;
+        }
+      }
+
+      if (!allPreEvalsComplete) {
+        setSessionPhase('pre_evaluation');
+      } else {
+        setSessionPhase('comparing');
+      }
+    };
+
+    initializeSession();
+  }, [project, student, responsesLoaded, maxQuestions]);
 
   // 문항별 응답 업데이트 및 알고리즘 재초기화
   useEffect(() => {
@@ -333,19 +445,21 @@ export const ComparisonSession = () => {
     }
   }, [student?.id, projectId, hasUpdatedCompletion, allQuestionsCompletedCounts, toast]);
 
-  // Complete project assignment when all questions are done
+  // Complete project assignment when all questions are done - now moves to post_evaluation
   useEffect(() => {
-    if (allQuestionsComplete && !isInitializing && isStudent && !hasUpdatedCompletion) {
-      console.log('All questions completed, triggering completion update:', { 
-        allQuestionsComplete, 
-        isInitializing, 
-        isStudent,
-        hasUpdatedCompletion,
-        allQuestionsCompletedCounts
-      });
+    if (allQuestionsComplete && !isInitializing && isStudent && sessionPhase === 'comparing') {
+      console.log('All questions completed, moving to post evaluation');
+      setPostEvaluationQuestion(1);
+      setSessionPhase('post_evaluation');
+    }
+  }, [allQuestionsComplete, isInitializing, isStudent, sessionPhase]);
+
+  // 사후 자기평가가 모두 완료되면 프로젝트 완료 처리
+  useEffect(() => {
+    if (sessionPhase === 'completed' && !hasUpdatedCompletion) {
       updateProjectAssignmentCompletion();
     }
-  }, [allQuestionsComplete, isInitializing, isStudent, hasUpdatedCompletion, updateProjectAssignmentCompletion]);
+  }, [sessionPhase, hasUpdatedCompletion, updateProjectAssignmentCompletion]);
 
   const fetchProjectAndResponses = async () => {
     try {
@@ -486,6 +600,105 @@ export const ComparisonSession = () => {
         <div className="flex items-center justify-center h-64">
           <p className="text-muted-foreground">프로젝트를 불러오고 있습니다...</p>
         </div>
+      </div>
+    );
+  }
+
+  // 사전 자기평가 단계
+  if (sessionPhase === 'pre_evaluation' && isStudent && student) {
+    const handlePreEvalComplete = async () => {
+      if (preEvaluationQuestion < maxQuestions) {
+        setPreEvaluationQuestion(prev => prev + 1);
+      } else {
+        // 모든 사전 평가 완료 → 비교 시작
+        await fetchPreEvaluations();
+        setSessionPhase('comparing');
+      }
+    };
+
+    return (
+      <SelfEvaluationStep
+        projectId={projectId || ''}
+        studentId={student.id}
+        questionNumber={preEvaluationQuestion}
+        totalQuestions={maxQuestions}
+        phase="pre"
+        myResponse={myResponses[preEvaluationQuestion] || ''}
+        questionText={getQuestionByNumber(preEvaluationQuestion)}
+        onComplete={handlePreEvalComplete}
+      />
+    );
+  }
+
+  // 사후 자기평가 단계
+  if (sessionPhase === 'post_evaluation' && isStudent && student) {
+    const preEval = preEvaluations.find(e => e.question_number === postEvaluationQuestion);
+    
+    const handlePostEvalComplete = () => {
+      if (postEvaluationQuestion < maxQuestions) {
+        setPostEvaluationQuestion(prev => prev + 1);
+      } else {
+        // 모든 사후 평가 완료 → 완료 화면
+        setSessionPhase('completed');
+      }
+    };
+
+    return (
+      <SelfEvaluationStep
+        projectId={projectId || ''}
+        studentId={student.id}
+        questionNumber={postEvaluationQuestion}
+        totalQuestions={maxQuestions}
+        phase="post"
+        myResponse={myResponses[postEvaluationQuestion] || ''}
+        questionText={getQuestionByNumber(postEvaluationQuestion)}
+        preScore={preEval?.score}
+        preReason={preEval?.reason}
+        onComplete={handlePostEvalComplete}
+      />
+    );
+  }
+
+  // 완료 단계
+  if (sessionPhase === 'completed') {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <Card className="p-8 text-center max-w-2xl mx-auto">
+          <div className="h-20 w-20 text-green-500 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center text-3xl">
+            🎉
+          </div>
+          <h2 className="text-3xl font-bold mb-4 text-foreground">모든 평가 완료!</h2>
+          <p className="text-lg text-muted-foreground mb-6">
+            자기평가와 동료 비교평가를 모두 완료하셨습니다.<br/>
+            참여해주셔서 감사합니다.
+          </p>
+          <div className="bg-muted/50 p-6 rounded-lg mb-6">
+            <p className="text-sm text-muted-foreground mb-2">
+              총 <span className="font-semibold text-foreground">{reviewerStats?.completed || 0}개</span>의 비교를 완료했습니다
+            </p>
+            <p className="text-sm text-muted-foreground">
+              여러분의 소중한 피드백이 동료들의 학습에 큰 도움이 됩니다
+            </p>
+          </div>
+          <Button 
+            size="lg" 
+            onClick={() => navigate('/student-dashboard')}
+            className="min-w-48"
+          >
+            학생 대시보드로 돌아가기
+          </Button>
+        </Card>
+        
+        {/* 피드백 모달 */}
+        {student && (
+          <ExperienceFeedbackModal
+            isOpen={showFeedbackModal}
+            onClose={() => setShowFeedbackModal(false)}
+            projectId={projectId || ''}
+            studentId={student.id}
+            onSubmitSuccess={() => setShowFeedbackModal(false)}
+          />
+        )}
       </div>
     );
   }
