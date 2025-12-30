@@ -202,8 +202,20 @@ export const useAdvancedComparisonLogic = ({
       
       // Map decision to database format
       const dbDecision = decision === 'A' ? 'left' : decision === 'B' ? 'right' : 'neutral';
-      // Use the returned value from handleSubmission, not the stale state
-      const decisionTimeMs = submissionTimeData.comparisonTimeMs || 0;
+      
+      // 비교 시간 안전 계산: submissionTimeData 우선, 없으면 직접 계산
+      let decisionTimeMs = 0;
+      if (submissionTimeData.comparisonTimeMs && Number.isFinite(submissionTimeData.comparisonTimeMs) && submissionTimeData.comparisonTimeMs > 0) {
+        decisionTimeMs = submissionTimeData.comparisonTimeMs;
+      } else if (submissionTimeData.shownAtClient && submissionTimeData.submittedAtClient) {
+        // 직접 계산 (fallback)
+        decisionTimeMs = submissionTimeData.submittedAtClient.getTime() - submissionTimeData.shownAtClient.getTime();
+      }
+      // 음수나 너무 큰 값 방지
+      if (decisionTimeMs < 0 || decisionTimeMs > 600000) { // 10분 이상은 비정상
+        console.warn(`Abnormal comparison time: ${decisionTimeMs}ms, resetting to 0`);
+        decisionTimeMs = 0;
+      }
       
       console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}, time: ${decisionTimeMs}ms`);
       console.log(`Reviewer ID: ${reviewerId}, Session metadata:`, sessionMetadata);

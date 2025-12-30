@@ -63,6 +63,9 @@ export const ComparisonSession = () => {
   const [postEvaluationQuestion, setPostEvaluationQuestion] = useState<number>(1);
   const [myResponses, setMyResponses] = useState<Record<number, string>>({});
   const [preEvaluations, setPreEvaluations] = useState<SelfEvaluation[]>([]);
+  
+  // 인지부하 데이터 로딩 완료 플래그 (레이스 컨디션 방지)
+  const [cognitiveLoadLoaded, setCognitiveLoadLoaded] = useState(false);
 
   // 현재 사용자 정보 (교사 또는 학생)  
   const isStudent = !!student;
@@ -211,7 +214,7 @@ export const ComparisonSession = () => {
   // 프로젝트 로딩 후 자기 응답 조회 및 세션 단계 결정
   useEffect(() => {
     const initializeSession = async () => {
-      if (!project || !student || !responsesLoaded) return;
+      if (!project || !student || !responsesLoaded || maxQuestions === 0) return;
 
       await fetchMyResponses();
       await fetchPreEvaluations();
@@ -223,17 +226,41 @@ export const ComparisonSession = () => {
         .eq('project_id', projectId)
         .eq('student_id', student.id);
 
+      // 비교평가 단계에서 완료된 문항들 세팅
+      const completedCognitiveLoadQuestions = new Set<number>();
+      const hasInitialSelfEvalCogLoad = cognitiveLoadData?.some((r: any) => r.phase === 'initial_self_eval') || false;
+      const hasFinalSelfEvalCogLoad = cognitiveLoadData?.some((r: any) => r.phase === 'final_self_eval') || false;
+      
       if (!cogLoadError && cognitiveLoadData) {
-        // 비교평가 단계에서 완료된 문항들 세팅
-        const completedCognitiveLoadQuestions = new Set<number>();
         cognitiveLoadData.forEach((record: any) => {
           if (record.phase === 'comparison' && record.question_number) {
             completedCognitiveLoadQuestions.add(record.question_number);
           }
         });
-        setCognitiveLoadShownForQuestions(completedCognitiveLoadQuestions);
-        console.log('Previously completed cognitive load measurements:', completedCognitiveLoadQuestions);
+        console.log('Previously completed cognitive load measurements:', {
+          comparison: Array.from(completedCognitiveLoadQuestions),
+          hasInitialSelfEval: hasInitialSelfEvalCogLoad,
+          hasFinalSelfEval: hasFinalSelfEvalCogLoad
+        });
       }
+      setCognitiveLoadShownForQuestions(completedCognitiveLoadQuestions);
+      setCognitiveLoadLoaded(true); // 인지부하 데이터 로드 완료 플래그
+
+      // 문항별 비교 완료 개수 조회
+      const questionCompletionCounts: Record<number, number> = {};
+      for (let q = 1; q <= maxQuestions; q++) {
+        const { data: compData, error: compError } = await supabase
+          .from('comparisons')
+          .select('id', { count: 'exact' })
+          .eq('project_id', projectId)
+          .eq('student_id', student.id)
+          .eq('question_number', q);
+        
+        if (!compError && compData) {
+          questionCompletionCounts[q] = compData.length;
+        }
+      }
+      console.log('Question completion counts:', questionCompletionCounts);
 
       // 사전 자기평가가 모두 완료되었는지 확인
       const { data: preEvalData, error } = await supabase
@@ -263,23 +290,101 @@ export const ComparisonSession = () => {
 
       if (!allPreEvalsComplete) {
         setSessionPhase('pre_evaluation');
-      } else {
-        // 사전 자기평가 인지부하도 완료되었는지 확인
-        const hasInitialSelfEvalCogLoad = cognitiveLoadData?.some((r: any) => r.phase === 'initial_self_eval');
-        if (!hasInitialSelfEvalCogLoad) {
-          // 사전 자기평가 인지부하 측정 필요
-          setCognitiveLoadPhase('initial_self_eval');
-          setCognitiveLoadQuestionNumber(null);
-          setPendingPhaseTransition(() => () => setSessionPhase('comparing'));
-          setShowCognitiveLoadModal(true);
-        } else {
-          setSessionPhase('comparing');
+        return;
+      }
+
+      // 사전 자기평가 인지부하 체크
+      if (!hasInitialSelfEvalCogLoad) {
+        setCognitiveLoadPhase('initial_self_eval');
+        setCognitiveLoadQuestionNumber(null);
+        setPendingPhaseTransition(() => () => setSessionPhase('comparing'));
+        setShowCognitiveLoadModal(true);
+        return;
+      }
+
+      // 비교 단계: 첫 미완료 문항 찾기
+      const requiredPerQuestion = sessionMetadata?.config.reviewerTargetPerPerson || 15;
+      let firstIncompleteQuestion = 0;
+      
+      for (let q = 1; q <= maxQuestions; q++) {
+        const count = questionCompletionCounts[q] || 0;
+        if (count < requiredPerQuestion) {
+          firstIncompleteQuestion = q;
+          break;
         }
       }
+
+      // 모든 문항 비교 완료 체크
+      if (firstIncompleteQuestion === 0) {
+        // 마지막 문항 인지부하 체크
+        if (!completedCognitiveLoadQuestions.has(maxQuestions)) {
+          setCognitiveLoadPhase('comparison');
+          setCognitiveLoadQuestionNumber(maxQuestions);
+          setPendingPhaseTransition(() => () => {
+            setCognitiveLoadShownForQuestions(prev => new Set(prev).add(maxQuestions));
+            setPostEvaluationQuestion(1);
+            setSessionPhase('post_evaluation');
+          });
+          setShowCognitiveLoadModal(true);
+          setSessionPhase('comparing');
+          return;
+        }
+        
+        // 사후 자기평가 단계로 전환
+        // 사후 자기평가 완료 여부 확인
+        const { data: postEvalData } = await supabase
+          .from('self_evaluations' as any)
+          .select('question_number')
+          .eq('project_id', projectId)
+          .eq('student_id', student.id)
+          .eq('phase', 'post');
+        
+        const completedPostEvals = new Set((postEvalData || []).map((e: any) => e.question_number));
+        let firstIncompletePostEval = 0;
+        for (let q = 1; q <= maxQuestions; q++) {
+          if (!completedPostEvals.has(q)) {
+            firstIncompletePostEval = q;
+            break;
+          }
+        }
+        
+        if (firstIncompletePostEval > 0) {
+          setPostEvaluationQuestion(firstIncompletePostEval);
+          setSessionPhase('post_evaluation');
+          return;
+        }
+        
+        // 최종 인지부하 체크
+        if (!hasFinalSelfEvalCogLoad) {
+          setCognitiveLoadPhase('final_self_eval');
+          setCognitiveLoadQuestionNumber(null);
+          setPendingPhaseTransition(() => () => setSessionPhase('completed'));
+          setShowCognitiveLoadModal(true);
+          setSessionPhase('post_evaluation');
+          return;
+        }
+        
+        // 모든 것이 완료됨
+        setSessionPhase('completed');
+        return;
+      }
+
+      // 미완료 문항으로 이동하여 비교 시작
+      // 해당 문항 이전 문항들의 인지부하 확인 및 스킵
+      for (let q = 1; q < firstIncompleteQuestion; q++) {
+        if (!completedCognitiveLoadQuestions.has(q)) {
+          // 이전 문항의 인지부하가 누락된 경우 (비정상 상태이지만 처리)
+          completedCognitiveLoadQuestions.add(q);
+        }
+      }
+      setCognitiveLoadShownForQuestions(completedCognitiveLoadQuestions);
+      
+      setCurrentQuestion(firstIncompleteQuestion);
+      setSessionPhase('comparing');
     };
 
     initializeSession();
-  }, [project, student, responsesLoaded, maxQuestions]);
+  }, [project, student, responsesLoaded, maxQuestions, sessionMetadata?.config.reviewerTargetPerPerson]);
 
   // 문항별 응답 업데이트 및 알고리즘 재초기화
   useEffect(() => {
@@ -341,7 +446,10 @@ export const ComparisonSession = () => {
 
   // Auto-advance to next question when current is complete (but not on the last question)
   // Now shows cognitive load modal before advancing
+  // 레이스 컨디션 방지: cognitiveLoadLoaded가 true일 때만 동작
   useEffect(() => {
+    if (!cognitiveLoadLoaded) return; // 인지부하 데이터 로드 전에는 실행하지 않음
+    
     if (isCurrentQuestionComplete && !isInitializing && currentQuestion < maxQuestions && sessionPhase === 'comparing') {
       // Check if cognitive load modal already shown for this question
       if (!cognitiveLoadShownForQuestions.has(currentQuestion) && !showCognitiveLoadModal) {
@@ -355,9 +463,13 @@ export const ComparisonSession = () => {
           setCurrentQuestion(prev => prev + 1);
         });
         setShowCognitiveLoadModal(true);
+      } else if (cognitiveLoadShownForQuestions.has(currentQuestion)) {
+        // 인지부하 이미 완료됨 → 다음 문항으로 자동 전환
+        console.log(`Question ${currentQuestion} cognitive load already done. Auto-advancing to next question.`);
+        setCurrentQuestion(prev => prev + 1);
       }
     }
-  }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed, sessionPhase, cognitiveLoadShownForQuestions, showCognitiveLoadModal]);
+  }, [isCurrentQuestionComplete, isInitializing, currentQuestion, maxQuestions, reviewerStats?.completed, sessionPhase, cognitiveLoadShownForQuestions, showCognitiveLoadModal, cognitiveLoadLoaded]);
 
   // 모든 문항별로 실제 완료된 비교 횟수 확인
   const [allQuestionsCompletedCounts, setAllQuestionsCompletedCounts] = useState<Record<number, number>>({});
@@ -608,7 +720,9 @@ export const ComparisonSession = () => {
     const comparisonTime = Date.now() - startTime;
 
     try {
-      const success = await submitComparison(decision === 'left' ? 'A' : 'B');
+      // 결정을 정확하게 매핑: left → A, right → B, neutral → N
+      const mappedDecision = decision === 'left' ? 'A' : decision === 'right' ? 'B' : 'N';
+      const success = await submitComparison(mappedDecision);
       
       if (success) {
         const decisionText = decision === 'left' ? '응답 A' : decision === 'right' ? '응답 B' : '중립';
