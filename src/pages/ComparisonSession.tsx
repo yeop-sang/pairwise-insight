@@ -216,6 +216,25 @@ export const ComparisonSession = () => {
       await fetchMyResponses();
       await fetchPreEvaluations();
 
+      // 기존 인지부하 측정 기록 조회 (이미 완료된 것들 확인)
+      const { data: cognitiveLoadData, error: cogLoadError } = await supabase
+        .from('cognitive_load_measurements' as any)
+        .select('question_number, phase')
+        .eq('project_id', projectId)
+        .eq('student_id', student.id);
+
+      if (!cogLoadError && cognitiveLoadData) {
+        // 비교평가 단계에서 완료된 문항들 세팅
+        const completedCognitiveLoadQuestions = new Set<number>();
+        cognitiveLoadData.forEach((record: any) => {
+          if (record.phase === 'comparison' && record.question_number) {
+            completedCognitiveLoadQuestions.add(record.question_number);
+          }
+        });
+        setCognitiveLoadShownForQuestions(completedCognitiveLoadQuestions);
+        console.log('Previously completed cognitive load measurements:', completedCognitiveLoadQuestions);
+      }
+
       // 사전 자기평가가 모두 완료되었는지 확인
       const { data: preEvalData, error } = await supabase
         .from('self_evaluations' as any)
@@ -245,7 +264,17 @@ export const ComparisonSession = () => {
       if (!allPreEvalsComplete) {
         setSessionPhase('pre_evaluation');
       } else {
-        setSessionPhase('comparing');
+        // 사전 자기평가 인지부하도 완료되었는지 확인
+        const hasInitialSelfEvalCogLoad = cognitiveLoadData?.some((r: any) => r.phase === 'initial_self_eval');
+        if (!hasInitialSelfEvalCogLoad) {
+          // 사전 자기평가 인지부하 측정 필요
+          setCognitiveLoadPhase('initial_self_eval');
+          setCognitiveLoadQuestionNumber(null);
+          setPendingPhaseTransition(() => () => setSessionPhase('comparing'));
+          setShowCognitiveLoadModal(true);
+        } else {
+          setSessionPhase('comparing');
+        }
       }
     };
 
