@@ -18,6 +18,7 @@ import { StudentLogin } from "./pages/StudentLogin";
 import { AdminDashboard } from "./pages/AdminDashboard";
 import UserGuide from "./pages/UserGuide";
 import NotFound from "./pages/NotFound";
+import MockComparisonScreen from "./pages/MockComparisonScreen";
 
 const queryClient = new QueryClient();
 
@@ -43,6 +44,7 @@ const App = () => (
               <Route path="/results/:projectId" element={<ComparisonResults />} />
               <Route path="/project/:id" element={<ProjectDetail />} />
               <Route path="/project/:id/assignments" element={<ProjectAssignment />} />
+              <Route path="/mock-comparison" element={<MockComparisonScreen />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>
