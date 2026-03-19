@@ -89,9 +89,8 @@ const MockComparisonScreen = () => {
 
         <Card className="border-2 border-transparent hover:border-primary/50 transition-all duration-200">
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle>
               <span>응답 B</span>
-              <Badge variant="outline">학생 S1047</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
