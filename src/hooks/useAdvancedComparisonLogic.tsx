@@ -19,7 +19,7 @@ interface ComparisonPair {
 interface UseAdvancedComparisonLogicProps {
   projectId: string;
   responses: StudentResponse[];
-  reviewerId: string; // student_number as string for matching with response.student_code
+  reviewerId: string; // student_number as string identifier
   currentQuestion: number;
   numResponses?: number; // Optional: number of responses for current question
   studentUUID?: string; // Optional: student UUID for database operations
