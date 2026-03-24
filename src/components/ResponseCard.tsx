@@ -14,7 +14,6 @@ interface Attachment {
 
 interface ResponseCardProps {
   responseId: string;
-  ownerMasked: string;
   contentText: string;
   attachments?: Attachment[];
   position: "left" | "right";
@@ -22,7 +21,6 @@ interface ResponseCardProps {
 
 export const ResponseCard = ({
   responseId,
-  ownerMasked,
   contentText,
   attachments = [],
   position,

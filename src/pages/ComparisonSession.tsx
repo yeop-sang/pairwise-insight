@@ -17,7 +17,6 @@ import { CognitiveLoadModal } from "@/components/CognitiveLoadModal";
 
 interface StudentResponse {
   id: string;
-  student_code: string;
   response_text: string;
   question_number: number;
 }
@@ -97,7 +96,7 @@ export const ComparisonSession = () => {
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
-    reviewerId: student?.student_number?.toString() || user?.id || '', // Use student_number as string to match with response.student_code
+    reviewerId: student?.student_number?.toString() || user?.id || '',
     currentQuestion,
     // 응답 로딩 완료 후에만 유효한 응답 수 전달
     numResponses: responsesLoaded && currentQuestionResponseCount > 0 ? currentQuestionResponseCount : undefined,
@@ -698,7 +697,7 @@ export const ComparisonSession = () => {
       // Fetch all responses for this project
       const { data: responsesData, error: responsesError } = await supabase
         .from('student_responses')
-        .select('*')
+        .select('id, response_text, question_number, project_id')
         .eq('project_id', projectId)
         .order('question_number');
 

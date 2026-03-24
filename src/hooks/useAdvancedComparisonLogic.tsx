@@ -7,7 +7,6 @@ import { useQualityManager } from './useQualityManager';
 
 interface StudentResponse {
   id: string;
-  student_code: string;
   response_text: string;
   question_number: number;
 }
@@ -20,7 +19,7 @@ interface ComparisonPair {
 interface UseAdvancedComparisonLogicProps {
   projectId: string;
   responses: StudentResponse[];
-  reviewerId: string; // student_number as string for matching with response.student_code
+  reviewerId: string; // student_number as string identifier
   currentQuestion: number;
   numResponses?: number; // Optional: number of responses for current question
   studentUUID?: string; // Optional: student UUID for database operations
@@ -132,7 +131,7 @@ export const useAdvancedComparisonLogic = ({
       console.log(`Initializing algorithm for question ${currentQuestion} with ${currentQuestionResponses.length} responses`);
       console.log(`Reviewer ID: ${reviewerId}`);
       console.log(`Reviewer target per person: ${reviewerTarget}`);
-      console.log(`Current question responses:`, currentQuestionResponses.map(r => ({ id: r.id, student_code: r.student_code })));
+      console.log(`Current question responses: ${currentQuestionResponses.length} items`);
       console.log(`Multi-reviewer system: Same pairs can be evaluated by multiple reviewers for better objectivity`);
       
       // Create new algorithm instance with only reviewer ID (no self-exclusion needed)
@@ -217,8 +216,7 @@ export const useAdvancedComparisonLogic = ({
         decisionTimeMs = 0;
       }
       
-      console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}, time: ${decisionTimeMs}ms`);
-      console.log(`Reviewer ID: ${reviewerId}, Session metadata:`, sessionMetadata);
+      console.log(`Submitting comparison: ${currentPair.responseA.id} vs ${currentPair.responseB.id}, decision: ${decision}, time: ${decisionTimeMs}ms`);
       
       // Process decision with quality manager
       const qualityResult = await processDecision(dbDecision as 'left' | 'right' | 'neutral', decisionTimeMs);
