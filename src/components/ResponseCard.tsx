@@ -14,7 +14,6 @@ interface Attachment {
 
 interface ResponseCardProps {
   responseId: string;
-  ownerMasked: string;
   contentText: string;
   attachments?: Attachment[];
   position: "left" | "right";
