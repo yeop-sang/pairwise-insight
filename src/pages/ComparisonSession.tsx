@@ -96,7 +96,7 @@ export const ComparisonSession = () => {
   } = useAdvancedComparisonLogic({
     projectId: projectId || '',
     responses,
-    reviewerId: student?.student_number?.toString() || user?.id || '', // Use student_number as string to match with response.student_code
+    reviewerId: student?.student_number?.toString() || user?.id || '',
     currentQuestion,
     // 응답 로딩 완료 후에만 유효한 응답 수 전달
     numResponses: responsesLoaded && currentQuestionResponseCount > 0 ? currentQuestionResponseCount : undefined,
