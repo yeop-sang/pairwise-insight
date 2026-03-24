@@ -7,7 +7,6 @@ import { useQualityManager } from './useQualityManager';
 
 interface StudentResponse {
   id: string;
-  student_code: string;
   response_text: string;
   question_number: number;
 }
