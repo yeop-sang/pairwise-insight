@@ -205,7 +205,6 @@ export const CompareSession = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
           <ResponseCard
             responseId={currentPair.left.id}
-            ownerMasked={currentPair.left.ownerMasked}
             contentText={currentPair.left.contentText}
             attachments={currentPair.left.attachments}
             position="left"
@@ -213,7 +212,6 @@ export const CompareSession = () => {
           
           <ResponseCard
             responseId={currentPair.right.id}
-            ownerMasked={currentPair.right.ownerMasked}
             contentText={currentPair.right.contentText}
             attachments={currentPair.right.attachments}
             position="right"

@@ -697,7 +697,7 @@ export const ComparisonSession = () => {
       // Fetch all responses for this project
       const { data: responsesData, error: responsesError } = await supabase
         .from('student_responses')
-        .select('*')
+        .select('id, response_text, question_number, project_id')
         .eq('project_id', projectId)
         .order('question_number');
 

@@ -216,8 +216,7 @@ export const useAdvancedComparisonLogic = ({
         decisionTimeMs = 0;
       }
       
-      console.log(`Submitting comparison: ${currentPair.responseA.student_code} vs ${currentPair.responseB.student_code}, decision: ${decision}, time: ${decisionTimeMs}ms`);
-      console.log(`Reviewer ID: ${reviewerId}, Session metadata:`, sessionMetadata);
+      console.log(`Submitting comparison: ${currentPair.responseA.id} vs ${currentPair.responseB.id}, decision: ${decision}, time: ${decisionTimeMs}ms`);
       
       // Process decision with quality manager
       const qualityResult = await processDecision(dbDecision as 'left' | 'right' | 'neutral', decisionTimeMs);

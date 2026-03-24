@@ -21,7 +21,6 @@ interface ResponseCardProps {
 
 export const ResponseCard = ({
   responseId,
-  ownerMasked,
   contentText,
   attachments = [],
   position,

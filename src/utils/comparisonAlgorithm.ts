@@ -2,7 +2,6 @@ import { MIN_COMPARISONS_PER_PAIR, calculateTotalPairs } from './comparisonCalcu
 
 interface StudentResponse {
   id: string;
-  student_code: string;
   response_text: string;
   question_number: number;
 }
