@@ -131,7 +131,7 @@ export const useAdvancedComparisonLogic = ({
       console.log(`Initializing algorithm for question ${currentQuestion} with ${currentQuestionResponses.length} responses`);
       console.log(`Reviewer ID: ${reviewerId}`);
       console.log(`Reviewer target per person: ${reviewerTarget}`);
-      console.log(`Current question responses:`, currentQuestionResponses.map(r => ({ id: r.id, student_code: r.student_code })));
+      console.log(`Current question responses: ${currentQuestionResponses.length} items`);
       console.log(`Multi-reviewer system: Same pairs can be evaluated by multiple reviewers for better objectivity`);
       
       // Create new algorithm instance with only reviewer ID (no self-exclusion needed)
